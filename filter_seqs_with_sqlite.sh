@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Define paths to your centroids text file and SQLite database
-CENTROIDS_TXT="/path/to/your/centroids.txt"
+CENTROIDS_TXT="/ibmm_data2/oas_database/paired_lea_tmp/txt_files_oas_db/centroids_seqs_cdr3_aa_100.txt"
 SQLITE_DB="/path/to/your/database.sqlite"
-OUTPUT_FILE="/path/to/your/output_sequences.txt"
+OUTPUT_FILE="/ibmm_data2/oas_database/paired_lea_tmp/filtered_fasta_file/filtered_full_seq_cdrh3.txt"
 
 # Prepare the output file
 echo "" > "$OUTPUT_FILE"
