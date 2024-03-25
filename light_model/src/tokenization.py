@@ -7,6 +7,15 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
 
+def load_sequences(file_path):
+    with open(file_path, 'r') as file:
+        sequences = file.read().splitlines()
+    return sequences
+
+training_sequences = load_sequences('/ibmm_data2/oas_database/paired_lea_tmp/light_model/data/training_set_light_seq_100_pident.txt')
+test_sequences = load_sequences('/ibmm_data2/oas_database/paired_lea_tmp/light_model/data/test_set_light_seq_100_pident.txt')
+
+
 amino_acids = 'ACDEFGHIKLMNPQRSTVWY'
 special_tokens = {'[PAD]': 0, '[UNK]': 1, '[CLS]': 2, '[SEP]': 3, '[MASK]': 4}
 
@@ -36,24 +45,26 @@ def tokenize_sequences(sequences, aa_to_id, max_len):
     return tokenized_sequences
 
 
-class AminoAcidDataset(Dataset):
-    def __init__(self, sequences, labels=None):
+class AminoAcidDataset(torch.utils.data.Dataset):
+    def __init__(self, sequences):
         self.sequences = sequences
-        self.labels = labels
 
     def __len__(self):
         return len(self.sequences)
 
     def __getitem__(self, idx):
-        item = {'input_ids': torch.tensor(self.sequences[idx], dtype=torch.long)}
-        
-        if self.labels is not None:
-            item['labels'] = torch.tensor(self.labels[idx], dtype=torch.long)
-        
-        return item
+        return torch.tensor(self.sequences[idx], dtype=torch.long)
 
-# Example usage
-max_len = 128  # Choose a maximum length
-tokenized_sequences = tokenize_sequences(light_chain_sequences, aa_to_id, max_len=max_len)
-dataset = AminoAcidDataset(tokenized_sequences)
-data_loader = DataLoader(dataset, batch_size=32, shuffle=True)
+
+
+max_len = 128  
+
+tokenized_training_sequences = tokenize_sequences(training_sequences, aa_to_id, max_len=128)
+tokenized_test_sequences = tokenize_sequences(test_sequences, aa_to_id, max_len=128)
+
+# Create dataset instances
+train_dataset = AminoAcidDataset(tokenized_training_sequences)
+test_dataset = AminoAcidDataset(tokenized_test_sequences)
+
+train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
