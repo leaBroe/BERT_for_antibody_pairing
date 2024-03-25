@@ -82,4 +82,43 @@ for epoch in range(num_epochs):
         total_loss += loss.item()
 
 
+def evaluate_mlm(model, dataloader, device):
+    model.eval()  # Put model in evaluation mode
+    
+    total_loss = 0
+    total_accuracy = 0
+    total_correct_predictions = 0
+    total_masked_tokens = 0
+    
+    with torch.no_grad():  # No need to compute gradients during evaluation
+        for batch in dataloader:
+            input_ids = batch['input_ids'].to(device)
+            attention_mask = batch['attention_mask'].to(device)
+            labels = batch['labels'].to(device)
+
+            outputs = model(input_ids=input_ids, 
+                            attention_mask=attention_mask, 
+                            labels=labels)
+
+            loss = outputs.loss
+            total_loss += loss.item()
+
+            # Compute accuracy for masked tokens
+            predictions = torch.argmax(outputs.logits, dim=-1)
+            mask = labels != -100  # Only consider masked tokens for accuracy calculation
+
+            correct_predictions = (predictions == labels) & mask
+            total_correct_predictions += correct_predictions.sum().item()
+            total_masked_tokens += mask.sum().item()
+
+    avg_loss = total_loss / len(dataloader)
+    accuracy = (total_correct_predictions / total_masked_tokens) if total_masked_tokens > 0 else 0
+
+    return avg_loss, accuracy
+
+
+test_loss, test_accuracy = evaluate_mlm(mlm_model, test_loader, device)
+
+print(f"Test Loss: {test_loss:.3f}")
+print(f"Test Accuracy: {test_accuracy:.3f}")
 
