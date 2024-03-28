@@ -35,8 +35,8 @@ TOTAL_LINES=$(wc -l < "$INPUT_FILE")
 TRAINING_LINES=$(echo "($TOTAL_LINES * $SPLIT_PERCENTAGE + 99) / 100" | bc) # +99 to round up with bc
 
 # Split the file
-TRAINING_FILE="/ibmm_data2/oas_database/paired_lea_tmp/light_model/data/training_set_light_seq_100_pident.txt"
-TEST_FILE="/ibmm_data2/oas_database/paired_lea_tmp/light_model/data/test_set_light_seq_100_pident.txt"
+TRAINING_FILE="/ibmm_data2/oas_database/paired_lea_tmp/light_model/data/training_set_light_seq_70_pident_subset.txt"
+TEST_FILE="/ibmm_data2/oas_database/paired_lea_tmp/light_model/data/test_set_light_seq_70_pident_subset.txt"
 
 head -n "$TRAINING_LINES" "$INPUT_FILE" > "$TRAINING_FILE"
 tail -n +"$((TRAINING_LINES + 1))" "$INPUT_FILE" > "$TEST_FILE"
