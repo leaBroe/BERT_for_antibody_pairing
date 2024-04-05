@@ -17,7 +17,7 @@ parser.add_argument("--rep_fasta_file", help="", type=str)
 parser.add_argument("--prefix", help="", type=str, default='CDRH3')
 
 args = parser.parse_args()
-main_dataset = args.main_dataset
+main_dataset = args.tsv_dataset
 rep_fasta_file = args.rep_fasta_file
 data = args.prefix #prefix to use
 
