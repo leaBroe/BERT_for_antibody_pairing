@@ -29,6 +29,7 @@ import warnings
 from dataclasses import dataclass, field
 from itertools import chain
 from typing import Optional
+import wandb
 
 import datasets
 import evaluate
@@ -154,6 +155,16 @@ class ModelArguments:
         },
     )
 
+    #edited
+    project_name: str = field(
+        default=False,
+        metadata={
+            "help": (
+                ""
+            )
+        },
+    )
+
     def __post_init__(self):
         if self.config_overrides is not None and (self.config_name is not None or self.model_name_or_path is not None):
             raise ValueError(
@@ -258,6 +269,8 @@ def main():
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
 
+    os.environ["WANDB_DISABLED"] = "false"
+
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
         # If we pass only one argument to the script and it's the path to a json file,
@@ -278,6 +291,9 @@ def main():
     # Sending telemetry. Tracking the example usage helps us better allocate resources to maintain them. The
     # information sent is the one passed as arguments along with your Python/PyTorch versions.
     send_example_telemetry("run_mlm", model_args, data_args)
+
+    # WANDB PROJECT NAME (default is hugginface) edited
+    os.environ["WANDB_PROJECT"] = model_args.project_name
 
     # Setup logging
     logging.basicConfig(
