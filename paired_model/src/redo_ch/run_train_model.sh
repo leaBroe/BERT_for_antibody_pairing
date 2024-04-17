@@ -4,16 +4,17 @@
 #SBATCH --job-name=paired_model_nsp
 
 #--config_name 'config3.json' \
+# --do_eval \
 
-python run_mlm.py \
+
+python run_mlm_nsp.py \
     --model_type 'roberta' \
     --tokenizer_name ./ProteinTokenizer \
-    --train_file /ibmm_data2/oas_database/paired_lea_tmp/heavy_model/train_test_val_datasets/heavy_all_seqs_train_no_ids.txt \
-    --validation_file /ibmm_data2/oas_database/paired_lea_tmp/heavy_model/train_test_val_datasets/heavy_all_seqs_val_no_ids.txt \
+    --train_file /ibmm_data2/oas_database/paired_lea_tmp/paired_model/src/redo_ch/test.txt \
+    --validation_file /ibmm_data2/oas_database/paired_lea_tmp/paired_model/src/redo_ch/val.txt \
     --per_device_train_batch_size 16 \
     --per_device_eval_batch_size 16 \
     --do_train \
-    --do_eval \
     --do_predict \
     --evaluation_strategy 'epoch' \
     --save_strategy 'epoch' \
