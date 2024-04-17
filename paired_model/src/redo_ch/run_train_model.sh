@@ -1,17 +1,20 @@
 #!/bin/bash
 
-#SBATCH --gres=gpu:a100:1
 #SBATCH --job-name=paired_model_nsp
+#SBATCH --output=paired_model_nsp%j.out
+#SBATCH --error=paired_model_nsp%j.err
 
 #--config_name 'config3.json' \
 # --do_eval \
+#     --validation_file /ibmm_data2/oas_database/paired_lea_tmp/paired_model/src/redo_ch/val.txt \
+#     --config_name 'config3.json' \
+
 
 
 python run_mlm_nsp.py \
     --model_type 'roberta' \
     --tokenizer_name ./ProteinTokenizer \
     --train_file /ibmm_data2/oas_database/paired_lea_tmp/paired_model/src/redo_ch/test.txt \
-    --validation_file /ibmm_data2/oas_database/paired_lea_tmp/paired_model/src/redo_ch/val.txt \
     --per_device_train_batch_size 16 \
     --per_device_eval_batch_size 16 \
     --do_train \
@@ -31,7 +34,6 @@ python run_mlm_nsp.py \
     --metric_for_best_model 'loss' \
     --line_by_line \
     --greater_is_better False \
-    --config_name 'config3.json' \
     --report_to 'wandb' \
     --max_seq_length 30 \
     --overwrite_output_dir \

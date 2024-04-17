@@ -381,11 +381,10 @@ def main():
     else:
         data_files = {}
         if data_args.train_file is not None:
-            #data_files["train"] = data_args.train_file
-            #extension = data_args.train_file.split(".")[-1]
-            train_data = TextDatasetForNextSentencePrediction(tokenizer=tokenizer, file_path=data_args.train_file, block_size=512, overwrite_cache=False, short_seq_probability=0.1, nsp_probability=0.5) #edited
-            data_files["train"] = train_data
+            data_files["train"] = data_args.train_file
             extension = data_args.train_file.split(".")[-1]
+            #data_files["train"] = train_data
+            #extension = data_args.train_file.split(".")[-1]
         if data_args.validation_file is not None:
             data_files["validation"] = data_args.validation_file
             extension = data_args.validation_file.split(".")[-1]
@@ -457,6 +456,20 @@ def main():
             "You are instantiating a new tokenizer from scratch. This is not supported by this script. "
             "You can do it from another script, save it, and load it from here, using --tokenizer_name."
         )
+    
+
+    #config.vocab_size = tokenizer.vocab_size
+    #tokenizer.vocab_size = config.vocab_size
+    print(f"config vocab size: {config.vocab_size}, tokenizer vocab size: {tokenizer.vocab_size}") # edited
+
+    # edited 
+    train_dataset = TextDatasetForNextSentencePrediction(
+        tokenizer=tokenizer, 
+        file_path=data_args.train_file, 
+        block_size=512, 
+        overwrite_cache=False, 
+        short_seq_probability=0.1, 
+        nsp_probability=0.5 ) # edited
 
     if model_args.model_name_or_path:
         torch_dtype = (
@@ -480,13 +493,15 @@ def main():
         logger.info("Training new model from scratch")
         #model = AutoModelForMaskedLM.from_config(config, trust_remote_code=model_args.trust_remote_code)
         #model = BertForPreTraining.from_config(config, trust_remote_code=model_args.trust_remote_code)
-        model= BertForPreTraining(config=config) #edited
+        model= BertForPreTraining(config=BertConfig(vocab_size=25)) #edited
 
     # We resize the embeddings only when necessary to avoid index errors. If you are creating a model from scratch
     # on a small vocab and want a smaller embedding size, remove this test.
     embedding_size = model.get_input_embeddings().weight.shape[0]
-    if len(tokenizer) > embedding_size:
-        model.resize_token_embeddings(len(tokenizer))
+    print(f"embedding size: {embedding_size}")
+    print(f"tokenizer size: {len(tokenizer)}")
+    #if len(tokenizer) > embedding_size: # edited commented out
+        #model.resize_token_embeddings(len(tokenizer))
 
     # Preprocessing the datasets.
     # First we tokenize all the texts.
@@ -504,7 +519,7 @@ def main():
                 " of 1024. If you would like to use a longer `block_size` up to `tokenizer.model_max_length` you can"
                 " override this default with `--block_size xxx`."
             )
-            max_seq_length = 1024
+            max_seq_length = 1024 
     else:
         if data_args.max_seq_length > tokenizer.model_max_length:
             logger.warning(
@@ -613,7 +628,7 @@ def main():
     if training_args.do_train:
         if "train" not in tokenized_datasets:
             raise ValueError("--do_train requires a train dataset")
-        train_dataset = tokenized_datasets["train"]
+        #train_dataset = tokenized_datasets["train"] # comment edited
         if data_args.max_train_samples is not None:
             max_train_samples = min(len(train_dataset), data_args.max_train_samples)
             train_dataset = train_dataset.select(range(max_train_samples))
@@ -677,7 +692,7 @@ def main():
             checkpoint = training_args.resume_from_checkpoint
         elif last_checkpoint is not None:
             checkpoint = last_checkpoint
-        train_result = trainer.train(resume_from_checkpoint=checkpoint)
+        train_result = trainer.train(resume_from_checkpoint=checkpoint) # train(resume_from_checkpoint=checkpoint) # edited
         trainer.save_model()  # Saves the tokenizer too for easy upload
         metrics = train_result.metrics
 
@@ -698,10 +713,10 @@ def main():
 
         max_eval_samples = data_args.max_eval_samples if data_args.max_eval_samples is not None else len(eval_dataset)
         metrics["eval_samples"] = min(max_eval_samples, len(eval_dataset))
-        try:
-            perplexity = math.exp(metrics["eval_loss"])
-        except OverflowError:
-            perplexity = float("inf")
+        # try: # edited commented out
+        #     perplexity = math.exp(metrics["eval_loss"])
+        # except OverflowError:
+        #     perplexity = float("inf")
         metrics["perplexity"] = perplexity
 
         trainer.log_metrics("eval", metrics)
