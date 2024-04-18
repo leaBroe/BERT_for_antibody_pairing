@@ -41,9 +41,9 @@ from transformers import (
     CONFIG_MAPPING,
     MODEL_FOR_MASKED_LM_MAPPING,
     AutoConfig,
-    #AutoModelForMaskedLM,
+    AutoModelForMaskedLM,
     #BertForNextSentencePrediction, #edited
-    BertForPreTraining, #edited
+    #BertForPreTraining, #edited
     AutoTokenizer,
     DataCollatorForLanguageModeling,
     HfArgumentParser,
