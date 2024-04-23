@@ -32,16 +32,16 @@ import copy
 
 #instantiate the tokenizer
 #tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-config = AutoConfig.from_pretrained(pretrained_model_name_or_path="ProteinTokenizer/config.json")
+#config = AutoConfig.from_pretrained(pretrained_model_name_or_path="ProteinTokenizer/config.json")
 tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path="ProteinTokenizer")
 
-PST = pytz.timezone('US/Pacific')
+PST = pytz.timezone('Europe/Zurich')
 
 #instantiate the model
 print("start loading model=",datetime.now(PST))
 #model = BertLMHeadModel.from_pretrained("bert-base-uncased")
 #model = BertForPreTraining.from_pretrained("bert-base-uncased")
-model = BertForPreTraining(config=config)
+model = BertForPreTraining(BertConfig())
 
 # define the arguments for the trainer
 training_args = TrainingArguments(
@@ -118,7 +118,7 @@ print("finished=",datetime.now(PST))
 os.environ["WANDB_PROJECT"] = "test_mlm_nsp"
 
 # define run name
-run_name = "bert_config"
+run_name = "custom_config"
 os.environ["WANDB_RUN_NAME"] = run_name
 
 # now do training
