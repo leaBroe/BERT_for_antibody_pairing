@@ -52,8 +52,12 @@ import copy
 # config.save_pretrained('UpdatedProteinTokenizer')
 
 # Load the updated tokenizer and configuration
-tokenizer = BertTokenizer.from_pretrained('UpdatedProteinTokenizer')
-config = BertConfig.from_json_file('UpdatedProteinTokenizer/config.json')
+tokenizer = AutoTokenizer.from_pretrained('UpdatedProteinTokenizer')
+config = AutoConfig.from_pretrained(pretrained_model_name_or_path="ProteinTokenizer/config.json")
+
+# print tokenizer and config
+print(f'tokenizer: {tokenizer}')
+print(f'config: {config}')
 
 
 PST = pytz.timezone('Europe/Zurich')
