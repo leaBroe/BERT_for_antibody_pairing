@@ -33,7 +33,28 @@ import copy
 #instantiate the tokenizer
 #tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
 #config = AutoConfig.from_pretrained(pretrained_model_name_or_path="ProteinTokenizer/config.json")
-tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path="ProteinTokenizer")
+# tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path="ProteinTokenizer", do_lower_case=False)
+
+# # Add new tokens (this updates the tokenizer's vocabulary as well)
+# new_tokens = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
+# tokenizer.add_tokens(new_tokens)
+
+# # Check that the new tokens were added to the tokenizer
+# print(tokenizer.additional_special_tokens)
+
+# # Save the updated tokenizer to a directory
+# tokenizer.save_pretrained('UpdatedProteinTokenizer')
+
+# config = BertConfig.from_json_file("ProteinTokenizer/config.json")
+# config.vocab_size = len(tokenizer)
+
+# # Save the updated configuration to the same directory as the tokenizer
+# config.save_pretrained('UpdatedProteinTokenizer')
+
+# Load the updated tokenizer and configuration
+tokenizer = BertTokenizer.from_pretrained('UpdatedProteinTokenizer')
+config = BertConfig.from_json_file('UpdatedProteinTokenizer/config.json')
+
 
 PST = pytz.timezone('Europe/Zurich')
 
@@ -41,7 +62,9 @@ PST = pytz.timezone('Europe/Zurich')
 print("start loading model=",datetime.now(PST))
 #model = BertLMHeadModel.from_pretrained("bert-base-uncased")
 #model = BertForPreTraining.from_pretrained("bert-base-uncased")
-model = BertForPreTraining(BertConfig())
+model = BertForPreTraining(config=config)
+
+
 
 # define the arguments for the trainer
 training_args = TrainingArguments(
@@ -53,28 +76,51 @@ training_args = TrainingArguments(
     weight_decay=0.01,               # strength of weight decay
     logging_dir='pytorch_finetuned_log',     # directory for storing logs
     do_train=True,
-    evaluation_strategy="steps",
+    eval_strategy="steps",
     eval_steps=2
 )
 
-# prepare the train_dataset
-print("start building train_dataset=",datetime.now(PST))
+def check_input_ids_validity(dataset, tokenizer):
+    vocab_size = tokenizer.vocab_size
+    for example in dataset:
+        # Extracting input_ids from each example
+        input_ids = example['input_ids'] if isinstance(example, dict) else example.input_ids
+        max_id = max(input_ids)
+        if max_id >= vocab_size:
+            raise ValueError(f"An input_id ({max_id}) exceeds the tokenizer's vocabulary size ({vocab_size}).")
+    print(f"All input_ids are within the vocabulary size.")
+
+
+
+# Prepare the train_dataset
+print("start building train_dataset=", datetime.now(PST))
 train_dataset = TextDatasetForNextSentencePrediction(
     tokenizer=tokenizer,
     file_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/src/redo_ch/test.txt",
     block_size=128
 )
 
-print("start building eval_dataset=",datetime.now(PST))
+# Check train_dataset input_ids
+print("Checking train_dataset input_ids...")
+check_input_ids_validity(train_dataset, tokenizer)
+
+# Prepare the eval_dataset
+print("start building eval_dataset=", datetime.now(PST))
 eval_dataset = TextDatasetForNextSentencePrediction(
     tokenizer=tokenizer,
     file_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/src/redo_ch/val.txt",
     block_size=128
 )
 
+# Check eval_dataset input_ids
+print("Checking eval_dataset input_ids...")
+check_input_ids_validity(eval_dataset, tokenizer)
+
+# Initialize the Data Collator
 data_collator = DataCollatorForLanguageModeling(
     tokenizer=tokenizer, mlm=True, mlm_probability=0.15
 )
+
 
 # Instantiate the trainer
 print("start building trainer=",datetime.now(PST))
@@ -118,7 +164,7 @@ print("finished=",datetime.now(PST))
 os.environ["WANDB_PROJECT"] = "test_mlm_nsp"
 
 # define run name
-run_name = "custom_config"
+run_name = "debugging"
 os.environ["WANDB_RUN_NAME"] = run_name
 
 # now do training
