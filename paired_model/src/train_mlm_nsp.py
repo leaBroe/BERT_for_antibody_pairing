@@ -205,6 +205,41 @@ for batch in train_data_loader:
     # Optionally, break after the first batch to just test the setup
     break
 
+# Example to check how the tokenizer handles one of your sequences
+sample_sequence = "QVQLQESGPGLVKPSETLSLTCTVSGGSISGFYWSWIRQSPGKGLE"
+tokens = tokenizer.tokenize(sample_sequence)
+token_ids = tokenizer.convert_tokens_to_ids(tokens)
+
+print("Tokens:", tokens)
+print("Token IDs:", token_ids)
+
+# turn txt fiel with sequences into a list of sequences
+def read_txt_file(file_path):
+    with open(file_path, 'r') as f:
+        lines = f.readlines()
+    return [line.strip() for line in lines]
+
+# Load the sequences from the txt file
+train_data = read_txt_file("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/src/redo_ch/test.txt")
+
+
+# Check if all characters are in the tokenizer's vocab
+unique_chars = set(''.join(train_data))  # Assuming train_data is a list of your sequences
+unknown_chars = [char for char in unique_chars if char not in tokenizer.get_vocab()]
+print("Unknown Characters:", unknown_chars)
+
+for batch in train_data_loader:
+    input_ids = batch['input_ids']
+    if torch.any(input_ids >= tokenizer.vocab_size):
+        print("Invalid input_ids detected:", input_ids)
+    try:
+        outputs = model(input_ids=input_ids, attention_mask=batch['attention_mask'])
+    except IndexError as e:
+        print(f"Caught IndexError: {str(e)}")
+        print(f"Problematic input_ids: {input_ids}")
+        break  # Break or handle error accordingly
+
+
 
 # If everything is verified, start the training
 print("Starting training...")
