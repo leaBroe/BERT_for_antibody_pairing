@@ -52,8 +52,8 @@ import copy
 # config.save_pretrained('UpdatedProteinTokenizer')
 
 # Load the updated tokenizer and configuration
-tokenizer = AutoTokenizer.from_pretrained('UpdatedProteinTokenizer')
-config = AutoConfig.from_pretrained(pretrained_model_name_or_path="ProteinTokenizer/config.json")
+tokenizer = AutoTokenizer.from_pretrained('UpdatedProteinTokenizer', force_download=True)
+config = AutoConfig.from_pretrained(pretrained_model_name_or_path="UpdatedProteinTokenizer/config.json", vocab_size=len(tokenizer), force_download=True)
 
 # print tokenizer and config
 print(f'tokenizer: {tokenizer}')
@@ -68,6 +68,11 @@ print("start loading model=",datetime.now(PST))
 #model = BertForPreTraining.from_pretrained("bert-base-uncased")
 model = BertForPreTraining(config=config)
 
+# Load your model's configuration and check the vocab_size parameter. It must match the total number of tokens in your tokenizer’s vocabulary.
+print(f"Model's vocab_size: {model.config.vocab_size}")
+print(f"Tokenizer's vocab_size: {tokenizer.vocab_size}")
+
+print("Model's vocab size from embeddings:", model.bert.embeddings.word_embeddings.num_embeddings)
 
 
 # define the arguments for the trainer
