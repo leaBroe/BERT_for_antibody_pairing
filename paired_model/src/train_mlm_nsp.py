@@ -176,5 +176,39 @@ os.environ["WANDB_PROJECT"] = "test_mlm_nsp"
 run_name = "debugging"
 os.environ["WANDB_RUN_NAME"] = run_name
 
+# Log input_ids right before training to ensure they are all valid
+def log_input_ids(data_loader):
+    for batch in data_loader:
+        input_ids = batch['input_ids']
+        if torch.any(input_ids >= tokenizer.vocab_size):
+            print("Invalid input_ids detected:", input_ids)
+        assert torch.all(input_ids < tokenizer.vocab_size), f"Found input_ids >= vocab size: {input_ids.max().item()}"
+
+# Create DataLoader for debugging
+train_data_loader = DataLoader(train_dataset, batch_size=16, collate_fn=data_collator)
+
+print("Verifying all input_ids in DataLoader before training...")
+log_input_ids(train_data_loader)  # This will raise an error if any input_id is out of range
+
+# Testing DataLoader outputs
+for batch in train_data_loader:
+    input_ids = batch['input_ids']
+    attention_mask = batch['attention_mask']
+    print(f"Batch input_ids shape: {input_ids.shape}")  # Should show consistent shapes within a batch
+    print(f"Batch attention mask shape: {attention_mask.shape}")  # Verify attention masks are correct
+
+    # Check if any input_id in the batch exceeds the tokenizer's vocab size
+    if torch.any(input_ids >= tokenizer.vocab_size):
+        print("Invalid input_ids detected:", input_ids)
+        break
+
+    # Optionally, break after the first batch to just test the setup
+    break
+
+
+# If everything is verified, start the training
+print("Starting training...")
+
+
 # now do training
 trainer.train()
