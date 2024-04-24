@@ -28,6 +28,9 @@ import csv
 import pickle
 import re
 import copy
+from torch.optim import AdamW
+from transformers import get_scheduler
+
 #BUCKET_NAME = 'clinical_bert_bucket'
 
 #instantiate the tokenizer
@@ -51,9 +54,17 @@ import copy
 # # Save the updated configuration to the same directory as the tokenizer
 # config.save_pretrained('UpdatedProteinTokenizer')
 
+os.environ['CUDA_VISIBLE_DEVICES'] ='0'
+
+# print used device cpu or cuda
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f'device: {device}')
+
 # Load the updated tokenizer and configuration
 tokenizer = AutoTokenizer.from_pretrained('UpdatedProteinTokenizer', force_download=True)
 config = AutoConfig.from_pretrained(pretrained_model_name_or_path="UpdatedProteinTokenizer/config.json", vocab_size=len(tokenizer), force_download=True)
+
+#input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device) # This line.
 
 # print tokenizer and config
 print(f'tokenizer: {tokenizer}')
@@ -66,7 +77,18 @@ PST = pytz.timezone('Europe/Zurich')
 print("start loading model=",datetime.now(PST))
 #model = BertLMHeadModel.from_pretrained("bert-base-uncased")
 #model = BertForPreTraining.from_pretrained("bert-base-uncased")
+
+config.type_vocab_size = 2
+
+# Load and configure your model
 model = BertForPreTraining(config=config)
+
+# Move model to the appropriate device (GPU or CPU)
+model.to(device)  # 'device' is determined by torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# Now you can print this to confirm
+print(f"Model is on device: {next(model.parameters()).device}")  # It will show cuda:0 if on GPU
+
 
 # Load your model's configuration and check the vocab_size parameter. It must match the total number of tokens in your tokenizer’s vocabulary.
 print(f"Model's vocab_size: {model.config.vocab_size}")
@@ -105,7 +127,7 @@ def check_input_ids_validity(dataset, tokenizer):
 print("start building train_dataset=", datetime.now(PST))
 train_dataset = TextDatasetForNextSentencePrediction(
     tokenizer=tokenizer,
-    file_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/src/redo_ch/test.txt",
+    file_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_train_for_nsp.txt",
     block_size=128
 )
 
@@ -117,7 +139,7 @@ check_input_ids_validity(train_dataset, tokenizer)
 print("start building eval_dataset=", datetime.now(PST))
 eval_dataset = TextDatasetForNextSentencePrediction(
     tokenizer=tokenizer,
-    file_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/src/redo_ch/val.txt",
+    file_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_val_for_nsp.txt",
     block_size=128
 )
 
@@ -130,16 +152,6 @@ data_collator = DataCollatorForLanguageModeling(
     tokenizer=tokenizer, mlm=True, mlm_probability=0.15
 )
 
-
-# Instantiate the trainer
-print("start building trainer=",datetime.now(PST))
-trainer = Trainer(
-    model=model,                         # the instantiated 🤗 Transformers model to be trained
-    args=training_args,                  # training arguments, defined above
-    train_dataset=train_dataset,
-    data_collator=data_collator,
-    eval_dataset=eval_dataset            # evaluation dataset
-)
 
 def compute_metrics(pred):
     labels = pred.label_ids
@@ -168,12 +180,26 @@ def compute_metrics(eval_preds):
     preds = preds[mask]
     return metric.compute(predictions=preds, references=labels)
 
+model.to(device)
+
+# Instantiate the trainer
+print("start building trainer=",datetime.now(PST))
+trainer = Trainer(
+    model=model,                         # the instantiated 🤗 Transformers model to be trained
+    args=training_args,                  # training arguments, defined above
+    train_dataset=train_dataset,
+    data_collator=data_collator,
+    eval_dataset=eval_dataset,           # evaluation dataset
+    compute_metrics=compute_metrics  # pass the compute_metrics function     
+)
+
+
 print("finished=",datetime.now(PST))
 
-os.environ["WANDB_PROJECT"] = "test_mlm_nsp"
+os.environ["WANDB_PROJECT"] = "paired_model_nsp_mlm_full_seqs"
 
 # define run name
-run_name = "debugging"
+run_name = "compute_metrics"
 os.environ["WANDB_RUN_NAME"] = run_name
 
 # Log input_ids right before training to ensure they are all valid
@@ -183,6 +209,8 @@ def log_input_ids(data_loader):
         if torch.any(input_ids >= tokenizer.vocab_size):
             print("Invalid input_ids detected:", input_ids)
         assert torch.all(input_ids < tokenizer.vocab_size), f"Found input_ids >= vocab size: {input_ids.max().item()}"
+
+optimizer = AdamW(model.parameters(), lr=5e-5)
 
 # Create DataLoader for debugging
 train_data_loader = DataLoader(train_dataset, batch_size=16, collate_fn=data_collator)
@@ -222,28 +250,88 @@ def read_txt_file(file_path):
 # Load the sequences from the txt file
 train_data = read_txt_file("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/src/redo_ch/test.txt")
 
-
 # Check if all characters are in the tokenizer's vocab
 unique_chars = set(''.join(train_data))  # Assuming train_data is a list of your sequences
 unknown_chars = [char for char in unique_chars if char not in tokenizer.get_vocab()]
 print("Unknown Characters:", unknown_chars)
 
-for batch in train_data_loader:
-    input_ids = batch['input_ids']
-    if torch.any(input_ids >= tokenizer.vocab_size):
-        print("Invalid input_ids detected:", input_ids)
-    try:
-        outputs = model(input_ids=input_ids, attention_mask=batch['attention_mask'])
-    except IndexError as e:
-        print(f"Caught IndexError: {str(e)}")
-        print(f"Problematic input_ids: {input_ids}")
-        break  # Break or handle error accordingly
+# for batch in train_data_loader:
+#     input_ids = batch['input_ids']
+#     if torch.any(input_ids >= tokenizer.vocab_size):
+#         print("Invalid input_ids detected:", input_ids)
+#     try:
+#         outputs = model(input_ids=input_ids, attention_mask=batch['attention_mask'])
+#     except IndexError as e:
+#         print(f"Caught IndexError: {str(e)}")
+#         print(f"Problematic input_ids: {input_ids}")
+#         break  # Break or handle error accordingly
 
+# Example function to verify token type ids
+def verify_token_type_ids(data_loader):
+    for i, batch in enumerate(data_loader):
+        input_ids = batch['input_ids']
+        token_type_ids = batch.get('token_type_ids', torch.zeros_like(input_ids))  # Assuming default of all zeros if not provided
+        
+        # Printing unique token type ids to verify them
+        print(f"Batch {i}: Unique token type ids:", torch.unique(token_type_ids))
+
+        # Optionally check max input id
+        if input_ids.max().item() >= tokenizer.vocab_size:
+            print("Error: input_ids exceed vocab size")
+            break
+
+        # Print a message if everything seems fine
+        print(f"Batch {i}: All token type IDs are within expected range.")
+        
+        # Breaking after a few batches for demonstration
+        if i > 5:  # Check first 5 batches
+            break
+
+# Run this function to verify token type ids in your DataLoader
+verify_token_type_ids(train_data_loader)
 
 
 # If everything is verified, start the training
 print("Starting training...")
 
+################# Custom Training Loop #################
+
+# Prepare the learning rate scheduler
+""" num_training_steps = len(train_data_loader) * 3  # 3 is the number of epochs
+lr_scheduler = get_scheduler(
+    "linear",
+    optimizer=optimizer,
+    num_warmup_steps=500,
+    num_training_steps=num_training_steps
+)
+
+model.train()
+for epoch in range(3):  # Loop over epochs
+    for batch in train_data_loader:
+        batch = {k: v.to(model.device) for k, v in batch.items()}
+        outputs = model(**batch)
+        loss = outputs.loss
+
+        # Perform backpropagation
+        loss.backward()
+
+        # Update parameters and learning rate
+        optimizer.step()
+        lr_scheduler.step()
+        optimizer.zero_grad()
+
+        print(f"Epoch: {epoch}, Loss: {loss.item()}")
+
+        try:
+            outputs = model(**batch)
+            loss = outputs.loss
+        except RuntimeError as e:
+            print(f"Runtime error: {e}")
+            print(f"Batch input IDs: {batch['input_ids']}")
+            continue  # Skip this batch or additional handling
+
+ """
+################# Training Loop from transformers #################
 
 # now do training
 trainer.train()
