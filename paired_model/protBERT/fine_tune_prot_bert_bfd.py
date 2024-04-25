@@ -9,6 +9,7 @@ import evaluate
 from datetime import datetime
 import pytz
 from sklearn.metrics import accuracy_score
+from transformers import AutoConfig
 
 
 os.environ["WANDB_PROJECT"] = "test_prot_bert_bfd"
@@ -23,7 +24,9 @@ print(f'device: {device}')
 
 # Load the ProtBERT tokenizer and model
 tokenizer = BertTokenizer.from_pretrained('Rostlab/prot_bert_bfd', do_lower_case=False)
-model = BertForPreTraining.from_pretrained('Rostlab/prot_bert_bfd')
+config = AutoConfig.from_pretrained(pretrained_model_name_or_path="tokenizer/config.json")
+model = BertForPreTraining.from_pretrained('Rostlab/prot_bert_bfd', config=config)
+
 model.to(device)
 print(f"Model is on device: {next(model.parameters()).device}")
 
@@ -62,12 +65,52 @@ accuracy_metric = evaluate.load("accuracy")
 
 # def compute_metrics(eval_preds):
 #     preds, labels = eval_preds
+#     # print labels and preds
+#     print(f"labels: {labels}")
+#     print(f"preds: {preds}")
 #     labels = labels.reshape(-1)
 #     preds = preds.reshape(-1)
 #     mask = labels != -100
 #     labels = labels[mask]
 #     preds = preds[mask]
 #     return accuracy_metric.compute(predictions=preds, references=labels)
+
+
+def compute_metrics(eval_preds):
+    preds, labels = eval_preds
+    print(f"Type of preds: {type(preds)}, Preds structure: {len(preds)} if isinstance(preds, tuple) else 'Not a tuple'")
+    print(f"Type of labels: {type(labels)}, Labels structure: {len(labels)} if isinstance(labels, tuple) else 'Not a tuple'")
+
+    # Assuming preds and labels are tuples of (MLM logits, NSP logits) and (MLM labels, NSP labels)
+    if isinstance(preds, tuple) and isinstance(labels, tuple):
+        mlm_logits, nsp_logits = preds
+        mlm_labels, nsp_labels = labels
+
+        # Ensure nsp_logits is a tensor
+        if isinstance(nsp_logits, np.ndarray):
+            nsp_logits = torch.tensor(nsp_logits)
+
+        # Apply softmax to convert logits to probabilities
+        nsp_probs = torch.nn.functional.softmax(nsp_logits, dim=-1)
+        nsp_preds = torch.argmax(nsp_probs, dim=-1).detach().cpu().numpy()
+
+        # Ensure nsp_labels is a numpy array for accuracy calculation
+        if isinstance(nsp_labels, torch.Tensor):
+            nsp_labels = nsp_labels.detach().cpu().numpy()
+
+        # Calculate accuracy for NSP
+        nsp_accuracy = accuracy_score(nsp_labels, nsp_preds)
+
+        # print the accuracy
+        print(f"NSP Accuracy: {nsp_accuracy}")
+
+        return {
+            'accuracy': nsp_accuracy
+        }
+    else:
+        raise TypeError("The predictions and labels must be tuples of (MLM logits/labels, NSP logits/labels).")
+
+
 
 # def compute_metrics(eval_preds):
 #     preds, labels = eval_preds
@@ -99,23 +142,23 @@ accuracy_metric = evaluate.load("accuracy")
 #     return accuracy_metric.compute(predictions=preds, references=labels)
 
 
-def compute_metrics(eval_preds):
-    preds, labels = eval_preds
+# def compute_metrics(eval_preds):
+#     preds, labels = eval_preds
     
-    # Unpack the tuple for MLM and NSP
-    mlm_preds, nsp_preds = preds
-    mlm_labels, nsp_labels = labels
+#     # Unpack the tuple for MLM and NSP
+#     mlm_preds, nsp_preds = preds
+#     mlm_labels, nsp_labels = labels
 
-    # For MLM: We ignore since you are mainly interested in NSP for accuracy calculation
-    # For NSP: Calculate accuracy
-    nsp_preds = np.argmax(nsp_preds, axis=1)  # Select the class with the highest probability
+#     # For MLM: We ignore since you are mainly interested in NSP for accuracy calculation
+#     # For NSP: Calculate accuracy
+#     nsp_preds = np.argmax(nsp_preds, axis=1)  # Select the class with the highest probability
 
-    # Compute accuracy for NSP
-    nsp_accuracy = accuracy_score(nsp_labels, nsp_preds)
+#     # Compute accuracy for NSP
+#     nsp_accuracy = accuracy_score(nsp_labels, nsp_preds)
 
-    return {
-        'accuracy': nsp_accuracy  # You can return more metrics as needed
-    }
+#     return {
+#         'accuracy': nsp_accuracy  # You can return more metrics as needed
+#     }
 
 
 
