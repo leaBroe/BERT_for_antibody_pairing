@@ -20,7 +20,7 @@ training_sequences = load_sequences('/ibmm_data2/oas_database/paired_lea_tmp/lig
 test_sequences = load_sequences('/ibmm_data2/oas_database/paired_lea_tmp/light_model/data/test_set_test.txt')
 
 
-amino_acids = 'ACDEFGHIKLMNPQRSTVWY'
+amino_acids = 'LAGVESIKRDTPNQFYMHCWXUBZO'
 special_tokens = {'[PAD]': 0, '[UNK]': 1, '[CLS]': 2, '[SEP]': 3, '[MASK]': 4}
 
 # Create a dictionary mapping each amino acid and special token to a unique integer

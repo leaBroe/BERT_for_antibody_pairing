@@ -11,19 +11,15 @@ import wandb
 
 
 # Initialize WandB
-wandb.init(project="test_prot_bert_mlm_only", name="mlm_only_small_dataset")
+wandb.init(project="test_prot_bert_mlm_only", name="full_seqs")
 
 
 # Check if CUDA (GPU support) is available and set the device accordingly
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Set environment variables for Weights and Biases
-# os.environ["WANDB_PROJECT"] = "test_prot_bert_mlm_only"
-# os.environ["WANDB_RUN_NAME"] = "mlm_only_small_dataset"
-
 print(f"Using {device} device for training.")
 
-amino_acids = 'ACDEFGHIKLMNPQRSTVWY'
+amino_acids = 'LAGVESIKRDTPNQFYMHCWXUBZO'
 special_tokens = {'[PAD]': 0, '[UNK]': 1, '[CLS]': 2, '[SEP]': 3, '[MASK]': 4}
 
 # Create a dictionary mapping each amino acid and special token to a unique integer
@@ -37,8 +33,12 @@ max_len = 128
 #test_sequences = load_sequences("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/protBERT/data/small_val_set.txt")
 
 # small subset of the training and validation sets (larger)
-training_sequences = load_sequences("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/protBERT/data/small_subset_train_larger.txt")
-test_sequences = load_sequences("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/protBERT/data/small_subset_val_larger.txt")
+#training_sequences = load_sequences("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/protBERT/data/small_subset_train_larger.txt")
+#test_sequences = load_sequences("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/protBERT/data/small_subset_val_larger.txt")
+
+# full training and validation sets
+training_sequences = load_sequences("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids.txt")
+test_sequences = load_sequences("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids.txt")
 
 tokenized_training_sequences, training_labels, training_masks = tokenize_and_mask_sequences(training_sequences, aa_to_id, max_len=max_len)
 tokenized_test_sequences, test_labels, test_masks = tokenize_and_mask_sequences(test_sequences, aa_to_id, max_len=max_len)
