@@ -13,9 +13,15 @@ import wandb
 
 # initialize Weights & Biases
 
-wandb.init(project='paired_classification_heavy_light', name='test')
+wandb.init(project='paired_classification_heavy_light', name='all_seqs')
 
 logging.basicConfig(level=logging.INFO)
+
+# Setup model
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# print device
+print(f"Device: {device}")
 
 # the input data is a csv file with columns 'heavy', 'light', 'label'
 # 1 for paired, 0 for not paired
@@ -124,8 +130,8 @@ def evaluate(model, data_loader, device):
     )
     f1 = f1_score(
         actual_labels, predictions, average='binary', zero_division=1
-    ) 
-    
+    )
+
     average_loss = total_loss / len(data_loader)
 
     metrics = {
@@ -173,27 +179,25 @@ batch_size = 16
 num_epochs = 4
 learning_rate = 2e-5
 
-data_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/small_training_set_classification.txt"
-heavy_chains, light_chains, labels = load_paired_data(data_file)
-train_heavy, val_heavy, train_light, val_light, train_labels, val_labels = train_test_split(
-    heavy_chains, light_chains, labels, test_size=0.2, random_state=42)
+# Load the training and validation data from separate files
+train_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_train_with_unpaired.csv"
+val_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_val_with_unpaired.csv"
 
+train_heavy, train_light, train_labels = load_paired_data(train_file)
+val_heavy, val_light, val_labels = load_paired_data(val_file)
+
+# Tokenizer and DataLoader setup
 tokenizer = BertTokenizer.from_pretrained(bert_model_name)
 train_dataset = PairedChainsDataset(train_heavy, train_light, train_labels, tokenizer, max_length)
 val_dataset = PairedChainsDataset(val_heavy, val_light, val_labels, tokenizer, max_length)
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 val_dataloader = DataLoader(val_dataset, batch_size=batch_size)
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# print the device
-print(f'Using device: {device}')
-
 model = BERTPairedClassifier(bert_model_name, num_classes).to(device)
 
 optimizer = AdamW(model.parameters(), lr=learning_rate)
 total_steps = len(train_dataloader) * num_epochs
 scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
-
 
 # Log hyperparameters to Weights & Biases
 wandb.config.update({
@@ -217,6 +221,9 @@ for epoch in range(num_epochs):
     logging.info(f"Recall: {metrics['recall']:.4f}")
     logging.info(metrics['classification_report'])
 
+# Save the model
+torch.save(model.state_dict(), 'paired_antibody_classifier_state_dict.pth')
+wandb.save('paired_antibody_classifier_state_dict.pth')
 
 # Test pairing prediction
 test_heavy = "GLEWIAYIYFSGSTNYNPSLKSRVTLSVDTSKNQFSLKLSSVTAADSAVYYCARDVGPYNSISPGRYYFDYWGPGTLVTVSS"
