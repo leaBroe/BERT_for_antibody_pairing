@@ -190,7 +190,7 @@ trainer = Trainer(
     train_dataset=train_dataset,
     data_collator=data_collator,
     eval_dataset=eval_dataset,           # evaluation dataset
-    compute_metrics=compute_metrics  # pass the compute_metrics function     
+    #compute_metrics=compute_metrics  # pass the compute_metrics function     
 )
 
 
