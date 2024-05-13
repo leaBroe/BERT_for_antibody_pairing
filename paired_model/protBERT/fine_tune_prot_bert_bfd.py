@@ -1,7 +1,7 @@
 import os
 import torch
 from torch.utils.data import DataLoader
-from transformers import BertForPreTraining, Trainer, TrainingArguments
+from transformers import BertForPreTraining, Trainer, TrainingArguments, BertForMaskedLM, BertTokenizer
 from transformers import AutoTokenizer, DataCollatorForLanguageModeling
 from transformers.data.datasets.language_modeling import TextDatasetForNextSentencePrediction
 import evaluate
@@ -10,7 +10,7 @@ import numpy as np
 
 # Set environment variables for Weights and Biases
 os.environ["WANDB_PROJECT"] = "test_prot_bert_bfd"
-os.environ["WANDB_RUN_NAME"] = "test_prot_bert_bfd"
+os.environ["WANDB_RUN_NAME"] = "test_prot_bert_bfd_no_metrics_function"
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 # Define device based on CUDA availability
@@ -18,8 +18,10 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f'device: {device}')
 
 # Load the tokenizer and model from Hugging Face's Transformers
-tokenizer = AutoTokenizer.from_pretrained('Rostlab/prot_bert_bfd', do_lower_case=False)
-model = BertForPreTraining.from_pretrained('Rostlab/prot_bert_bfd')
+#tokenizer = AutoTokenizer.from_pretrained('Rostlab/prot_bert_bfd', do_lower_case=False)
+tokenizer = BertTokenizer.from_pretrained('Rostlab/prot_bert_bfd')
+#model = BertForPreTraining.from_pretrained('Rostlab/prot_bert_bfd')
+model = BertForMaskedLM.from_pretrained('Rostlab/prot_bert_bfd')
 model.to(device)
 print(f"Model is on device: {next(model.parameters()).device}")
 
@@ -44,28 +46,35 @@ def prepare_dataset(file_path, tokenizer):
         block_size=128
     )
 
+# small subset of the training and validation sets
 #train_dataset = prepare_dataset("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/protBERT/data/small_training_set.txt", tokenizer)
 #eval_dataset = prepare_dataset("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/protBERT/data/small_val_set.txt", tokenizer)
 
+# small subset of the training and validation sets (larger)
+#train_dataset = prepare_dataset("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/protBERT/data/small_subset_train_larger.txt", tokenizer)
+#eval_dataset = prepare_dataset("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/protBERT/data/small_subset_val_larger.txt", tokenizer)
+
+# full training and validation sets
 train_dataset = prepare_dataset("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids.txt", tokenizer)
 eval_dataset = prepare_dataset("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids.txt", tokenizer)
+
 
 
 data_collator = DataCollatorForLanguageModeling(
     tokenizer=tokenizer, mlm=True, mlm_probability=0.15
 )
 
-# def compute_metrics(pred):
-#     labels = pred.label_ids
-#     preds = pred.predictions.argmax(-1)
-#     precision, recall, f1, _ = precision_recall_fscore_support(labels, preds, average='binary')
-#     acc = accuracy_score(labels, preds)
-#     return {
-#         'accuracy': acc,
-#         'f1': f1,
-#         'precision': precision,
-#         'recall': recall
-#     }
+def compute_metrics(pred):
+    labels = pred.label_ids
+    preds = pred.predictions.argmax(-1)
+    precision, recall, f1, _ = precision_recall_fscore_support(labels, preds, average='binary')
+    acc = accuracy_score(labels, preds)
+    return {
+        'accuracy': acc,
+        'f1': f1,
+        'precision': precision,
+        'recall': recall
+    }
 
 # def compute_metrics(pred):
 #     # Extract MLM logits and NSP logits from the predictions tuple
@@ -100,30 +109,30 @@ data_collator = DataCollatorForLanguageModeling(
 #     }
 
 
-def compute_metrics(pred):
-    mlm_logits, nsp_logits = pred.predictions
+# def compute_metrics(pred):
+#     mlm_logits, nsp_logits = pred.predictions
 
-    mlm_labels, nsp_labels = pred.label_ids
+#     mlm_labels, nsp_labels = pred.label_ids
 
-    # Check if nsp_logits is a numpy array and convert it to a tensor if it is
-    if isinstance(nsp_logits, np.ndarray):
-        nsp_logits = torch.tensor(nsp_logits)
+#     # Check if nsp_logits is a numpy array and convert it to a tensor if it is
+#     if isinstance(nsp_logits, np.ndarray):
+#         nsp_logits = torch.tensor(nsp_logits)
 
-    # Applying softmax to convert logits to probabilities
-    nsp_probs = torch.nn.functional.softmax(nsp_logits, dim=-1)
-    nsp_preds = torch.argmax(nsp_probs, dim=-1).detach().cpu().numpy()
+#     # Applying softmax to convert logits to probabilities
+#     nsp_probs = torch.nn.functional.softmax(nsp_logits, dim=-1)
+#     nsp_preds = torch.argmax(nsp_probs, dim=-1).detach().cpu().numpy()
 
-    if isinstance(nsp_labels, torch.Tensor):
-        nsp_labels = nsp_labels.detach().cpu().numpy()
+#     if isinstance(nsp_labels, torch.Tensor):
+#         nsp_labels = nsp_labels.detach().cpu().numpy()
 
-    precision, recall, f1, _ = precision_recall_fscore_support(nsp_labels, nsp_preds, average='binary')
-    acc = accuracy_score(nsp_labels, nsp_preds)
-    return {
-        'accuracy': acc,
-        'f1': f1,
-        'precision': precision,
-        'recall': recall
-    }
+#     precision, recall, f1, _ = precision_recall_fscore_support(nsp_labels, nsp_preds, average='binary')
+#     acc = accuracy_score(nsp_labels, nsp_preds)
+#     return {
+#         'accuracy': acc,
+#         'f1': f1,
+#         'precision': precision,
+#         'recall': recall
+#     }
 
 
 metric = evaluate.load("accuracy", )
@@ -135,9 +144,9 @@ trainer = Trainer(
     train_dataset=train_dataset,
     eval_dataset=eval_dataset,
     data_collator=data_collator,
-    compute_metrics=compute_metrics
+    #compute_metrics=compute_metrics
 )
 
 trainer.train()
-evaluation_results = trainer.evaluate(eval_dataset=eval_dataset)
-print(evaluation_results)
+#evaluation_results = trainer.evaluate(eval_dataset=eval_dataset)
+#print(evaluation_results)
