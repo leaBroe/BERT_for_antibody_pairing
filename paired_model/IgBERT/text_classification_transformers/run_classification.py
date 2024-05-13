@@ -253,6 +253,17 @@ class ModelArguments:
             )
         },
     )
+
+    # edited by me
+    project_name: str = field(
+        default=False,
+        metadata={
+            "help": (
+                ""
+            )
+        },
+    )
+
     ignore_mismatched_sizes: bool = field(
         default=False,
         metadata={"help": "Will enable to load a pretrained model whose head dimensions are different."},
@@ -277,6 +288,8 @@ def main():
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
 
+    os.environ["WANDB_DISABLED"] = "false" # edited by me
+
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
         # If we pass only one argument to the script and it's the path to a json file,
@@ -297,6 +310,9 @@ def main():
     # Sending telemetry. Tracking the example usage helps us better allocate resources to maintain them. The
     # information sent is the one passed as arguments along with your Python/PyTorch versions.
     send_example_telemetry("run_classification", model_args, data_args)
+
+    # WANDB PROJECT NAME (default is hugginface) edited
+    os.environ["WANDB_PROJECT"] = model_args.project_name
 
     # Setup logging
     logging.basicConfig(
