@@ -99,7 +99,7 @@ print("Model's vocab size from embeddings:", model.bert.embeddings.word_embeddin
 
 # define the arguments for the trainer
 training_args = TrainingArguments(
-    output_dir='pytorch_finetuned_model',          # output directory
+    output_dir='nsp_mlm_pairedlr_5e-7',          # output directory
     num_train_epochs=3,              # total # of training epochs
     per_device_train_batch_size=16,  # batch size per device during training (try 16 if needed)
     per_device_eval_batch_size=64,   # batch size for evaluation
@@ -169,16 +169,16 @@ def compute_metrics(pred):
 metric = evaluate.load("accuracy", )
 
 
-def compute_metrics(eval_preds):
-    preds, labels = eval_preds
-    # preds have the same shape as the labels, after the argmax(-1) has been calculated
-    # by preprocess_logits_for_metrics
-    labels = labels.reshape(-1)
-    preds = preds.reshape(-1)
-    mask = labels != -100
-    labels = labels[mask]
-    preds = preds[mask]
-    return metric.compute(predictions=preds, references=labels)
+# def compute_metrics(eval_preds):
+#     preds, labels = eval_preds
+#     # preds have the same shape as the labels, after the argmax(-1) has been calculated
+#     # by preprocess_logits_for_metrics
+#     labels = labels.reshape(-1)
+#     preds = preds.reshape(-1)
+#     mask = labels != -100
+#     labels = labels[mask]
+#     preds = preds[mask]
+#     return metric.compute(predictions=preds, references=labels)
 
 model.to(device)
 
@@ -210,7 +210,7 @@ def log_input_ids(data_loader):
             print("Invalid input_ids detected:", input_ids)
         assert torch.all(input_ids < tokenizer.vocab_size), f"Found input_ids >= vocab size: {input_ids.max().item()}"
 
-optimizer = AdamW(model.parameters(), lr=5e-5)
+optimizer = AdamW(model.parameters(), lr=5e-7)
 
 # Create DataLoader for debugging
 train_data_loader = DataLoader(train_dataset, batch_size=16, collate_fn=data_collator)
