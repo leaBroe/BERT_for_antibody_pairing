@@ -6,7 +6,10 @@ from sklearn.model_selection import train_test_split
 # heavy and light chains and adds a 0 for unpaired. In this way, the sequences are not shared between the training, validation and test files (run the script for each training, test and val file separately). 
 
 # Load the data
-file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids.txt"
+#file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids.txt"
+#file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids.txt"
+file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids.txt"
+
 with open(file_path, "r") as f:
     data = f.readlines()
 
@@ -34,6 +37,8 @@ random.shuffle(combined_data)
 df = pd.DataFrame(combined_data, columns=["heavy", "light", "label"])
 
 # save the dataset
-df.to_csv("paired_full_seqs_sep_train_with_unpaired.csv", index=False)
+#df.to_csv("paired_full_seqs_sep_train_with_unpaired.csv", index=False)
+#df.to_csv("paired_full_seqs_sep_test_with_unpaired.csv", index=False)
+df.to_csv("paired_full_seqs_sep_val_with_unpaired.csv", index=False)
 
 print("Dataset saved successfully!")

@@ -13,7 +13,7 @@ import wandb
 
 # initialize Weights & Biases
 
-wandb.init(project='paired_classification_heavy_light', name='all_seqs')
+wandb.init(project='paired_classification_heavy_light', name='igbert_full_1e-2')
 
 logging.basicConfig(level=logging.INFO)
 
@@ -74,7 +74,7 @@ class BERTPairedClassifier(nn.Module):
         super(BERTPairedClassifier, self).__init__()
         self.bert = BertModel.from_pretrained(bert_model_name)
         self.dropout = nn.Dropout(0.1)
-        self.fc = nn.Linear(self.bert.config.hidden_size, num_classes)
+        self.fc = nn.Linear(self.bert.config.hidden_size, num_classes) # linear layer that uses the pooled output to compute logits for the final classification
 
     def forward(self, input_ids, attention_mask):
         outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
@@ -83,6 +83,7 @@ class BERTPairedClassifier(nn.Module):
         logits = self.fc(x)
         return logits
 
+# num classes 1 
 
 def train(model, data_loader, optimizer, scheduler, device):
     model.train()
@@ -108,12 +109,19 @@ def evaluate(model, data_loader, device):
     predictions = []
     actual_labels = []
     total_loss = 0
+    loss_fn = nn.CrossEntropyLoss()  # Define the loss function
+
     with torch.no_grad():
         for batch in data_loader:
             input_ids = batch['input_ids'].to(device)
             attention_mask = batch['attention_mask'].to(device)
             labels = batch['label'].to(device)
             outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+
+            # Calculate loss
+            loss = loss_fn(outputs, labels)
+            total_loss += loss.item()
+
             _, preds = torch.max(outputs, dim=1)
             predictions.extend(preds.cpu().tolist())
             actual_labels.extend(labels.cpu().tolist())
@@ -132,7 +140,7 @@ def evaluate(model, data_loader, device):
         actual_labels, predictions, average='binary', zero_division=1
     )
 
-    average_loss = total_loss / len(data_loader)
+    average_loss = total_loss / len(data_loader) if len(data_loader) > 0 else 0
 
     metrics = {
         'accuracy': accuracy,
@@ -152,7 +160,8 @@ def evaluate(model, data_loader, device):
     return metrics
 
 
-def predict_pairing(heavy, light, model, tokenizer, device, max_length=128):
+
+def predict_pairing(heavy, light, model, tokenizer, device, max_length=512):
     model.eval()
     encoding = tokenizer(
         heavy, light,
@@ -173,15 +182,19 @@ def predict_pairing(heavy, light, model, tokenizer, device, max_length=128):
 
 # Set up parameters
 bert_model_name = 'Exscientia/IgBERT'
+#bert_model_name = 'Rostlab/prot_bert_bfd'
 num_classes = 2
 max_length = 512
 batch_size = 16
-num_epochs = 4
+num_epochs = 11
 learning_rate = 2e-5
 
 # Load the training and validation data from separate files
-train_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_train_with_unpaired.csv"
-val_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_val_with_unpaired.csv"
+#train_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_train_with_unpaired.csv"
+#val_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_val_with_unpaired.csv"
+
+train_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_train_with_unpaired_small.csv"
+val_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_val_with_unpaired_small.csv"
 
 train_heavy, train_light, train_labels = load_paired_data(train_file)
 val_heavy, val_light, val_labels = load_paired_data(val_file)
@@ -222,8 +235,9 @@ for epoch in range(num_epochs):
     logging.info(metrics['classification_report'])
 
 # Save the model
-torch.save(model.state_dict(), 'paired_antibody_classifier_state_dict.pth')
-wandb.save('paired_antibody_classifier_state_dict.pth')
+model_name = 'paired_antibody_classifier_full_seqs_2e-5.pth'
+torch.save(model.state_dict(), model_name)
+#wandb.save('paired_antibody_classifier_state_dict_2e-5.pth')
 
 # Test pairing prediction
 test_heavy = "GLEWIAYIYFSGSTNYNPSLKSRVTLSVDTSKNQFSLKLSSVTAADSAVYYCARDVGPYNSISPGRYYFDYWGPGTLVTVSS"
