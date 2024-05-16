@@ -1,11 +1,23 @@
 #!/bin/bash
 
 #SBATCH --gres=gpu:a100:1
-#SBATCH --job-name=heavy_model_unp
+#SBATCH --job-name=hea_conf3
 
 #--config_name 'config3.json' \
 
-python run_mlm.py \
+# paths to full datasets
+#    --train_file /ibmm_data2/oas_database/paired_lea_tmp/heavy_model/train_test_val_datasets/heavy_all_seqs_train_no_ids.txt \
+#    --validation_file /ibmm_data2/oas_database/paired_lea_tmp/heavy_model/train_test_val_datasets/heavy_all_seqs_val_no_ids.txt \
+
+# paths to small datasets
+#    --train_file /ibmm_data2/oas_database/paired_lea_tmp/heavy_model/train_test_val_datasets/heavy_all_seqs_train_no_ids_test_small.txt \
+#    --validation_file /ibmm_data2/oas_database/paired_lea_tmp/heavy_model/train_test_val_datasets/heavy_all_seqs_val_no_ids_test_small.txt \
+
+
+eval "$(conda shell.bash hook)"
+conda init bash
+conda activate lea_env
+/home/leab/anaconda3/envs/lea_env/bin/python run_mlm.py \
     --model_type 'roberta' \
     --tokenizer_name ./ProteinTokenizer \
     --train_file /ibmm_data2/oas_database/paired_lea_tmp/heavy_model/train_test_val_datasets/heavy_all_seqs_train_no_ids.txt \
@@ -19,7 +31,7 @@ python run_mlm.py \
     --save_strategy 'epoch' \
     --learning_rate 5e-5 \
     --weight_decay 0.1 \
-    --num_train_epochs 20 \
+    --num_train_epochs 500 \
     --lr_scheduler_type 'linear' \
     --log_level 'info' \
     --seed 42 \
@@ -32,6 +44,5 @@ python run_mlm.py \
     --greater_is_better False \
     --config_name 'config3.json' \
     --report_to 'wandb' \
-    --max_seq_length 30 \
-    --overwrite_output_dir \
-    --output_dir ./test-mlm
+    --max_seq_length 512 \
+    --output_dir ./FULL_config_3_roberta_run_lr5e-5_500epochs_max_seq_length_512
