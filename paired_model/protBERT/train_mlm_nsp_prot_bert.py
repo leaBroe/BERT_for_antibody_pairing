@@ -107,13 +107,13 @@ output_dir = run_name
 
 # define the arguments for the trainer
 training_args = TrainingArguments(
-    output_dir="./small_dataset_10_epochs_own_training_loop_SPACES",          # output directory
+    output_dir="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/protBERT/small_dataset_10_epochs_own_training_loop_SPACES",          # output directory
     num_train_epochs=10,              # total # of training epochs
     per_device_train_batch_size=16,  # batch size per device during training (try 16 if needed)
     per_device_eval_batch_size=16,   # batch size for evaluation
     warmup_steps=500,                # number of warmup steps for learning rate scheduler
     weight_decay=0.01,               # strength of weight decay
-    logging_dir='nsp_mlm_paired_protbert_test',     # directory for storing logs
+    logging_dir='/ibmm_data2/oas_database/paired_lea_tmp/paired_model/protBERT/small_dataset_10_epochs_own_training_loop_SPACES_logging',     # directory for storing logs
     do_train=True,
     eval_strategy="epoch",
     logging_steps=5
@@ -210,17 +210,41 @@ def create_data_loader_with_debugging(dataset, batch_size, data_collator):
 train_data_loader = create_data_loader_with_debugging(train_dataset, batch_size=16, data_collator=data_collator)
 
 
-def compute_metrics(pred):
-    labels = pred.label_ids
-    preds = pred.predictions.argmax(-1)
-    precision, recall, f1, _ = precision_recall_fscore_support(labels, preds, average='binary')
-    acc = accuracy_score(labels, preds)
+def compute_metrics(preds, labels):
+    # Flatten predictions and labels to handle inhomogeneous shapes
+    true_labels = []
+    true_preds = []
+    
+    for i in range(len(labels)):
+        true_labels.extend(labels[i])
+        true_preds.extend(preds[i])
+    
+    # Filter out -100 labels (which are ignored in the evaluation)
+    filtered_labels = [label for label in true_labels if label != -100]
+    filtered_preds = [pred for label, pred in zip(true_labels, true_preds) if label != -100]
+    
+    precision, recall, f1, _ = precision_recall_fscore_support(filtered_labels, filtered_preds, average='macro')
+    acc = accuracy_score(filtered_labels, filtered_preds)
+    
     return {
         'accuracy': acc,
         'f1': f1,
         'precision': precision,
         'recall': recall
     }
+
+# def compute_metrics(pred):
+#     labels = pred.label_ids
+#     preds = pred.predictions.argmax(-1)
+#     precision, recall, f1, _ = precision_recall_fscore_support(labels, preds, average='binary')
+#     acc = accuracy_score(labels, preds)
+#     return {
+#         'accuracy': acc,
+#         'f1': f1,
+#         'precision': precision,
+#         'recall': recall
+#     }
+
 
 
 metric = evaluate.load("accuracy", )
@@ -237,20 +261,30 @@ metric = evaluate.load("accuracy", )
 #     preds = preds[mask]
 #     return metric.compute(predictions=preds, references=labels)
 
-model.to(device)
 
 # Instantiate the trainer
 print("start building trainer=",datetime.now(PST))
 
 
+# Instantiate the custom trainer
 class CustomTrainer(Trainer):
     def log(self, logs: dict):
-        # Call the parent's log method to ensure proper logging
         super().log(logs)
-        
-        # Log the training loss for the current epoch
         if 'loss' in logs:
             print(f"Training loss: {logs['loss']}")
+    
+    def evaluate_and_log(self):
+        metrics = self.evaluate()
+        print(f"Evaluation metrics: {metrics}")
+        return metrics
+    
+    def train(self, *args, **kwargs):
+        for epoch in range(int(self.args.num_train_epochs)):
+            # Call the parent's train method for each epoch
+            super().train(*args, **kwargs)
+            # Evaluate and log after each epoch
+            self.evaluate_and_log()
+
 
 
 trainer = CustomTrainer(
@@ -259,7 +293,7 @@ trainer = CustomTrainer(
     train_dataset=train_dataset,
     data_collator=data_collator,
     eval_dataset=eval_dataset,           # evaluation dataset
-    #compute_metrics=compute_metrics  # pass the compute_metrics function     
+    compute_metrics=compute_metrics,  # pass the compute_metrics function     
 )
 
 
@@ -284,6 +318,8 @@ optimizer = AdamW(model.parameters(), lr=1e-5)
 
 # Create DataLoader for debugging
 train_data_loader = DataLoader(train_dataset, batch_size=16, collate_fn=data_collator)
+eval_data_loader = DataLoader(eval_dataset, batch_size=16, collate_fn=data_collator)
+
 
 print("Verifying all input_ids in DataLoader before training...")
 log_input_ids(train_data_loader)  # This will raise an error if any input_id is out of range
@@ -369,6 +405,10 @@ lr_scheduler = get_scheduler(
     num_training_steps=num_training_steps
 )
 
+# Move the model to the appropriate device
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
+
 def find_nan(tensor):
     nan_mask = torch.isnan(tensor)
     if torch.any(nan_mask):
@@ -449,63 +489,68 @@ def find_nan(tensor):
 print("Starting training...")
 
 ################# Custom Training Loop #################
-model.train()
 
-# for epoch in range(training_args.num_train_epochs):
-#     for step, batch in enumerate(train_data_loader):
-#         batch = {k: v.to(model.device) for k, v in batch.items()}
+for epoch in range(training_args.num_train_epochs):
+    model.train()
+    for step, batch in enumerate(train_data_loader):
+        batch = {k: v.to(model.device) for k, v in batch.items()}
 
-#         # Check for NaNs in the input batch
-#         for key, value in batch.items():
-#             if torch.any(torch.isnan(value)):
-#                 print(f"NaN found in {key} at epoch {epoch}, step {step}")
-
-#         # Forward pass
-#         outputs = model(**batch)
+        # Forward pass
+        outputs = model(**batch)
         
-#         # Extract the loss and logits from the model output
-#         loss, prediction_logits, seq_relationship_logits = outputs
+        # Extract the loss and logits from the model output
+        loss = outputs.loss
+        #loss, prediction_logits, seq_relationship_logits = outputs
         
-#         # Print the loss for debugging
-#         print(f"Epoch: {epoch}, Step: {step}, Loss: {loss.item()}")
+        # Perform backpropagation
+        loss.backward()
 
-#         # Check for NaNs in the output tensors
-#         if torch.isnan(loss):
-#             print(f"NaN loss encountered at epoch {epoch}, step {step}")
+        # Clip gradients to prevent explosion
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 
-#             # Check prediction_logits for NaNs
-#             pred_logits_nan_idx = find_nan(outputs.prediction_logits)
-#             if pred_logits_nan_idx is not None:
-#                 print(f"NaN found in prediction_logits at index {pred_logits_nan_idx}")
-#                 print(f"prediction_logits: {outputs.prediction_logits}")
+        # Update parameters and learning rate
+        optimizer.step()
+        lr_scheduler.step()
+        optimizer.zero_grad()
 
-#             # Check seq_relationship_logits for NaNs
-#             seq_rel_logits_nan_idx = find_nan(outputs.seq_relationship_logits)
-#             if seq_rel_logits_nan_idx is not None:
-#                 print(f"NaN found in seq_relationship_logits at index {seq_rel_logits_nan_idx}")
-#                 print(f"seq_relationship_logits: {outputs.seq_relationship_logits}")
+        print(f"Epoch: {epoch}, Step: {step}, Loss: {loss.item()}")
 
-#             continue  # Skip the rest of the loop to avoid backpropagation on NaN loss
+        # Additional logging
+        if step % 10 == 0:
+            print(f"Detailed logging at Epoch: {epoch}, Step: {step}")
+            print(f"Input IDs: {batch['input_ids']}")
+            print(f"Attention Mask: {batch['attention_mask']}")
+            print(f"Loss: {loss.item()}")
+        
+    # Evaluation
+    model.eval()
+    eval_loss = 0
+    all_preds = []
+    all_labels = []
+    with torch.no_grad():
+        for batch in eval_data_loader:
+            batch = {k: v.to(device) for k, v in batch.items()}
+            
+            outputs = model(**batch)
+            loss = outputs.loss
+            eval_loss += loss.item()
 
-#         # Perform backpropagation
-#         loss.backward()
+            prediction_logits = outputs.prediction_logits
+            seq_relationship_logits = outputs.seq_relationship_logits
+            
+            # For MLM
+            mlm_preds = torch.argmax(prediction_logits, dim=-1)
+            all_preds.extend(mlm_preds.cpu().numpy())
+            all_labels.extend(batch['labels'].cpu().numpy())
 
-#         # Clip gradients to prevent explosion
-#         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-
-#         # Update parameters and learning rate
-#         optimizer.step()
-#         lr_scheduler.step()
-#         optimizer.zero_grad()
-
-#         print(f"Epoch: {epoch}, Step: {step}, Loss: {loss.item()}")
-
-#         # Additional logging
-#         if step % 10 == 0:
-#             print(f"Detailed logging at Epoch: {epoch}, Step: {step}")
-#             print(f"Input IDs: {batch['input_ids']}")
-#             print(f"Attention Mask: {batch['attention_mask']}")
-#             print(f"Loss: {loss.item()}")
+            # For NSP 
+            nsp_preds = torch.argmax(seq_relationship_logits, dim=-1)
+            # Add NSP predictions and labels processing if needed
+    
+    avg_eval_loss = eval_loss / len(eval_data_loader)
+    metrics = compute_metrics(all_preds, all_labels)
+    print(f"Epoch {epoch} Evaluation Loss: {avg_eval_loss}")
+    print(f"Evaluation Metrics: {metrics}")
 
 
 # for epoch in range(training_args.num_train_epochs):
@@ -578,4 +623,4 @@ model.train()
 ################# Training Loop from transformers #################
 
 # now do training
-trainer.train()
+#trainer.train()
