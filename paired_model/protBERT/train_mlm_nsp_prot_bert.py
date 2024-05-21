@@ -30,6 +30,7 @@ import re
 import copy
 from torch.optim import AdamW
 from transformers import get_scheduler
+import wandb
 
 #BUCKET_NAME = 'clinical_bert_bucket'
 
@@ -96,14 +97,16 @@ print(f"Tokenizer's vocab_size: {tokenizer.vocab_size}")
 
 print("Model's vocab size from embeddings:", model.bert.embeddings.word_embeddings.num_embeddings)
 
+# Initialize wandb
+wandb.init(project="paired_model_nsp_mlm_protbert", name="small_dataset_10_epochs_own_training_loop_SPACES")
 
-os.environ["WANDB_PROJECT"] = "paired_model_nsp_mlm_protbert"
+#os.environ["WANDB_PROJECT"] = "paired_model_nsp_mlm_protbert"
 
 # define run name
-run_name = "small_dataset_10_epochs_own_training_loop_SPACES"
-os.environ["WANDB_RUN_NAME"] = run_name
+#run_name = "small_dataset_10_epochs_own_training_loop_SPACES"
+#os.environ["WANDB_RUN_NAME"] = run_name
 
-output_dir = run_name
+#output_dir = run_name
 
 # define the arguments for the trainer
 training_args = TrainingArguments(
@@ -492,6 +495,8 @@ print("Starting training...")
 
 for epoch in range(training_args.num_train_epochs):
     model.train()
+    train_loss = 0
+
     for step, batch in enumerate(train_data_loader):
         batch = {k: v.to(model.device) for k, v in batch.items()}
 
@@ -500,6 +505,7 @@ for epoch in range(training_args.num_train_epochs):
         
         # Extract the loss and logits from the model output
         loss = outputs.loss
+        train_loss += loss.item()
         #loss, prediction_logits, seq_relationship_logits = outputs
         
         # Perform backpropagation
@@ -521,6 +527,11 @@ for epoch in range(training_args.num_train_epochs):
             print(f"Input IDs: {batch['input_ids']}")
             print(f"Attention Mask: {batch['attention_mask']}")
             print(f"Loss: {loss.item()}")
+            wandb.log({"train_loss": loss.item(), "epoch": epoch, "step": step})
+
+    avg_train_loss = train_loss / len(train_data_loader)
+    print(f"Epoch {epoch} Training Loss: {avg_train_loss}")
+    wandb.log({"avg_train_loss": avg_train_loss, "epoch": epoch})
         
     # Evaluation
     model.eval()
@@ -551,6 +562,10 @@ for epoch in range(training_args.num_train_epochs):
     metrics = compute_metrics(all_preds, all_labels)
     print(f"Epoch {epoch} Evaluation Loss: {avg_eval_loss}")
     print(f"Evaluation Metrics: {metrics}")
+
+    # Log evaluation metrics
+    wandb.log({"avg_eval_loss": avg_eval_loss, "epoch": epoch})
+    wandb.log(metrics)
 
 
 # for epoch in range(training_args.num_train_epochs):
