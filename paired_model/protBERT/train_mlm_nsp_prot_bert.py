@@ -80,7 +80,7 @@ logging_dir = f"./{run_name}_logging"
 # define the arguments for the trainer
 training_args = TrainingArguments(
     output_dir=output_dir,          # output directory
-    num_train_epochs=10,              # total # of training epochs
+    num_train_epochs=100,              # total # of training epochs
     per_device_train_batch_size=16,  # batch size per device during training (try 16 if needed)
     per_device_eval_batch_size=16,   # batch size for evaluation
     warmup_steps=500,                # number of warmup steps for learning rate scheduler
@@ -116,14 +116,14 @@ def log_input_ids(data_loader):
 small_train_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids_small_SPACE_separated.txt"
 small_val_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids_small_SPACE_separated.txt"
 
-#full_train_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_train_for_nsp.txt"
-#full_val_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_val_for_nsp.txt"
+full_train_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids_space_separated.txt"
+full_val_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids_space_separated.txt"
 
 # Prepare the train_dataset
 print("start building train_dataset=", datetime.now(PST))
 train_dataset = TextDatasetForNextSentencePrediction(
     tokenizer=tokenizer,
-    file_path=small_train_dataset_path,
+    file_path=full_train_dataset_path,
     block_size=128
 )
 
@@ -135,7 +135,7 @@ check_input_ids_validity(train_dataset, tokenizer)
 print("start building eval_dataset=", datetime.now(PST))
 eval_dataset = TextDatasetForNextSentencePrediction(
     tokenizer=tokenizer,
-    file_path=small_val_dataset_path,
+    file_path=full_val_dataset_path,
     block_size=128
 )
 
@@ -243,7 +243,9 @@ print("Verifying all input_ids in DataLoader before training...")
 train_data_loader = DataLoader(train_dataset, batch_size=16, collate_fn=data_collator)
 log_input_ids(train_data_loader)
 
-optimizer = AdamW(model.parameters(), lr=1e-5)
+learning_rate = 2e-5
+
+optimizer = AdamW(model.parameters(), lr=learning_rate)
 
 # Create DataLoader for debugging
 train_data_loader = DataLoader(train_dataset, batch_size=16, collate_fn=data_collator)
@@ -282,14 +284,14 @@ def read_txt_file(file_path):
         lines = f.readlines()
     return [line.strip() for line in lines]
 
-# Load the sequences from the txt file
-train_data = read_txt_file(small_train_dataset_path)
+# # Load the sequences from the txt file
+# train_data = read_txt_file(small_train_dataset_path)
 
-# Check if all characters are in the tokenizer's vocab
-unique_chars = set(''.join(train_data))  # Assuming train_data is a list of your sequences
-unknown_chars = [char for char in unique_chars if char not in tokenizer.get_vocab()]
-# single space is not in the vocab -> unknown_chars = [' ']
-print("Unknown Characters:", unknown_chars)
+# # Check if all characters are in the tokenizer's vocab
+# unique_chars = set(''.join(train_data))  # Assuming train_data is a list of your sequences
+# unknown_chars = [char for char in unique_chars if char not in tokenizer.get_vocab()]
+# # single space is not in the vocab -> unknown_chars = [' ']
+# print("Unknown Characters:", unknown_chars)
 
 # verify token type ids
 def verify_token_type_ids(data_loader):
