@@ -32,29 +32,6 @@ from torch.optim import AdamW
 from transformers import get_scheduler
 import wandb
 
-#BUCKET_NAME = 'clinical_bert_bucket'
-
-#instantiate the tokenizer
-#tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-#config = AutoConfig.from_pretrained(pretrained_model_name_or_path="ProteinTokenizer/config.json")
-# tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path="ProteinTokenizer", do_lower_case=False)
-
-# # Add new tokens (this updates the tokenizer's vocabulary as well)
-# new_tokens = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
-# tokenizer.add_tokens(new_tokens)
-
-# # Check that the new tokens were added to the tokenizer
-# print(tokenizer.additional_special_tokens)
-
-# # Save the updated tokenizer to a directory
-# tokenizer.save_pretrained('UpdatedProteinTokenizer')
-
-# config = BertConfig.from_json_file("ProteinTokenizer/config.json")
-# config.vocab_size = len(tokenizer)
-
-# # Save the updated configuration to the same directory as the tokenizer
-# config.save_pretrained('UpdatedProteinTokenizer')
-
 os.environ['CUDA_VISIBLE_DEVICES'] ='0'
 
 # print used device cpu or cuda
@@ -141,19 +118,12 @@ def log_input_ids(data_loader):
         assert torch.all(input_ids < tokenizer.vocab_size), f"Found input_ids >= vocab size: {input_ids.max().item()}"
 
 
-# small train dataset: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_train_for_nsp_small.txt
-# small val dataset: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_val_for_nsp_small.txt
-
-# small dataset with input heavyseq\nlightseq (no [SEP])
-#small_train_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_train_for_nsp_small.txt"
-#small_val_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_val_for_nsp_small.txt"
-
 # small dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
 small_train_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids_small_SPACE_separated.txt"
 small_val_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids_small_SPACE_separated.txt"
 
-full_train_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_train_for_nsp.txt"
-full_val_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_val_for_nsp.txt"
+#full_train_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_train_for_nsp.txt"
+#full_val_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_val_for_nsp.txt"
 
 # Prepare the train_dataset
 print("start building train_dataset=", datetime.now(PST))
@@ -214,7 +184,6 @@ train_data_loader = create_data_loader_with_debugging(train_dataset, batch_size=
 
 
 def compute_metrics(preds, labels):
-    # Flatten predictions and labels to handle inhomogeneous shapes
     true_labels = []
     true_preds = []
     
@@ -236,34 +205,7 @@ def compute_metrics(preds, labels):
         'recall': recall
     }
 
-# def compute_metrics(pred):
-#     labels = pred.label_ids
-#     preds = pred.predictions.argmax(-1)
-#     precision, recall, f1, _ = precision_recall_fscore_support(labels, preds, average='binary')
-#     acc = accuracy_score(labels, preds)
-#     return {
-#         'accuracy': acc,
-#         'f1': f1,
-#         'precision': precision,
-#         'recall': recall
-#     }
-
-
-
 metric = evaluate.load("accuracy", )
-
-
-# def compute_metrics(eval_preds):
-#     preds, labels = eval_preds
-#     # preds have the same shape as the labels, after the argmax(-1) has been calculated
-#     # by preprocess_logits_for_metrics
-#     labels = labels.reshape(-1)
-#     preds = preds.reshape(-1)
-#     mask = labels != -100
-#     labels = labels[mask]
-#     preds = preds[mask]
-#     return metric.compute(predictions=preds, references=labels)
-
 
 # Instantiate the trainer
 print("start building trainer=",datetime.now(PST))
@@ -412,6 +354,10 @@ lr_scheduler = get_scheduler(
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
+# Create directories if they do not exist
+os.makedirs(training_args.output_dir, exist_ok=True)
+os.makedirs(training_args.logging_dir, exist_ok=True)
+
 def find_nan(tensor):
     nan_mask = torch.isnan(tensor)
     if torch.any(nan_mask):
@@ -556,7 +502,6 @@ for epoch in range(training_args.num_train_epochs):
 
             # For NSP 
             nsp_preds = torch.argmax(seq_relationship_logits, dim=-1)
-            # Add NSP predictions and labels processing if needed
     
     avg_eval_loss = eval_loss / len(eval_data_loader)
     metrics = compute_metrics(all_preds, all_labels)
@@ -567,73 +512,23 @@ for epoch in range(training_args.num_train_epochs):
     wandb.log({"avg_eval_loss": avg_eval_loss, "epoch": epoch})
     wandb.log(metrics)
 
-
-# for epoch in range(training_args.num_train_epochs):
-#     for step, batch in enumerate(train_data_loader):
-#         batch = {k: v.to(model.device) for k, v in batch.items()}
-#         outputs = model(**batch)
-#         loss = outputs.loss
-
-#         # Check for NaN loss
-#         if torch.isnan(loss):
-#             print(f"NaN loss encountered at epoch {epoch}, step {step}. Skipping this batch.")
-#             continue
-
-#         # Perform backpropagation
-#         loss.backward()
-
-#         # Clip gradients to prevent explosion
-#         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-
-#         # Update parameters and learning rate
-#         optimizer.step()
-#         lr_scheduler.step()
-#         optimizer.zero_grad()
-
-#         print(f"Epoch: {epoch}, Step: {step}, Loss: {loss.item()}")
-
-#         # Additional logging
-#         if step % 10 == 0:
-#             print(f"Detailed logging at Epoch: {epoch}, Step: {step}")
-#             print(f"Input IDs: {batch['input_ids']}")
-#             print(f"Attention Mask: {batch['attention_mask']}")
-#             print(f"Loss: {loss.item()}")
-
-
-# # Prepare the learning rate scheduler
-# num_training_steps = len(train_data_loader) * 10  # 3 is the number of epochs
-# lr_scheduler = get_scheduler(
-#     "linear",
-#     optimizer=optimizer,
-#     num_warmup_steps=500,
-#     num_training_steps=num_training_steps
-# )
-
-# model.train()
-# for epoch in range(10):  # Loop over epochs
-#     for batch in train_data_loader:
-#         batch = {k: v.to(model.device) for k, v in batch.items()}
-#         outputs = model(**batch)
-#         loss = outputs.loss
-
-#         # Perform backpropagation
-#         loss.backward()
-
-#         # Update parameters and learning rate
-#         optimizer.step()
-#         lr_scheduler.step()
-#         optimizer.zero_grad()
-
-#         print(f"Epoch: {epoch}, Loss: {loss.item()}")
-
-#         try:
-#             outputs = model(**batch)
-#             loss = outputs.loss
-#         except RuntimeError as e:
-#             print(f"Runtime error: {e}")
-#             print(f"Batch input IDs: {batch['input_ids']}")
-#             continue  # Skip this batch or additional handling
-
+    # Log evaluation metrics
+    wandb.log({"avg_eval_loss": avg_eval_loss, "epoch": epoch})
+    wandb.log(metrics)
+    
+    # Save model checkpoint
+    checkpoint_dir = os.path.join(training_args.output_dir, f"checkpoint-epoch-{epoch}")
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    model.save_pretrained(checkpoint_dir)
+    tokenizer.save_pretrained(checkpoint_dir)
+    torch.save(optimizer.state_dict(), os.path.join(checkpoint_dir, "optimizer.pt"))
+    torch.save(lr_scheduler.state_dict(), os.path.join(checkpoint_dir, "scheduler.pt"))
+    
+    # Save logs
+    with open(os.path.join(training_args.logging_dir, "training_log.txt"), "a") as log_file:
+        log_file.write(f"Epoch {epoch}, Avg Training Loss: {avg_train_loss}\n")
+        log_file.write(f"Epoch {epoch}, Avg Evaluation Loss: {avg_eval_loss}\n")
+        log_file.write(f"Evaluation Metrics: {metrics}\n")
 
 ################# Training Loop from transformers #################
 
