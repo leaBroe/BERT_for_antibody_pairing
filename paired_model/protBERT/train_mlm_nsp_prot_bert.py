@@ -75,7 +75,9 @@ print(f"Tokenizer's vocab_size: {tokenizer.vocab_size}")
 print("Model's vocab size from embeddings:", model.bert.embeddings.word_embeddings.num_embeddings)
 
 # Initialize wandb
-wandb.init(project="paired_model_nsp_mlm_protbert", name="small_dataset_10_epochs_own_training_loop_SPACES")
+run_name = "small_dataset_10_epochs_own_training_loop_SPACES_debug"
+
+wandb.init(project="paired_model_nsp_mlm_protbert", name=run_name)
 
 #os.environ["WANDB_PROJECT"] = "paired_model_nsp_mlm_protbert"
 
@@ -85,15 +87,18 @@ wandb.init(project="paired_model_nsp_mlm_protbert", name="small_dataset_10_epoch
 
 #output_dir = run_name
 
+output_dir = f"./{run_name}"
+logging_dir = f"./{run_name}_logging"
+
 # define the arguments for the trainer
 training_args = TrainingArguments(
-    output_dir="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/protBERT/small_dataset_10_epochs_own_training_loop_SPACES",          # output directory
+    output_dir=output_dir,          # output directory
     num_train_epochs=10,              # total # of training epochs
     per_device_train_batch_size=16,  # batch size per device during training (try 16 if needed)
     per_device_eval_batch_size=16,   # batch size for evaluation
     warmup_steps=500,                # number of warmup steps for learning rate scheduler
     weight_decay=0.01,               # strength of weight decay
-    logging_dir='/ibmm_data2/oas_database/paired_lea_tmp/paired_model/protBERT/small_dataset_10_epochs_own_training_loop_SPACES_logging',     # directory for storing logs
+    logging_dir=logging_dir,     # directory for storing logs
     do_train=True,
     eval_strategy="epoch",
     logging_steps=5
@@ -195,7 +200,7 @@ def compute_metrics(preds, labels):
     filtered_labels = [label for label in true_labels if label != -100]
     filtered_preds = [pred for label, pred in zip(true_labels, true_preds) if label != -100]
     
-    precision, recall, f1, _ = precision_recall_fscore_support(filtered_labels, filtered_preds, average='macro')
+    precision, recall, f1, _ = precision_recall_fscore_support(filtered_labels, filtered_preds, average='macro', zero_division=0)
     acc = accuracy_score(filtered_labels, filtered_preds)
     
     return {
