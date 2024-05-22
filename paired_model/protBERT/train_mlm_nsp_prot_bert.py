@@ -32,60 +32,47 @@ from torch.optim import AdamW
 from transformers import get_scheduler
 import wandb
 
+# NSP and MLM tasks using ProtBERT bfd -> https://huggingface.co/Rostlab/prot_bert_bfd
+# Input data has to be of the form heavyseq[SEP]lightseq with each AA single space separated!!
+# example:
+# Q V Q L Q E S G P G L V K P S E T L S L T C T V S G G S I S G F Y W S W I R Q S P G K G L E [SEP] Q V Q L Q E S G P G L V K P S E T L S L T C T V S G G S I S G F Y W S W I R Q S P G K G L E
+
 os.environ['CUDA_VISIBLE_DEVICES'] ='0'
 
-# print used device cpu or cuda
+# print used device cpu or cuda/GPU
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f'device: {device}')
 
-# Load the updated tokenizer and configuration
+# Load the tokenizer and configuration
 tokenizer = AutoTokenizer.from_pretrained('Rostlab/prot_bert_bfd', do_lower_case=False )
 config = AutoConfig.from_pretrained('Rostlab/prot_bert_bfd', do_lower_case=False, vocab_size=len(tokenizer), force_download=True)
-
-#input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device) # This line.
 
 # print tokenizer and config
 print(f'tokenizer: {tokenizer}')
 print(f'config: {config}')
 
-
 PST = pytz.timezone('Europe/Zurich')
 
 #instantiate the model
 print("start loading model=",datetime.now(PST))
-#model = BertLMHeadModel.from_pretrained("bert-base-uncased")
-#model = BertForPreTraining.from_pretrained("bert-base-uncased")
-
-#config.type_vocab_size = 2
-
-# Load and configure your model
 model = BertForPreTraining(config=config)
 
 # Move model to the appropriate device (GPU or CPU)
 model.to(device)  # 'device' is determined by torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Now you can print this to confirm
+# confirm model is on the right device
 print(f"Model is on device: {next(model.parameters()).device}")  # It will show cuda:0 if on GPU
 
-
-# Load your model's configuration and check the vocab_size parameter. It must match the total number of tokens in your tokenizer’s vocabulary.
+# Load your model's configuration and check the vocab_size parameter. It must match the total number of tokens in your tokenizer’s vocabulary!
 print(f"Model's vocab_size: {model.config.vocab_size}")
 print(f"Tokenizer's vocab_size: {tokenizer.vocab_size}")
 
 print("Model's vocab size from embeddings:", model.bert.embeddings.word_embeddings.num_embeddings)
 
 # Initialize wandb
-run_name = "small_dataset_10_epochs_own_training_loop_SPACES_debug"
+run_name = "small_dataset_10_epochs_own_training_loop_SPACES_debug_2"
 
 wandb.init(project="paired_model_nsp_mlm_protbert", name=run_name)
-
-#os.environ["WANDB_PROJECT"] = "paired_model_nsp_mlm_protbert"
-
-# define run name
-#run_name = "small_dataset_10_epochs_own_training_loop_SPACES"
-#os.environ["WANDB_RUN_NAME"] = run_name
-
-#output_dir = run_name
 
 output_dir = f"./{run_name}"
 logging_dir = f"./{run_name}_logging"
@@ -104,6 +91,7 @@ training_args = TrainingArguments(
     logging_steps=5
 )
 
+# Debugging: Check if all input_ids are within the tokenizer's vocabulary size
 def check_input_ids_validity(dataset, tokenizer):
     vocab_size = tokenizer.vocab_size
     for example in dataset:
@@ -114,7 +102,8 @@ def check_input_ids_validity(dataset, tokenizer):
             raise ValueError(f"An input_id ({max_id}) exceeds the tokenizer's vocabulary size ({vocab_size}).")
     print(f"All input_ids are within the vocabulary size.")
 
-# Log input_ids right before training to ensure they are all valid
+
+# Debugging: Log input_ids right before training to ensure they are all valid
 def log_input_ids(data_loader):
     for batch in data_loader:
         input_ids = batch['input_ids']
@@ -159,7 +148,7 @@ data_collator = DataCollatorForLanguageModeling(
     tokenizer=tokenizer, mlm=True, mlm_probability=0.15
 )
 
-# Function to create a DataLoader with debugging
+# Function to create a DataLoader with debugging -> to see the first batch before and after data collator, see if it handles the data correctly
 def create_data_loader_with_debugging(dataset, batch_size, data_collator):
     data_loader = DataLoader(dataset, batch_size=batch_size, collate_fn=data_collator)
     for batch in data_loader:
@@ -204,13 +193,13 @@ def compute_metrics(preds, labels):
     acc = accuracy_score(filtered_labels, filtered_preds)
     
     return {
-        'accuracy': acc,
+        'accuracy': acc, 
         'f1': f1,
         'precision': precision,
         'recall': recall
     }
 
-metric = evaluate.load("accuracy", )
+#metric = evaluate.load("accuracy", )
 
 # Instantiate the trainer
 print("start building trainer=",datetime.now(PST))
@@ -249,20 +238,10 @@ trainer = CustomTrainer(
 
 print("finished=",datetime.now(PST))
 
-# Log input_ids right before training to ensure they are all valid
-def log_input_ids(data_loader):
-    for batch in data_loader:
-        input_ids = batch['input_ids']
-        if torch.any(input_ids >= tokenizer.vocab_size):
-            print("Invalid input_ids detected:", input_ids)
-        assert torch.all(input_ids < tokenizer.vocab_size), f"Found input_ids >= vocab size: {input_ids.max().item()}"
-
-
 # Verifying all input_ids in DataLoader before training
 print("Verifying all input_ids in DataLoader before training...")
 train_data_loader = DataLoader(train_dataset, batch_size=16, collate_fn=data_collator)
 log_input_ids(train_data_loader)
-
 
 optimizer = AdamW(model.parameters(), lr=1e-5)
 
@@ -309,20 +288,10 @@ train_data = read_txt_file(small_train_dataset_path)
 # Check if all characters are in the tokenizer's vocab
 unique_chars = set(''.join(train_data))  # Assuming train_data is a list of your sequences
 unknown_chars = [char for char in unique_chars if char not in tokenizer.get_vocab()]
+# single space is not in the vocab -> unknown_chars = [' ']
 print("Unknown Characters:", unknown_chars)
 
-# for batch in train_data_loader:
-#     input_ids = batch['input_ids']
-#     if torch.any(input_ids >= tokenizer.vocab_size):
-#         print("Invalid input_ids detected:", input_ids)
-#     try:
-#         outputs = model(input_ids=input_ids, attention_mask=batch['attention_mask'])
-#     except IndexError as e:
-#         print(f"Caught IndexError: {str(e)}")
-#         print(f"Problematic input_ids: {input_ids}")
-#         break  # Break or handle error accordingly
-
-# Example function to verify token type ids
+# verify token type ids
 def verify_token_type_ids(data_loader):
     for i, batch in enumerate(data_loader):
         input_ids = batch['input_ids']
@@ -371,6 +340,7 @@ def find_nan(tensor):
     return None
 
 
+# # Custom model for debugging -> to check for NaNs in the model outputs
 # class CustomBertForPreTraining(BertForPreTraining):
 #     def forward(self, input_ids=None, attention_mask=None, token_type_ids=None, labels=None, next_sentence_label=None, **kwargs):
 #         # Call the base BERT model to get the outputs
@@ -434,10 +404,6 @@ def find_nan(tensor):
 #         output = (prediction_scores, seq_relationship_score) + outputs[2:]
 #         return ((total_loss,) + output) if total_loss is not None else output
 
-
-# # Instantiate the custom model
-# model = BertForPreTraining(config=config)
-# model.to(device)
 
 # Custom training loop with gradient clipping and detailed logging
 print("Starting training...")
