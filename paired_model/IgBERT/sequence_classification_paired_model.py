@@ -21,15 +21,14 @@ import wandb
 # Q V Q L Q E S G P G L V K P S E T L S L T C A V S G Y S I S S G Y Y W G W I R Q P P G K G L E W I G S I Y H S G S T Y Y N P S L K S R V T I S V D T S K N Q F S L K L S S V T A A D T A V Y Y C A R Y C G G D C Y Y V P D Y W G Q G T L V T V S S , S Y E L T Q P P S V S V S P G Q T A S I T C S G D K L G D K Y A C W Y Q Q K P G Q S P V L V I Y Q D S K R P S G I P E R F S G S N S G N T A T L T I S G T Q A M D E A D Y Y C Q A W D S S T E V V F G G G T K L T V L ,0
 
 bert_model_name = 'Exscientia/IgBERT'
-num_classes = 2
+num_classes = 1
 max_length = 512
 batch_size = 32
 num_epochs = 10
 learning_rate = 2e-5
 
-
 # Initialize Weights & Biases
-run_name = f"small_set_{learning_rate}_{num_epochs}_epochs_debug_padding"
+run_name = f"small_set_2_{learning_rate}_{num_epochs}_epochs_num_classes_{num_classes}"
 
 output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/{run_name}"
 logging_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/{run_name}_logging"
@@ -61,12 +60,12 @@ class PairedChainsDataset(Dataset):
             return_tensors='pt',
             max_length=self.max_length,
             padding='max_length',
-            truncation=True
+            truncation=False
         )
         return {
             'input_ids': encoding['input_ids'].flatten(),
             'attention_mask': encoding['attention_mask'].flatten(),
-            'labels': torch.tensor(self.labels[idx], dtype=torch.long)
+            'labels': torch.tensor(self.labels[idx], dtype=torch.float)  # Change to float for binary classification with BCE
         }
     
     def debug_tokenization(self, idx):
@@ -85,8 +84,6 @@ class PairedChainsDataset(Dataset):
         print(f"Attention Mask: {encoding['attention_mask']}")
         print(f"Tokens: {self.tokenizer.convert_ids_to_tokens(encoding['input_ids'].flatten().tolist())}")
 
-
-
 # Example sequences and labels
 heavy_chains = ["E V Q L V E S G G G L V Q P G G S L R L S C A A S G F T F S S Y D M H W V R Q A T G K G L E W V S A I G T A G D T Y Y P G S G K G R F T I S R E N A K N S L Y L Q M N S L R A G D T A V Y Y C A R A R P V G Y C S G G L G C G A F D I W G Q G T M V T V S S"]
 light_chains = ["S Y E L T Q P P S V S V S P G Q T A R I T C S G D A L P K Q Y A Y W Y Q H K P G Q A P V L V I Y K D S E R P S G I P E R F S G S S S G T T V T L T I S G V Q A E D E A D Y Y C Q S A D S S G T Y V V F G G G T K L T V L"]
@@ -95,16 +92,11 @@ labels = [1]  # Example label
 tokenizer = BertTokenizer.from_pretrained(bert_model_name)
 model = AutoModelForSequenceClassification.from_pretrained(bert_model_name, num_labels=num_classes).to(device)
 
-#max_length = 512
-
 # Create the dataset
 dataset = PairedChainsDataset(heavy_chains, light_chains, labels, tokenizer, max_length)
 
 # Debug the tokenization for the first sample
 dataset.debug_tokenization(0)
-
-
-
 
 def train(model, data_loader, optimizer, scheduler, device, epoch, log_interval=10):
     model.train()
@@ -138,12 +130,12 @@ def evaluate(model, data_loader, device, epoch):
             loss = outputs.loss
             total_loss += loss.item()
             logits = outputs.logits
-            _, preds = torch.max(logits, dim=1)
+            preds = torch.round(torch.sigmoid(logits))  # Use sigmoid for binary classification
             predictions.extend(preds.cpu().tolist())
             actual_labels.extend(batch['labels'].cpu().tolist())
 
     average_loss = total_loss / len(data_loader)
-    
+
     metrics = {
         'accuracy': accuracy_score(actual_labels, predictions),
         'precision': precision_score(actual_labels, predictions, average='binary', zero_division=0),
@@ -186,7 +178,6 @@ wandb.config.update({ # Log hyperparameters
     "total_steps": total_steps
 })
 
-
 for epoch in range(num_epochs):
     logging.info(f"Epoch {epoch+1}/{num_epochs}")
     avg_train_loss = train(model, train_dataloader, optimizer, scheduler, device, epoch)
@@ -206,7 +197,6 @@ for epoch in range(num_epochs):
         log_file.write(f"Epoch {epoch}, Avg Train Loss: {avg_train_loss}\n")
         log_file.write(f"Epoch {epoch}, Avg Eval Loss: {metrics['average_loss']}\n")
         log_file.write(f"Evaluation Metrics: {metrics}\n")
-
 
 # Save the final model
 model.save_pretrained(output_dir)
