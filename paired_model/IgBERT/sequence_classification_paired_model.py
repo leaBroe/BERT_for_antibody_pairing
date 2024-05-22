@@ -25,11 +25,11 @@ num_classes = 2
 max_length = 512
 batch_size = 32
 num_epochs = 10
-learning_rate = 2e-4
+learning_rate = 2e-5
 
 
 # Initialize Weights & Biases
-run_name = f"small_set_{learning_rate}_{num_epochs}_epochs_debug"
+run_name = f"small_set_{learning_rate}_{num_epochs}_epochs_debug_padding"
 
 output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/{run_name}"
 logging_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/{run_name}_logging"
@@ -68,6 +68,43 @@ class PairedChainsDataset(Dataset):
             'attention_mask': encoding['attention_mask'].flatten(),
             'labels': torch.tensor(self.labels[idx], dtype=torch.long)
         }
+    
+    def debug_tokenization(self, idx):
+        encoding = self.tokenizer(
+            self.heavy_chains[idx], self.light_chains[idx],
+            return_tensors='pt',
+            max_length=self.max_length,
+            padding='max_length',
+            truncation=False
+        )
+        print(f"Index: {idx}")
+        print(f"Heavy Chain: {self.heavy_chains[idx]}")
+        print(f"Light Chain: {self.light_chains[idx]}")
+        print(f"Labels: {self.labels[idx]}")
+        print(f"Input IDs: {encoding['input_ids']}")
+        print(f"Attention Mask: {encoding['attention_mask']}")
+        print(f"Tokens: {self.tokenizer.convert_ids_to_tokens(encoding['input_ids'].flatten().tolist())}")
+
+
+
+# Example sequences and labels
+heavy_chains = ["E V Q L V E S G G G L V Q P G G S L R L S C A A S G F T F S S Y D M H W V R Q A T G K G L E W V S A I G T A G D T Y Y P G S G K G R F T I S R E N A K N S L Y L Q M N S L R A G D T A V Y Y C A R A R P V G Y C S G G L G C G A F D I W G Q G T M V T V S S"]
+light_chains = ["S Y E L T Q P P S V S V S P G Q T A R I T C S G D A L P K Q Y A Y W Y Q H K P G Q A P V L V I Y K D S E R P S G I P E R F S G S S S G T T V T L T I S G V Q A E D E A D Y Y C Q S A D S S G T Y V V F G G G T K L T V L"]
+labels = [1]  # Example label
+
+tokenizer = BertTokenizer.from_pretrained(bert_model_name)
+model = AutoModelForSequenceClassification.from_pretrained(bert_model_name, num_labels=num_classes).to(device)
+
+#max_length = 512
+
+# Create the dataset
+dataset = PairedChainsDataset(heavy_chains, light_chains, labels, tokenizer, max_length)
+
+# Debug the tokenization for the first sample
+dataset.debug_tokenization(0)
+
+
+
 
 def train(model, data_loader, optimizer, scheduler, device, epoch, log_interval=10):
     model.train()
@@ -118,9 +155,6 @@ def evaluate(model, data_loader, device, epoch):
     wandb.log(metrics)
     wandb.log({"Avg Eval Loss": average_loss, "Epoch": epoch})
     return metrics
-
-tokenizer = BertTokenizer.from_pretrained(bert_model_name)
-model = AutoModelForSequenceClassification.from_pretrained(bert_model_name, num_labels=num_classes).to(device)
 
 # Create directories if they do not exist
 os.makedirs(output_dir, exist_ok=True)
