@@ -6,6 +6,7 @@ from torch.optim import AdamW
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report, precision_score, recall_score, f1_score
 import logging
+import os
 import wandb
 
 ########################################################################################################################################################################################################################
@@ -19,9 +20,21 @@ import wandb
 # E V Q L V E S G G G L V Q P G G S L R L S C A A S G F T F S S Y D M H W V R Q A T G K G L E W V S A I G T A G D T Y Y P G S G K G R F T I S R E N A K N S L Y L Q M N S L R A G D T A V Y Y C A R A R P V G Y C S G G L G C G A F D I W G Q G T M V T V S S , S Y E L T Q P P S V S V S P G Q T A R I T C S G D A L P K Q Y A Y W Y Q H K P G Q A P V L V I Y K D S E R P S G I P E R F S G S S S G T T V T L T I S G V Q A E D E A D Y Y C Q S A D S S G T Y V V F G G G T K L T V L ,1
 # Q V Q L Q E S G P G L V K P S E T L S L T C A V S G Y S I S S G Y Y W G W I R Q P P G K G L E W I G S I Y H S G S T Y Y N P S L K S R V T I S V D T S K N Q F S L K L S S V T A A D T A V Y Y C A R Y C G G D C Y Y V P D Y W G Q G T L V T V S S , S Y E L T Q P P S V S V S P G Q T A S I T C S G D K L G D K Y A C W Y Q Q K P G Q S P V L V I Y Q D S K R P S G I P E R F S G S N S G N T A T L T I S G T Q A M D E A D Y Y C Q A W D S S T E V V F G G G T K L T V L ,0
 
+bert_model_name = 'Exscientia/IgBERT'
+num_classes = 2
+max_length = 512
+batch_size = 32
+num_epochs = 10
+learning_rate = 2e-4
+
+
 # Initialize Weights & Biases
-run_name = "igbert_test_2e-5_10_epochs"
-wandb.init(project='paired_classification_heavy_light', name=run_name)  
+run_name = f"small_set_{learning_rate}_{num_epochs}_epochs_debug"
+
+output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/{run_name}"
+logging_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/{run_name}_logging"
+
+wandb.init(project='paired_classification_heavy_light', name=run_name)
 
 logging.basicConfig(level=logging.INFO)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -56,10 +69,10 @@ class PairedChainsDataset(Dataset):
             'labels': torch.tensor(self.labels[idx], dtype=torch.long)
         }
 
-def train(model, data_loader, optimizer, scheduler, device):
+def train(model, data_loader, optimizer, scheduler, device, epoch, log_interval=10):
     model.train()
     total_loss = 0
-    for batch in data_loader:
+    for step, batch in enumerate(data_loader):
         batch = {k: v.to(device) for k, v in batch.items()}
         outputs = model(**batch)
         loss = outputs.loss
@@ -69,10 +82,15 @@ def train(model, data_loader, optimizer, scheduler, device):
         optimizer.zero_grad()
         total_loss += loss.item()
 
-    average_loss = total_loss / len(data_loader)
-    wandb.log({"Train Loss": average_loss})
+        if step % log_interval == 0:
+            wandb.log({"Train Loss": loss.item(), "Epoch": epoch, "Step": step})
+            logging.info(f"Epoch {epoch}, Step {step}, Train Loss: {loss.item()}")
 
-def evaluate(model, data_loader, device):
+    average_loss = total_loss / len(data_loader)
+    wandb.log({"Avg Train Loss": average_loss, "Epoch": epoch})
+    return average_loss
+
+def evaluate(model, data_loader, device, epoch):
     model.eval()
     total_loss = 0
     predictions, actual_labels = [], []
@@ -82,31 +100,31 @@ def evaluate(model, data_loader, device):
             outputs = model(**batch)
             loss = outputs.loss
             total_loss += loss.item()
-            _, preds = torch.max(outputs.logits, dim=1)
+            logits = outputs.logits
+            _, preds = torch.max(logits, dim=1)
             predictions.extend(preds.cpu().tolist())
             actual_labels.extend(batch['labels'].cpu().tolist())
 
+    average_loss = total_loss / len(data_loader)
+    
     metrics = {
         'accuracy': accuracy_score(actual_labels, predictions),
-        'precision': precision_score(actual_labels, predictions, average='binary', zero_division=1),
-        'recall': recall_score(actual_labels, predictions, average='binary', zero_division=1),
-        'f1': f1_score(actual_labels, predictions, average='binary', zero_division=1),
-        'average_loss': total_loss / len(data_loader),
-        'classification_report': classification_report(actual_labels, predictions, zero_division=1)
+        'precision': precision_score(actual_labels, predictions, average='binary', zero_division=0),
+        'recall': recall_score(actual_labels, predictions, average='binary', zero_division=0),
+        'f1': f1_score(actual_labels, predictions, average='binary', zero_division=0),
+        'average_loss': average_loss,
+        'classification_report': classification_report(actual_labels, predictions, zero_division=0, output_dict=True)
     }
     wandb.log(metrics)
+    wandb.log({"Avg Eval Loss": average_loss, "Epoch": epoch})
     return metrics
-
-
-bert_model_name = 'Exscientia/IgBERT'
-num_classes = 2
-max_length = 512
-batch_size = 16
-num_epochs = 10
-learning_rate = 2e-5
 
 tokenizer = BertTokenizer.from_pretrained(bert_model_name)
 model = AutoModelForSequenceClassification.from_pretrained(bert_model_name, num_labels=num_classes).to(device)
+
+# Create directories if they do not exist
+os.makedirs(output_dir, exist_ok=True)
+os.makedirs(logging_dir, exist_ok=True)
 
 # Example to check how the tokenizer handles one of your sequences
 sample_sequence = "E V Q L V E S G G G L V Q P G G S L R L S C A A S G F T F S S Y D M H W V R Q A T G K G L E W V S A I G T A G D T Y Y P G S G K G R F T I S R E N A K N S L Y L Q M N S L R A G D T A V Y Y C A R A R P V G Y C S G G L G C G A F D I W G Q G T M V T V S S"
@@ -134,12 +152,29 @@ wandb.config.update({ # Log hyperparameters
     "total_steps": total_steps
 })
 
+
 for epoch in range(num_epochs):
     logging.info(f"Epoch {epoch+1}/{num_epochs}")
-    train(model, train_dataloader, optimizer, scheduler, device)
-    metrics = evaluate(model, val_dataloader, device)
+    avg_train_loss = train(model, train_dataloader, optimizer, scheduler, device, epoch)
+    metrics = evaluate(model, val_dataloader, device, epoch)
     logging.info(f"Metrics: {metrics}")
+    
+    # Save model checkpoint
+    checkpoint_dir = os.path.join(output_dir, f"checkpoint-epoch-{epoch}")
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    model.save_pretrained(checkpoint_dir)
+    tokenizer.save_pretrained(checkpoint_dir)
+    torch.save(optimizer.state_dict(), os.path.join(checkpoint_dir, "optimizer.pt"))
+    torch.save(scheduler.state_dict(), os.path.join(checkpoint_dir, "scheduler.pt"))
+    
+    # Save logs
+    with open(os.path.join(logging_dir, "training_log.txt"), "a") as log_file:
+        log_file.write(f"Epoch {epoch}, Avg Train Loss: {avg_train_loss}\n")
+        log_file.write(f"Epoch {epoch}, Avg Eval Loss: {metrics['average_loss']}\n")
+        log_file.write(f"Evaluation Metrics: {metrics}\n")
 
-# Save the model
-model.save_pretrained(run_name)
-#wandb.save('igbert_test_2e-5.pth')
+
+# Save the final model
+model.save_pretrained(output_dir)
+tokenizer.save_pretrained(output_dir)
+wandb.finish()
