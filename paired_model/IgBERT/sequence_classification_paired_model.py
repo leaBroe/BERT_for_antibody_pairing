@@ -12,15 +12,16 @@ import wandb
 # sequence classification with AutoModelForSequenceClassification
 ########################################################################################################################################################################################################################
 
-# the input data is a csv file with columns 'heavy', 'light', 'label'
+# the input data is a csv file with columns 'heavy', 'light', 'label' and single space separated AAs
 # 1 for paired, 0 for not paired
 # example:
 # heavy,light,label
-# GLEWIAYIYFSGSTNYNPSLKSRVTLSVDTSKNQFSLKLSSVTAADSAVYYCARDVGPYNSISPGRYYFDYWGPGTLVTVSS,QSALTQPASVSGSPGQSITISCTGTSSDVGNYNLVSWYQHHPGKAPKLMIYEVSKRPSGISNRFSGSKSGNTASLTISGLQADDEADYYCCSYAGSRILYVFGSGTKVTVL,1
-# QLQLQESGPGLVKPSETLSLTCTVSGGSISSSSYYWGWIRQPPGKGLEWIGNFFYSGSTNYNPSLKSRATISLDTSKNELSLKLSSVTAADTAVYYCASNTLMAEATFDYWGQGTLVTVSS,SYEVTQAPSVSVSPGQTASVTCSGDKLDKKYTSWYQQRPGQSPTVVIYQNNKRPSGIPERFSASKSGNTATLTISGTQAVDEADYYCQAWDDSDGVFGPGTTVTVL,0
+# E V Q L V E S G G G L V Q P G G S L R L S C A A S G F T F S S Y D M H W V R Q A T G K G L E W V S A I G T A G D T Y Y P G S G K G R F T I S R E N A K N S L Y L Q M N S L R A G D T A V Y Y C A R A R P V G Y C S G G L G C G A F D I W G Q G T M V T V S S , S Y E L T Q P P S V S V S P G Q T A R I T C S G D A L P K Q Y A Y W Y Q H K P G Q A P V L V I Y K D S E R P S G I P E R F S G S S S G T T V T L T I S G V Q A E D E A D Y Y C Q S A D S S G T Y V V F G G G T K L T V L ,1
+# Q V Q L Q E S G P G L V K P S E T L S L T C A V S G Y S I S S G Y Y W G W I R Q P P G K G L E W I G S I Y H S G S T Y Y N P S L K S R V T I S V D T S K N Q F S L K L S S V T A A D T A V Y Y C A R Y C G G D C Y Y V P D Y W G Q G T L V T V S S , S Y E L T Q P P S V S V S P G Q T A S I T C S G D K L G D K Y A C W Y Q Q K P G Q S P V L V I Y Q D S K R P S G I P E R F S G S N S G N T A T L T I S G T Q A M D E A D Y Y C Q A W D S S T E V V F G G G T K L T V L ,0
 
 # Initialize Weights & Biases
-wandb.init(project='paired_classification_heavy_light', name='igbert_full_2e-5_BertForSequenceClassification')
+run_name = "igbert_test_2e-5_10_epochs"
+wandb.init(project='paired_classification_heavy_light', name=run_name)  
 
 logging.basicConfig(level=logging.INFO)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -101,14 +102,22 @@ bert_model_name = 'Exscientia/IgBERT'
 num_classes = 2
 max_length = 512
 batch_size = 16
-num_epochs = 11
+num_epochs = 10
 learning_rate = 2e-5
 
 tokenizer = BertTokenizer.from_pretrained(bert_model_name)
 model = AutoModelForSequenceClassification.from_pretrained(bert_model_name, num_labels=num_classes).to(device)
 
-train_heavy, train_light, train_labels = load_paired_data("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_train_with_unpaired.csv")
-val_heavy, val_light, val_labels = load_paired_data("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_val_with_unpaired.csv")
+# Example to check how the tokenizer handles one of your sequences
+sample_sequence = "E V Q L V E S G G G L V Q P G G S L R L S C A A S G F T F S S Y D M H W V R Q A T G K G L E W V S A I G T A G D T Y Y P G S G K G R F T I S R E N A K N S L Y L Q M N S L R A G D T A V Y Y C A R A R P V G Y C S G G L G C G A F D I W G Q G T M V T V S S"
+tokens = tokenizer.tokenize(sample_sequence)
+token_ids = tokenizer.convert_tokens_to_ids(tokens)
+
+print("Tokens:", tokens)
+print("Token IDs:", token_ids)
+
+train_heavy, train_light, train_labels = load_paired_data("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_train_with_unpaired_small_space_separated_rm.csv")
+val_heavy, val_light, val_labels = load_paired_data("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_val_with_unpaired_small_space_separated_rm.csv")
 
 train_dataset = PairedChainsDataset(train_heavy, train_light, train_labels, tokenizer, max_length)
 val_dataset = PairedChainsDataset(val_heavy, val_light, val_labels, tokenizer, max_length)
@@ -132,5 +141,5 @@ for epoch in range(num_epochs):
     logging.info(f"Metrics: {metrics}")
 
 # Save the model
-model.save_pretrained('igbert_full_2e-5_BertForSequenceClassification')
+model.save_pretrained(run_name)
 #wandb.save('igbert_test_2e-5.pth')
