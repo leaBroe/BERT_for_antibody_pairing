@@ -36,6 +36,7 @@ def map_to_length(x):
 sample_size = 10000
 data_stats = train_data.select(range(sample_size)).map(map_to_length, num_proc=4)
 
+# compute and print stats
 def compute_and_print_stats(x):
   if len(x["article_len"]) == sample_size:
     print(
