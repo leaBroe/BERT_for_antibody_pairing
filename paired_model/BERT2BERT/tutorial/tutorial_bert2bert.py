@@ -204,7 +204,11 @@ batch_size = 16  # change to 64 for full evaluation
 
 results = test_data.map(generate_summary, batched=True, batch_size=batch_size, remove_columns=["article"])
 
-rouge.compute(predictions=results["pred_summary"], references=results["highlights"], rouge_types=["rouge2"])["rouge2"].mid
+rouge_scores = rouge.compute(predictions=results["pred_summary"], references=results["highlights"], rouge_types=["rouge2"])["rouge2"].mid
+
+print(results)
+print(rouge_scores)
+
 
 
 
