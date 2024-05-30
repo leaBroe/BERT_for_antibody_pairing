@@ -55,27 +55,57 @@ decoder = BertModel.from_pretrained("Exscientia/IgBert")
 model = EncoderDecoderModel(encoder=encoder, decoder=decoder)
 #model = EncoderDecoderModel.from_encoder_decoder_pretrained("Exscientia/IgBert", "Exscientia/IgBert")
 
-max_length = None
 
-def tokenize_function(examples):
-    return tokenizer(examples['heavy'], examples['light'], padding="longest", truncation=False, max_length=128, return_tensors="pt") # return_tensors="pt": ensures that the output is in PyTorch tensor format, which is required for training
+encoder_max_length=512
+decoder_max_length=512
+
+def process_data_to_model_inputs(batch):
+  # tokenize the inputs and labels
+  inputs = tokenizer(batch["heavy"], padding="max_length", truncation=True, max_length=encoder_max_length)
+  outputs = tokenizer(batch["light"], padding="max_length", truncation=True, max_length=decoder_max_length)
+
+  batch["input_ids"] = inputs.input_ids
+  batch["attention_mask"] = inputs.attention_mask
+  batch["decoder_input_ids"] = outputs.input_ids
+  batch["decoder_attention_mask"] = outputs.attention_mask
+  batch["labels"] = outputs.input_ids.copy()
+
+  # because BERT automatically shifts the labels, the labels correspond exactly to `decoder_input_ids`. 
+  # We have to make sure that the PAD token is ignored
+  batch["labels"] = [[-100 if token == tokenizer.pad_token_id else token for token in labels] for labels in batch["labels"]]
+
+  return batch
+
+
 
 # Convert the dataframes to Hugging Face datasets
 train_dataset = Dataset.from_pandas(train_df[['heavy', 'light']])
 val_dataset = Dataset.from_pandas(val_df[['heavy', 'light']])
 
+batch_size=4
 
+train_data = train_dataset.map(
+    process_data_to_model_inputs, 
+    batched=True, 
+    batch_size=batch_size, 
+)
 
-tokenized_train_dataset = train_dataset.map(tokenize_function, batched=True)
-tokenized_val_dataset = val_dataset.map(tokenize_function, batched=True) # batched=True: indicates that the function should process batches of examples at a time rather than one example at a time. This can be more efficient because it allows vectorized operations and reduces the overhead of repeated function calls.
+train_data.set_format(
+    type="torch", columns=["input_ids", "attention_mask", "decoder_input_ids", "decoder_attention_mask", "labels"],
+)
 
-# Convert the tokenized datasets to PyTorch datasets
-tokenized_train_dataset.set_format(type='torch', columns=['input_ids', 'attention_mask', 'token_type_ids'])
-tokenized_val_dataset.set_format(type='torch', columns=['input_ids', 'attention_mask', 'token_type_ids'])
+val_data = val_dataset.map(
+    process_data_to_model_inputs,
+    batched=True,
+    batch_size=batch_size,
+)   
 
+val_data.set_format(
+    type="torch", columns=["input_ids", "attention_mask", "decoder_input_ids", "decoder_attention_mask", "labels"],
+)   
 
 # Print a few examples from the tokenized dataset
-for example in tokenized_train_dataset.select(range(1)):
+for example in train_data.select(range(1)):
     print(example)
 
 """
@@ -94,12 +124,12 @@ Output:{
 # The 'token_type_ids' field shows that the tokens from 'heavy' are marked with 0, and the tokens from 'light' are marked with 1.
 # The 'attention_mask' indicates which tokens are actual data (1) and which are padding (0).
 
-# Set up the Seq2Seq model
+# Set up the Seq2Seq model configuration
 model.config.decoder_start_token_id = tokenizer.cls_token_id
 model.config.eos_token_id = tokenizer.sep_token_id
-model.config.max_length = 128
+model.config.max_length = 512
 model.config.no_repeat_ngram_size = 3
-model.config.early_stopping = False
+model.config.early_stopping = True
 
 batch_size = 4
 
@@ -119,8 +149,8 @@ training_args = Seq2SeqTrainingArguments(
 trainer = Seq2SeqTrainer(
     model=model,
     args=training_args,
-    train_dataset=tokenized_train_dataset,
-    eval_dataset=tokenized_val_dataset,
+    train_dataset=train_data,
+    eval_dataset=val_data,
     tokenizer=tokenizer
 )
 
