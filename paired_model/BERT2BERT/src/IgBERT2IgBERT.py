@@ -1,8 +1,12 @@
 import pandas as pd
 from transformers import EncoderDecoderModel, BertTokenizerFast, Seq2SeqTrainer, Seq2SeqTrainingArguments, BertModel, BertTokenizer
-from datasets import Dataset
 from torch.utils.data import DataLoader
 import torch
+from datasets import Dataset
+import datasets
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+
+
 
 # used env: class_env
 
@@ -12,7 +16,8 @@ import torch
 
 # print device
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu")
 print(f"device: {device}")
 
 def load_data(file_path):
@@ -122,8 +127,8 @@ encoder = BertModel.from_pretrained("Exscientia/IgBert")
 decoder = BertModel.from_pretrained("Exscientia/IgBert")
 
 # Create the EncoderDecoderModel
-bert2bert = EncoderDecoderModel(encoder=encoder, decoder=decoder)
-#model = EncoderDecoderModel.from_encoder_decoder_pretrained("Exscientia/IgBert", "Exscientia/IgBert")
+#bert2bert = EncoderDecoderModel(encoder=encoder, decoder=decoder)
+bert2bert = EncoderDecoderModel.from_encoder_decoder_pretrained("Exscientia/IgBert", "Exscientia/IgBert")
 
 print(bert2bert)
 print(bert2bert.config)
@@ -156,12 +161,41 @@ training_args = Seq2SeqTrainingArguments(
     predict_with_generate=True
 )
 
+#rouge = datasets.load_metric("rouge")
+
+
+
+def compute_metrics(pred):
+    labels_ids = pred.label_ids
+    pred_ids = pred.predictions.argmax(-1)
+    
+    pred_str = tokenizer.batch_decode(pred_ids, skip_special_tokens=True)
+    labels_str = tokenizer.batch_decode(labels_ids, skip_special_tokens=True)
+    
+    # Flatten lists for accuracy and precision/recall/F1 calculation
+    pred_flat = [item for sublist in pred_str for item in sublist.split()]
+    labels_flat = [item for sublist in labels_str for item in sublist.split()]
+    
+    accuracy = accuracy_score(labels_flat, pred_flat)
+    precision, recall, f1, _ = precision_recall_fscore_support(labels_flat, pred_flat, average='weighted')
+    
+    return {
+        "accuracy": accuracy,
+        "precision": precision,
+        "recall": recall,
+        "f1": f1,
+    }
+
+
+
+# instantiate trainer
 trainer = Seq2SeqTrainer(
     model=bert2bert,
+    tokenizer=tokenizer,
     args=training_args,
+    compute_metrics=compute_metrics,
     train_dataset=train_data,
     eval_dataset=val_data,
-    tokenizer=tokenizer
 )
 
 trainer.train()
