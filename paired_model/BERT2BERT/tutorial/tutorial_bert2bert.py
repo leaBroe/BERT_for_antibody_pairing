@@ -17,7 +17,7 @@ import pandas as pd
 #from IPython.display import display, HTML
 from datasets import ClassLabel
 
-train_data = datasets.load_dataset("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/tutorial/cnn_dailymail_2", "3.0.0", split="train[:5%]")
+train_data = datasets.load_dataset("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/tutorial/cnn_dailymail_2", "3.0.0", split="train[:5%]", trust_remote_code=True)
 train_data.info.description
 
 tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
@@ -92,7 +92,7 @@ train_data.set_format(
     type="torch", columns=["input_ids", "attention_mask", "decoder_input_ids", "decoder_attention_mask", "labels"],
 )
 
-val_data = datasets.load_dataset("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/tutorial/cnn_dailymail_2", "3.0.0", split="validation[:1%]")
+val_data = datasets.load_dataset("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/tutorial/cnn_dailymail_2", "3.0.0", split="validation[:1%]", trust_remote_code=True)
 
 val_data = val_data.select(range(8))
 
@@ -182,7 +182,7 @@ trainer = Seq2SeqTrainer(
 trainer.train()
 
 
-test_data = datasets.load_dataset("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/tutorial/cnn_dailymail_2", "3.0.0", split="test[:1%]")
+test_data = datasets.load_dataset("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/tutorial/cnn_dailymail_2", "3.0.0", split="test[:1%]", trust_remote_code=True)
 
 
 def generate_summary(batch):
