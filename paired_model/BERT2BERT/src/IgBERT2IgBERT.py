@@ -48,13 +48,6 @@ tokenizer = BertTokenizer.from_pretrained("Exscientia/IgBert")
 #encoder = BertModel.from_pretrained("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/IgBERT_models_HF/Exscientia_IgBert_model")
 #decoder = BertModel.from_pretrained("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/IgBERT_models_HF/Exscientia_IgBert_model")
 
-encoder = BertModel.from_pretrained("Exscientia/IgBert")
-decoder = BertModel.from_pretrained("Exscientia/IgBert")
-
-# Create the EncoderDecoderModel
-model = EncoderDecoderModel(encoder=encoder, decoder=decoder)
-#model = EncoderDecoderModel.from_encoder_decoder_pretrained("Exscientia/IgBert", "Exscientia/IgBert")
-
 
 encoder_max_length=512
 decoder_max_length=512
@@ -124,12 +117,29 @@ Output:{
 # The 'token_type_ids' field shows that the tokens from 'heavy' are marked with 0, and the tokens from 'light' are marked with 1.
 # The 'attention_mask' indicates which tokens are actual data (1) and which are padding (0).
 
+
+encoder = BertModel.from_pretrained("Exscientia/IgBert")
+decoder = BertModel.from_pretrained("Exscientia/IgBert")
+
+# Create the EncoderDecoderModel
+bert2bert = EncoderDecoderModel(encoder=encoder, decoder=decoder)
+#model = EncoderDecoderModel.from_encoder_decoder_pretrained("Exscientia/IgBert", "Exscientia/IgBert")
+
+print(bert2bert)
+print(bert2bert.config)
+
 # Set up the Seq2Seq model configuration
-model.config.decoder_start_token_id = tokenizer.cls_token_id
-model.config.eos_token_id = tokenizer.sep_token_id
-model.config.max_length = 512
-model.config.no_repeat_ngram_size = 3
-model.config.early_stopping = True
+bert2bert.config.decoder_start_token_id = tokenizer.cls_token_id
+bert2bert.config.eos_token_id = tokenizer.sep_token_id
+bert2bert.config.pad_token_id = tokenizer.pad_token_id
+bert2bert.config.vocab_size = bert2bert.config.encoder.vocab_size
+
+bert2bert.config.max_length = 142
+bert2bert.config.min_length = 56
+bert2bert.config.no_repeat_ngram_size = 3
+bert2bert.config.early_stopping = True
+bert2bert.config.length_penalty = 2.0
+bert2bert.config.num_beams = 4
 
 batch_size = 4
 
@@ -147,7 +157,7 @@ training_args = Seq2SeqTrainingArguments(
 )
 
 trainer = Seq2SeqTrainer(
-    model=model,
+    model=bert2bert,
     args=training_args,
     train_dataset=train_data,
     eval_dataset=val_data,
