@@ -70,7 +70,7 @@ print(f"Tokenizer's vocab_size: {tokenizer.vocab_size}")
 print("Model's vocab size from embeddings:", model.bert.embeddings.word_embeddings.num_embeddings)
 
 # Initialize wandb
-run_name = "small_dataset_10_epochs_own_training_loop_SPACES_debug_2"
+run_name = "test_eval_loss"
 
 wandb.init(project="paired_model_nsp_mlm_protbert", name=run_name)
 
@@ -90,7 +90,7 @@ training_args = TrainingArguments(
     eval_strategy="epoch",
     logging_steps=5
 )
-
+ 
 # Debugging: Check if all input_ids are within the tokenizer's vocabulary size
 def check_input_ids_validity(dataset, tokenizer):
     vocab_size = tokenizer.vocab_size
@@ -116,6 +116,7 @@ def log_input_ids(data_loader):
 small_train_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids_small_SPACE_separated.txt"
 small_val_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids_small_SPACE_separated.txt"
 
+# FULL dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
 full_train_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids_space_separated.txt"
 full_val_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids_space_separated.txt"
 
@@ -123,7 +124,7 @@ full_val_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/tr
 print("start building train_dataset=", datetime.now(PST))
 train_dataset = TextDatasetForNextSentencePrediction(
     tokenizer=tokenizer,
-    file_path=full_train_dataset_path,
+    file_path=small_train_dataset_path,
     block_size=128
 )
 
@@ -135,7 +136,7 @@ check_input_ids_validity(train_dataset, tokenizer)
 print("start building eval_dataset=", datetime.now(PST))
 eval_dataset = TextDatasetForNextSentencePrediction(
     tokenizer=tokenizer,
-    file_path=full_val_dataset_path,
+    file_path=small_val_dataset_path,
     block_size=128
 )
 
@@ -267,8 +268,6 @@ for batch in train_data_loader:
         print("Invalid input_ids detected:", input_ids)
         break
 
-    # Optionally, break after the first batch to just test the setup
-    break
 
 # Example to check how the tokenizer handles one of your sequences
 sample_sequence = "Q V Q L Q E S G P G L V K P S E T L S L T C T V S G G S I S G F Y W S W I R Q S P G K G L E"
@@ -438,18 +437,19 @@ for epoch in range(training_args.num_train_epochs):
         lr_scheduler.step()
         optimizer.zero_grad()
 
-        print(f"Epoch: {epoch}, Step: {step}, Loss: {loss.item()}")
+        print(f"Epoch: {epoch}, Step: {step}, Training Loss: {loss.item()}")
 
         # Additional logging
         if step % 10 == 0:
             print(f"Detailed logging at Epoch: {epoch}, Step: {step}")
             print(f"Input IDs: {batch['input_ids']}")
             print(f"Attention Mask: {batch['attention_mask']}")
-            print(f"Loss: {loss.item()}")
+            print(f"Training Loss: {loss.item()}")
             wandb.log({"train_loss": loss.item(), "epoch": epoch, "step": step})
 
     avg_train_loss = train_loss / len(train_data_loader)
-    print(f"Epoch {epoch} Training Loss: {avg_train_loss}")
+    print(f"Epoch {epoch} avg Training Loss of this epoch: {avg_train_loss}")
+    print(f"Train dataloader length: {len(train_data_loader)}")
     wandb.log({"avg_train_loss": avg_train_loss, "epoch": epoch})
         
     # Evaluation
@@ -458,7 +458,7 @@ for epoch in range(training_args.num_train_epochs):
     all_preds = []
     all_labels = []
     with torch.no_grad():
-        for batch in eval_data_loader:
+        for step, batch in enumerate(eval_data_loader):
             batch = {k: v.to(device) for k, v in batch.items()}
             
             outputs = model(**batch)
@@ -475,18 +475,26 @@ for epoch in range(training_args.num_train_epochs):
 
             # For NSP 
             nsp_preds = torch.argmax(seq_relationship_logits, dim=-1)
+
+            print(f"Epoch: {epoch}, Step: {step}, evaluation Loss: {loss.item()}")
+
+            # Additional logging
+            if step % 10 == 0:
+                print(f"Detailed logging at Epoch: {epoch}, Step: {step}")
+                print(f"Input IDs: {batch['input_ids']}")
+                print(f"Attention Mask: {batch['attention_mask']}")
+                print(f"Evaluation Loss: {loss.item()}")
+                wandb.log({"eval_loss": loss.item(), "epoch": epoch, "step": step})
     
     avg_eval_loss = eval_loss / len(eval_data_loader)
+    # print len(eval_data_loader)
+    print(f"Eval dataloader length: {len(eval_data_loader)}")
     metrics = compute_metrics(all_preds, all_labels)
-    print(f"Epoch {epoch} Evaluation Loss: {avg_eval_loss}")
+    print(f"Epoch {epoch} avg Evaluation Loss of this epoch: {avg_eval_loss}")
     print(f"Evaluation Metrics: {metrics}")
 
     # Log evaluation metrics
-    wandb.log({"avg_eval_loss": avg_eval_loss, "epoch": epoch})
-    wandb.log(metrics)
-
-    # Log evaluation metrics
-    wandb.log({"avg_eval_loss": avg_eval_loss, "epoch": epoch})
+    wandb.log({"avg eval_loss": avg_eval_loss, "epoch": epoch})
     wandb.log(metrics)
     
     # Save model checkpoint
@@ -499,8 +507,8 @@ for epoch in range(training_args.num_train_epochs):
     
     # Save logs
     with open(os.path.join(training_args.logging_dir, "training_log.txt"), "a") as log_file:
-        log_file.write(f"Epoch {epoch}, Avg Training Loss: {avg_train_loss}\n")
-        log_file.write(f"Epoch {epoch}, Avg Evaluation Loss: {avg_eval_loss}\n")
+        log_file.write(f"Epoch {epoch}, Training Loss: {train_loss}\n")
+        log_file.write(f"Epoch {epoch}, Evaluation Loss: {eval_loss}\n")
         log_file.write(f"Evaluation Metrics: {metrics}\n")
 
 ################# Training Loop from transformers #################
