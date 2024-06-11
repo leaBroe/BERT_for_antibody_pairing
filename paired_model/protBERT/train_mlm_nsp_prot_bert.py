@@ -23,11 +23,6 @@ import math
 import logging
 from datetime import datetime
 import pytz     # for time zone
-import gzip
-import csv
-import pickle
-import re
-import copy
 from torch.optim import AdamW
 from transformers import get_scheduler
 import wandb
@@ -125,7 +120,7 @@ print("start building train_dataset=", datetime.now(PST))
 train_dataset = TextDatasetForNextSentencePrediction(
     tokenizer=tokenizer,
     file_path=small_train_dataset_path,
-    block_size=128
+    block_size=512
 )
 
 # Check train_dataset input_ids
@@ -137,7 +132,7 @@ print("start building eval_dataset=", datetime.now(PST))
 eval_dataset = TextDatasetForNextSentencePrediction(
     tokenizer=tokenizer,
     file_path=small_val_dataset_path,
-    block_size=128
+    block_size=512
 )
 
 # Check eval_dataset input_ids
@@ -170,7 +165,6 @@ def create_data_loader_with_debugging(dataset, batch_size, data_collator):
         print(f"Attention Mask: {attention_mask}")
         print(f"Labels: {labels}")
         print(f"Next Sentence Labels: {next_sentence_label}")
-        break  # Only print the first batch for debugging purposes
     return data_loader
 
 
@@ -185,10 +179,16 @@ def compute_metrics(preds, labels):
     for i in range(len(labels)):
         true_labels.extend(labels[i])
         true_preds.extend(preds[i])
+
+    print(f"true labels {true_labels}")
+    print(f"predictions {true_preds}")
     
     # Filter out -100 labels (which are ignored in the evaluation)
     filtered_labels = [label for label in true_labels if label != -100]
     filtered_preds = [pred for label, pred in zip(true_labels, true_preds) if label != -100]
+
+    print(f"Filtered labels: {filtered_labels}")
+    print(f"Filtered preds: {filtered_preds}")
     
     precision, recall, f1, _ = precision_recall_fscore_support(filtered_labels, filtered_preds, average='macro', zero_division=0)
     acc = accuracy_score(filtered_labels, filtered_preds)
@@ -330,8 +330,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
 # Create directories if they do not exist
-os.makedirs(training_args.output_dir, exist_ok=True)
-os.makedirs(training_args.logging_dir, exist_ok=True)
+os.makedirs(training_args.output_dir)
+os.makedirs(training_args.logging_dir)
 
 def find_nan(tensor):
     nan_mask = torch.isnan(tensor)
@@ -470,11 +470,16 @@ for epoch in range(training_args.num_train_epochs):
             
             # For MLM
             mlm_preds = torch.argmax(prediction_logits, dim=-1)
+
+            print(f"mlm_preds {mlm_preds}")
+
             all_preds.extend(mlm_preds.cpu().numpy())
             all_labels.extend(batch['labels'].cpu().numpy())
 
+            print(f"all_labels {all_labels}")
+
             # For NSP 
-            nsp_preds = torch.argmax(seq_relationship_logits, dim=-1)
+            nsp_preds = torch.softmax(seq_relationship_logits, dim=-1)
 
             print(f"Epoch: {epoch}, Step: {step}, evaluation Loss: {loss.item()}")
 
