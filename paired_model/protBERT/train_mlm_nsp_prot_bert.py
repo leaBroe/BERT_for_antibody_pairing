@@ -65,7 +65,7 @@ print(f"Tokenizer's vocab_size: {tokenizer.vocab_size}")
 print("Model's vocab size from embeddings:", model.bert.embeddings.word_embeddings.num_embeddings)
 
 # Initialize wandb
-run_name = "test_eval_loss"
+run_name = "debug_run_1"
 
 wandb.init(project="paired_model_nsp_mlm_protbert", name=run_name)
 
@@ -75,7 +75,7 @@ logging_dir = f"./{run_name}_logging"
 # define the arguments for the trainer
 training_args = TrainingArguments(
     output_dir=output_dir,          # output directory
-    num_train_epochs=100,              # total # of training epochs
+    num_train_epochs=5,              # total # of training epochs
     per_device_train_batch_size=16,  # batch size per device during training (try 16 if needed)
     per_device_eval_batch_size=16,   # batch size for evaluation
     warmup_steps=500,                # number of warmup steps for learning rate scheduler
@@ -172,32 +172,91 @@ def create_data_loader_with_debugging(dataset, batch_size, data_collator):
 train_data_loader = create_data_loader_with_debugging(train_dataset, batch_size=16, data_collator=data_collator)
 
 
-def compute_metrics(preds, labels):
-    true_labels = []
-    true_preds = []
+# def compute_metrics(preds, labels):
+#     true_labels = []
+#     true_preds = []
     
-    for i in range(len(labels)):
-        true_labels.extend(labels[i])
-        true_preds.extend(preds[i])
+#     for i in range(len(labels)):
+#         true_labels.extend(labels[i])
+#         true_preds.extend(preds[i])
 
-    print(f"true labels {true_labels}")
-    print(f"predictions {true_preds}")
+#     print(f"length of true labels {len(true_labels)}")
+#     print(f"length of true preds {len(true_preds)}")
+
+#     print(f"true labels {true_labels}")
+#     print(f"true predictions {true_preds}")
+    
+#     # Filter out -100 labels (which are ignored in the evaluation)
+#     filtered_labels = [label for label in true_labels if label != -100]
+#     filtered_preds = [pred for label, pred in zip(true_labels, true_preds) if label != -100]
+
+#     print(f"length of filtered labels {len(filtered_labels)}")
+#     print(f"length of filtered preds {len(filtered_preds)}")
+
+#     print(f"Filtered labels: {filtered_labels}")
+#     print(f"Filtered preds: {filtered_preds}")
+    
+#     precision, recall, f1, _ = precision_recall_fscore_support(filtered_labels, filtered_preds, average='macro', zero_division=0)
+#     acc = accuracy_score(filtered_labels, filtered_preds)
+    
+#     return {
+#         'accuracy': acc, 
+#         'f1': f1,
+#         'precision': precision,
+#         'recall': recall
+#     }
+
+def compute_metrics(mlm_preds, mlm_labels, nsp_preds, nsp_labels):
+    true_mlm_labels = []
+    true_mlm_preds = []
+    true_nsp_labels = nsp_labels
+    true_nsp_preds = nsp_preds
+    
+    for i in range(len(mlm_labels)):
+        true_mlm_labels.extend(mlm_labels[i])
+        true_mlm_preds.extend(mlm_preds[i])
+
+    # for i in range(len(nsp_labels)):
+    #     true_nsp_labels.extend(nsp_labels[i])
+    #     true_nsp_preds.extend(nsp_preds[i])
+
+    print(f"length of true mlm labels {len(true_mlm_labels)}")
+    print(f"length of mlm preds {len(true_mlm_preds)}")
+
+    print(f"length of true nsp labels {len(true_nsp_labels)}")
+    print(f"length of nsp preds {len(true_nsp_preds)}")
+
+    print(f"true mlm labels {true_mlm_labels}")
+    print(f"mlm predictions {true_mlm_preds}")
+
+    print(f"true nsp labels {true_nsp_labels}")
+    print(f"nsp predictions {true_nsp_preds}")
     
     # Filter out -100 labels (which are ignored in the evaluation)
-    filtered_labels = [label for label in true_labels if label != -100]
-    filtered_preds = [pred for label, pred in zip(true_labels, true_preds) if label != -100]
+    filtered_mlm_labels = [label for label in true_mlm_labels if label != -100]
+    filtered_mlm_preds = [pred for label, pred in zip(true_mlm_labels, true_mlm_preds) if label != -100]
 
-    print(f"Filtered labels: {filtered_labels}")
-    print(f"Filtered preds: {filtered_preds}")
+    print(f"length of filtered mlm labels {len(filtered_mlm_labels)}")
+    print(f"length of filtered mlm preds {len(filtered_mlm_preds)}")
+
+    print(f"Filtered mlm labels: {filtered_mlm_labels}")
+    print(f"Filtered mlm preds: {filtered_mlm_preds}")
     
-    precision, recall, f1, _ = precision_recall_fscore_support(filtered_labels, filtered_preds, average='macro', zero_division=0)
-    acc = accuracy_score(filtered_labels, filtered_preds)
+    mlm_precision, mlm_recall, mlm_f1, _ = precision_recall_fscore_support(filtered_mlm_labels, filtered_mlm_preds, average='macro', zero_division=0)
+    acc_mlm = accuracy_score(filtered_mlm_labels, filtered_mlm_preds)
+
+    nsp_precision, nsp_recall, nsp_f1, _ = precision_recall_fscore_support(true_nsp_labels, true_nsp_preds, average='macro', zero_division=0)
+    acc_nsp = accuracy_score(true_nsp_labels, true_nsp_preds)
     
     return {
-        'accuracy': acc, 
-        'f1': f1,
-        'precision': precision,
-        'recall': recall
+        'mlm accuracy': acc_mlm, 
+        'mlm f1': mlm_f1,
+        'mlm precision': mlm_precision,
+        'mlm recall': mlm_recall,
+        'nsp accuracy': acc_nsp,
+        'nsp precision': nsp_precision,
+        'nsp f1': nsp_f1,
+        'nsp recall': nsp_recall
     }
 
 #metric = evaluate.load("accuracy", )
@@ -330,8 +389,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
 # Create directories if they do not exist
-os.makedirs(training_args.output_dir)
-os.makedirs(training_args.logging_dir)
+os.makedirs(training_args.output_dir, exist_ok=True)
+os.makedirs(training_args.logging_dir, exist_ok=True)
 
 def find_nan(tensor):
     nan_mask = torch.isnan(tensor)
@@ -457,6 +516,8 @@ for epoch in range(training_args.num_train_epochs):
     eval_loss = 0
     all_preds = []
     all_labels = []
+    nsp_true_labels = []
+    nsp_all_preds = []
     with torch.no_grad():
         for step, batch in enumerate(eval_data_loader):
             batch = {k: v.to(device) for k, v in batch.items()}
@@ -478,8 +539,27 @@ for epoch in range(training_args.num_train_epochs):
 
             print(f"all_labels {all_labels}")
 
+            # we still need softmax to convert the logits into probabilities
+            # index 0: sequence B is a continuation of sequence A
+            # index 1: sequence B is a random sequence
+
             # For NSP 
-            nsp_preds = torch.softmax(seq_relationship_logits, dim=-1)
+            nsp_true_labels.extend(batch['next_sentence_label'].cpu().numpy())
+
+            nsp_preds = torch.softmax(seq_relationship_logits, dim=1)
+            print(f"seq_relationship_logits: {seq_relationship_logits}")
+            print(f"nsp_preds: {nsp_preds}")
+
+            # tensor([[9.9993e-01, 6.7607e-05]], grad_fn=<SoftmaxBackward>)
+            # very high value for index 0: high probability of seq_B being a continuation of seq_A
+            # which is what we expect
+
+            nsp_preds_labels = torch.argmax(nsp_preds, dim=1)
+            nsp_all_preds.extend(nsp_preds_labels.cpu().numpy())
+
+            print(f"nsp_preds_labels: {nsp_preds_labels}")
+
+            print(f"true nsp labels: {nsp_true_labels}")
 
             print(f"Epoch: {epoch}, Step: {step}, evaluation Loss: {loss.item()}")
 
@@ -494,7 +574,8 @@ for epoch in range(training_args.num_train_epochs):
     avg_eval_loss = eval_loss / len(eval_data_loader)
     # print len(eval_data_loader)
     print(f"Eval dataloader length: {len(eval_data_loader)}")
-    metrics = compute_metrics(all_preds, all_labels)
+    # def compute_metrics(mlm_preds, mlm_labels, nsp_preds, nsp_labels):
+    metrics = compute_metrics(mlm_preds = all_preds, mlm_labels = all_labels, nsp_preds = nsp_all_preds, nsp_labels = nsp_true_labels)
     print(f"Epoch {epoch} avg Evaluation Loss of this epoch: {avg_eval_loss}")
     print(f"Evaluation Metrics: {metrics}")
 
