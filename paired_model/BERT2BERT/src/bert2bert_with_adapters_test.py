@@ -39,6 +39,22 @@ model = EncoderDecoderModel(encoder=encoder, decoder=decoder)
 
 print(model)
 
+# Load the tokenizer and model from Hugging Face
+tokenizer = BertTokenizer.from_pretrained("Exscientia/IgBert")
+
+# Set up the Seq2Seq model configuration
+model.config.decoder_start_token_id = tokenizer.cls_token_id
+model.config.eos_token_id = tokenizer.sep_token_id
+model.config.pad_token_id = tokenizer.pad_token_id
+model.config.vocab_size = model.config.encoder.vocab_size
+
+model.config.max_length = 512
+model.config.min_length = 100
+#model.config.no_repeat_ngram_size = 3
+#model.config.early_stopping = False
+#model.config.length_penalty = 2.0
+model.config.num_beams = 2
+
 batch_size = 8
 run_name="test_with_adapters_batch_size_8"
 
@@ -49,8 +65,6 @@ logging_dir = f"./{run_name}_logging"
 training_args = Seq2SeqTrainingArguments(
     output_dir=output_dir,
     logging_dir=logging_dir,
-    do_train=True,
-    do_eval = True,
     evaluation_strategy="epoch",
     logging_strategy="steps",
     logging_steps=10,
@@ -61,7 +75,7 @@ training_args = Seq2SeqTrainingArguments(
     save_total_limit=3,
     num_train_epochs=3,
     predict_with_generate=True,
-    #report_to="wandb",
+    report_to="wandb",
     run_name=run_name,
 )
 
@@ -101,9 +115,6 @@ train_df = load_data(train_file_path)
 val_df = load_data(val_file_path)
 
 
-# Load the tokenizer and model from Hugging Face
-tokenizer = BertTokenizer.from_pretrained("Exscientia/IgBert")
-
 encoder_max_length = 512
 decoder_max_length = 512
 
@@ -114,7 +125,7 @@ def process_data_to_model_inputs(batch):
 
     batch["input_ids"] = inputs.input_ids
     batch["attention_mask"] = inputs.attention_mask
-    batch["decoder_input_ids"] = outputs.input_ids
+    #batch["decoder_input_ids"] = outputs.input_ids
     batch["decoder_attention_mask"] = outputs.attention_mask
     batch["labels"] = outputs.input_ids.copy()
 
@@ -129,7 +140,7 @@ def process_data_to_model_inputs(batch):
 train_dataset = Dataset.from_pandas(train_df[['heavy', 'light']])
 val_dataset = Dataset.from_pandas(val_df[['heavy', 'light']])
 
-batch_size = 4
+batch_size = 8
 
 train_data = train_dataset.map(
     process_data_to_model_inputs,
@@ -137,8 +148,9 @@ train_data = train_dataset.map(
     batch_size=batch_size,
 )
 
+# "decoder_input_ids",
 train_data.set_format(
-    type="torch", columns=["input_ids", "attention_mask", "decoder_input_ids", "decoder_attention_mask", "labels"],
+    type="torch", columns=["input_ids", "attention_mask", "decoder_attention_mask", "labels"],
 )
 
 val_data = val_dataset.map(
@@ -147,8 +159,9 @@ val_data = val_dataset.map(
     batch_size=batch_size,
 )
 
+# "decoder_input_ids",
 val_data.set_format(
-    type="torch", columns=["input_ids", "attention_mask", "decoder_input_ids", "decoder_attention_mask", "labels"],
+    type="torch", columns=["input_ids", "attention_mask", "decoder_attention_mask", "labels"],
 )
 
 
@@ -171,37 +184,39 @@ trainer = Seq2SeqTrainer(
 )
 
 
-# input_ids = train_data["input_ids"].to(device)
-# decoder_input_ids = train_data["decoder_input_ids"].to(device)
-# labels = train_data["labels"].to(device)
-# attention_mask = train_data["attention_mask"].to(device)
-# decoder_attention_mask = train_data["decoder_attention_mask"].to(device)
+input_ids = train_data["input_ids"].to(device)
+#decoder_input_ids = train_data["decoder_input_ids"].to(device)
+labels = train_data["labels"].to(device)
+attention_mask = train_data["attention_mask"].to(device)
+decoder_attention_mask = train_data["decoder_attention_mask"].to(device)
 
-# print(f"device: {device}")
+print(f"device: {device}")
 
-# # input_ids.to(device)
-# # decoder_input_ids.to(device)
-# # labels.to(device)
-# # attention_mask.to(device)
-# # decoder_attention_mask.to(device)
+# input_ids.to(device)
+# decoder_input_ids.to(device)
+# labels.to(device)
+# attention_mask.to(device)
+# decoder_attention_mask.to(device)
 
-# model.to(device)
+model.to(device)
 
-# print(f"model is on device: {next(model.parameters()).device}")
-# print(f"input_ids is on device: {input_ids.device}")
-# print(f"decoder_input_ids is on device: {decoder_input_ids.device}")
-# print(f"labels is on device: {labels.device}")
-# print(f"attention_mask is on device: {attention_mask.device}")
-# print(f"decoder_attention_mask is on device: {decoder_attention_mask.device}")
+print(f"model is on device: {next(model.parameters()).device}")
+print(f"input_ids is on device: {input_ids.device}")
+#print(f"decoder_input_ids is on device: {decoder_input_ids.device}")
+print(f"labels is on device: {labels.device}")
+print(f"attention_mask is on device: {attention_mask.device}")
+print(f"decoder_attention_mask is on device: {decoder_attention_mask.device}")
 
-# #output_ids = model.generate(input_ids).to(device)
-# #print(f"output_ids: {output_ids}")
+#output_ids = model.generate(input_ids).to(device)
+#print(f"output_ids: {output_ids}")
 
-# # train...
-# loss = model(input_ids=input_ids, decoder_input_ids=decoder_input_ids, labels=labels, attention_mask=attention_mask, decoder_attention_mask=decoder_attention_mask).loss
-# loss.to(device)
-# #print(f"loss is on device: {loss.device}")
-# #loss.backward()
+# train...
+# decoder_input_ids=decoder_input_ids,
+loss = model(input_ids=input_ids, labels=labels, attention_mask=attention_mask, decoder_attention_mask=decoder_attention_mask).loss
+loss.to(device)
+print(f"{loss.grad_fn}")
+print(f"loss is on device: {loss.device}")
+#loss.backward()
 
 # Train the model
-trainer.train()
+#trainer.train()
