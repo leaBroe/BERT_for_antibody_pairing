@@ -1,14 +1,16 @@
 import pandas as pd
-from transformers import EncoderDecoderModel, BertTokenizer, Seq2SeqTrainer, Seq2SeqTrainingArguments, BertModel
+from transformers import EncoderDecoderModel, BertTokenizer, Seq2SeqTrainingArguments, BertModel
 from datasets import Dataset
 import torch
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 import wandb
+import transformers.adapters.composition as ac
+from adapters import Seq2SeqAdapterTrainer
 
 # Log in to Weights & Biases
-#wandb.login()
+wandb.login()
 
-run_name = "2nd_test_num_beam_2"
+run_name = "test_with_adapters"
 
 wandb.init(project="bert2bert-translation", name=run_name)
 
@@ -24,7 +26,7 @@ def load_data(file_path):
     sequences = []
     for entry in data:
         split_entry = entry.split(' [SEP] ')
-        if len(split_entry) == 2:
+        if (len(split_entry) == 2):
             sequences.append(split_entry)
         else:
             print(f"Skipping invalid entry: {entry}")
@@ -94,13 +96,14 @@ print(f"first example heavy and light seq {train_dataset[0]}")
 for example in train_data.select(range(1)):
     print(example)
 
-#print(f"first example of tokenized sequences {train_data.select(0)}")
-
-#encoder = BertModel.from_pretrained("Exscientia/IgBert")
-#decoder = BertModel.from_pretrained("Exscientia/IgBert")
-
 # Create the EncoderDecoderModel
 bert2bert = EncoderDecoderModel.from_encoder_decoder_pretrained("Exscientia/IgBert", "Exscientia/IgBert")
+
+# Add adapters
+bert2bert.add_adapter("translation_adapter")
+bert2bert.train_adapter("translation_adapter")
+bert2bert.add_cross_attention("translation_adapter")
+bert2bert.set_active_adapters("translation_adapter")
 
 print(bert2bert)
 print(bert2bert.config)
@@ -113,47 +116,12 @@ bert2bert.config.vocab_size = bert2bert.config.encoder.vocab_size
 
 bert2bert.config.max_length = 512
 bert2bert.config.min_length = 100
-#bert2bert.config.no_repeat_ngram_size = 3
-#bert2bert.config.early_stopping = False
-#bert2bert.config.length_penalty = 2.0
 bert2bert.config.num_beams = 2
-
-# Custom metrics function
-# def compute_metrics(pred):
-#     labels_ids = pred.label_ids
-#     pred_ids = pred.predictions.argmax(-1)  # Assuming the predictions are logits
-
-#     # Decode predicted and true labels
-#     pred_str = tokenizer.batch_decode(pred_ids, skip_special_tokens=True)
-#     labels_ids[labels_ids == -100] = tokenizer.pad_token_id
-#     label_str = tokenizer.batch_decode(labels_ids, skip_special_tokens=True)
-
-#     # Flatten the lists of tokens for evaluation
-#     pred_flat = [item for sublist in [s.split() for s in pred_str] for item in sublist]
-#     labels_flat = [item for sublist in [s.split() for s in label_str] for item in sublist]
-
-#     # Ensure both lists have the same length
-#     min_len = min(len(pred_flat), len(labels_flat))
-#     pred_flat = pred_flat[:min_len]
-#     labels_flat = labels_flat[:min_len]
-
-#     # Calculate metrics
-#     accuracy = accuracy_score(labels_flat, pred_flat)
-#     precision, recall, f1, _ = precision_recall_fscore_support(labels_flat, pred_flat, average='weighted')
-
-#     return {
-#         "accuracy": round(accuracy, 4),
-#         "precision": round(precision, 4),
-#         "recall": round(recall, 4),
-#         "f1": round(f1, 4),
-#     }
-
-
 
 # Set up training arguments and train the model
 training_args = Seq2SeqTrainingArguments(
-    output_dir="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/model_outputs/results_test",
-    logging_dir="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/model_outputs/results_test_logs",
+    output_dir=f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/model_outputs/{run_name}",
+    logging_dir=f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/model_outputs/{run_name}",
     do_train=True,
     do_eval = True,
     evaluation_strategy="epoch",
@@ -171,7 +139,7 @@ training_args = Seq2SeqTrainingArguments(
 )
 
 # Initialize the trainer
-trainer = Seq2SeqTrainer(
+trainer = Seq2SeqAdapterTrainer(
     model=bert2bert,
     tokenizer=tokenizer,
     args=training_args,
@@ -185,5 +153,11 @@ trainer.train()
 # save the model
 bert2bert.save_pretrained(f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/model_outputs/pretrained_model_{run_name}")
 
+# save adapter
+bert2bert.save_all_adapters(f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/model_outputs/adapters_{run_name}")
+
 # Finish the Weights & Biases run
 wandb.finish()
+
+
+
