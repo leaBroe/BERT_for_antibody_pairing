@@ -49,14 +49,15 @@ model.config.pad_token_id = tokenizer.pad_token_id
 model.config.vocab_size = model.config.encoder.vocab_size
 
 model.config.max_length = 512
-model.config.min_length = 100
+model.config.min_length = 50
 #model.config.no_repeat_ngram_size = 3
 #model.config.early_stopping = False
 #model.config.length_penalty = 2.0
 model.config.num_beams = 2
 
-batch_size = 8
-run_name="test_with_adapters_batch_size_8_generate_seq"
+batch_size = 16
+num_train_epochs = 10
+run_name="MEDIUM_data_with_adapters_batch_size_16_generate_seq_epochs_10"
 
 output_dir = f"./{run_name}"
 logging_dir = f"./{run_name}_logging"
@@ -73,7 +74,7 @@ training_args = Seq2SeqTrainingArguments(
     per_device_eval_batch_size=batch_size,
     weight_decay=0.01,
     save_total_limit=3,
-    num_train_epochs=3,
+    num_train_epochs=num_train_epochs,
     predict_with_generate=True,
     report_to="wandb",
     run_name=run_name,
@@ -107,9 +108,18 @@ def load_data(file_path):
     return df
 
 
-# Load training and validation data
-train_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_train_no_ids_small_SPACE_separated.txt'
-val_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_val_no_ids_small_SPACE_separated.txt'
+# Load training and validation data SMALL
+#train_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_train_no_ids_small_SPACE_separated.txt'
+#val_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_val_no_ids_small_SPACE_separated.txt'
+
+# FULL dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
+#train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids_space_separated.txt"
+#val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids_space_separated.txt"
+
+# MEDIUM dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
+train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/medium_sized_train_data_seq2seq.txt"
+val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/medium_sized_val_data_seq2seq.txt"
+
 
 train_df = load_data(train_file_path)
 val_df = load_data(val_file_path)
@@ -120,8 +130,8 @@ decoder_max_length = 512
 
 def process_data_to_model_inputs(batch):
     # tokenize the inputs and labels
-    inputs = tokenizer(batch["heavy"], padding="max_length", truncation=True, max_length=encoder_max_length)
-    outputs = tokenizer(batch["light"], padding="max_length", truncation=True, max_length=decoder_max_length)
+    inputs = tokenizer(batch["light"], padding="max_length", truncation=True, max_length=encoder_max_length)
+    outputs = tokenizer(batch["heavy"], padding="max_length", truncation=True, max_length=decoder_max_length)
 
     batch["input_ids"] = inputs.input_ids
     batch["attention_mask"] = inputs.attention_mask
@@ -140,7 +150,6 @@ def process_data_to_model_inputs(batch):
 train_dataset = Dataset.from_pandas(train_df[['heavy', 'light']])
 val_dataset = Dataset.from_pandas(val_df[['heavy', 'light']])
 
-batch_size = 8
 
 train_data = train_dataset.map(
     process_data_to_model_inputs,
@@ -227,14 +236,24 @@ trainer.train()
 
 model.to(device)
 
+
 #input_prompt = "C A R L F D P F V N D Y S P G T G Y G W L D P W G Q G T P V T V S A "
 input_prompt = "S T G V A F M E I N G L R S D D T A T Y F C A I N R V G D R G S N P S Y F Q D W G Q G T R V T V S S "
 print(f"input_prompt: {input_prompt}")
-input_ids = tokenizer.encode(input_prompt, return_tensors="pt").to(device)
+
+inputs = tokenizer(input_prompt, padding="max_length", truncation=True, max_length=512, return_tensors="pt")
+input_ids = inputs.input_ids.to(device)
+attention_mask = inputs.attention_mask.to(device)
+
+print(f"attention_mask: {attention_mask}")
+
+#input_ids = tokenizer.encode(input_prompt, return_tensors="pt").to(device)
 print(f"input_ids: {input_ids}")
 
 # Generate text using the model
-generated_text = model.generate(input_ids, max_length=100).to(device)
+generated_text = model.generate(input_ids=input_ids, attention_mask=attention_mask, max_length=100).to(device)
+
+print(F"encoded heavy sequence: {generated_text}")
 
 # Convert the generated IDs back to text
 generated_text = tokenizer.decode(generated_text[0], skip_special_tokens=True)
