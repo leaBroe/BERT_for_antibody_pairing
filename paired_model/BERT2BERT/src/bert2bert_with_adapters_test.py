@@ -56,7 +56,7 @@ model.config.min_length = 100
 model.config.num_beams = 2
 
 batch_size = 8
-run_name="test_with_adapters_batch_size_8"
+run_name="test_with_adapters_batch_size_8_generate_seq"
 
 output_dir = f"./{run_name}"
 logging_dir = f"./{run_name}_logging"
@@ -184,39 +184,60 @@ trainer = Seq2SeqTrainer(
 )
 
 
-input_ids = train_data["input_ids"].to(device)
-#decoder_input_ids = train_data["decoder_input_ids"].to(device)
-labels = train_data["labels"].to(device)
-attention_mask = train_data["attention_mask"].to(device)
-decoder_attention_mask = train_data["decoder_attention_mask"].to(device)
+# input_ids = train_data["input_ids"].to(device)
+# #decoder_input_ids = train_data["decoder_input_ids"].to(device)
+# labels = train_data["labels"].to(device)
+# attention_mask = train_data["attention_mask"].to(device)
+# decoder_attention_mask = train_data["decoder_attention_mask"].to(device)
 
-print(f"device: {device}")
+# print(f"device: {device}")
 
-# input_ids.to(device)
-# decoder_input_ids.to(device)
-# labels.to(device)
-# attention_mask.to(device)
-# decoder_attention_mask.to(device)
+# # input_ids.to(device)
+# # decoder_input_ids.to(device)
+# # labels.to(device)
+# # attention_mask.to(device)
+# # decoder_attention_mask.to(device)
+
+# model.to(device)
+
+# print(f"model is on device: {next(model.parameters()).device}")
+# print(f"input_ids is on device: {input_ids.device}")
+# #print(f"decoder_input_ids is on device: {decoder_input_ids.device}")
+# print(f"labels is on device: {labels.device}")
+# print(f"attention_mask is on device: {attention_mask.device}")
+# print(f"decoder_attention_mask is on device: {decoder_attention_mask.device}")
+
+# #output_ids = model.generate(input_ids).to(device)
+# #print(f"output_ids: {output_ids}")
+
+# # train...
+# # decoder_input_ids=decoder_input_ids,
+# loss = model(input_ids=input_ids, labels=labels, attention_mask=attention_mask, decoder_attention_mask=decoder_attention_mask).loss
+# loss.to(device)
+# print(f"{loss.grad_fn}")
+# print(f"loss is on device: {loss.device}")
+# #loss.backward()
+
+TORCH_DEBUG=1
+
+model.requires_grad_(True)
+
+# Train the model
+trainer.train()
 
 model.to(device)
 
-print(f"model is on device: {next(model.parameters()).device}")
-print(f"input_ids is on device: {input_ids.device}")
-#print(f"decoder_input_ids is on device: {decoder_input_ids.device}")
-print(f"labels is on device: {labels.device}")
-print(f"attention_mask is on device: {attention_mask.device}")
-print(f"decoder_attention_mask is on device: {decoder_attention_mask.device}")
+#input_prompt = "C A R L F D P F V N D Y S P G T G Y G W L D P W G Q G T P V T V S A "
+input_prompt = "S T G V A F M E I N G L R S D D T A T Y F C A I N R V G D R G S N P S Y F Q D W G Q G T R V T V S S "
+print(f"input_prompt: {input_prompt}")
+input_ids = tokenizer.encode(input_prompt, return_tensors="pt").to(device)
+print(f"input_ids: {input_ids}")
 
-#output_ids = model.generate(input_ids).to(device)
-#print(f"output_ids: {output_ids}")
+# Generate text using the model
+generated_text = model.generate(input_ids, max_length=100).to(device)
 
-# train...
-# decoder_input_ids=decoder_input_ids,
-loss = model(input_ids=input_ids, labels=labels, attention_mask=attention_mask, decoder_attention_mask=decoder_attention_mask).loss
-loss.to(device)
-print(f"{loss.grad_fn}")
-print(f"loss is on device: {loss.device}")
-#loss.backward()
+# Convert the generated IDs back to text
+generated_text = tokenizer.decode(generated_text[0], skip_special_tokens=True)
 
-# Train the model
-#trainer.train()
+print("generated heavy sequence: ", generated_text)
+
