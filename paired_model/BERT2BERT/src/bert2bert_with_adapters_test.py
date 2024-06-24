@@ -1,17 +1,21 @@
+# environment: adapter_env
 from transformers import BertGenerationEncoder, BertGenerationDecoder, EncoderDecoderModel, Seq2SeqTrainingArguments, BertTokenizer, Seq2SeqTrainer
 from adapters import BnConfig, Seq2SeqAdapterTrainer, AdapterTrainer, BertAdapterModel, init
 import wandb
 import torch
 import pandas as pd
 from datasets import Dataset
+import os
 
-#encoder = BertGenerationEncoder.from_pretrained("Exscientia/IgBert")
+# print device
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"device: {device}")
 
-encoder = BertAdapterModel.from_pretrained("Exscientia/IgBert").base_model
+encoder = BertGenerationEncoder.from_pretrained("Exscientia/IgBert")
+#encoder = BertAdapterModel.from_pretrained("Exscientia/IgBert").base_model
 
-#decoder = BertGenerationDecoder.from_pretrained("Exscientia/IgBert", add_cross_attention=True, is_decoder=True)
-
-decoder = BertAdapterModel.from_pretrained("Exscientia/IgBert", add_cross_attention = True, is_decoder=True).base_model
+decoder = BertGenerationDecoder.from_pretrained("Exscientia/IgBert", add_cross_attention=True, is_decoder=True)
+#decoder = BertAdapterModel.from_pretrained("Exscientia/IgBert", add_cross_attention = True, is_decoder=True).base_model
 
 init(encoder)
 init(decoder)
@@ -36,11 +40,15 @@ model = EncoderDecoderModel(encoder=encoder, decoder=decoder)
 print(model)
 
 batch_size = 8
-run_name="test_with_adapters"
+run_name="test_with_adapters_batch_size_8"
+
+output_dir = f"./{run_name}"
+logging_dir = f"./{run_name}_logging"
+
 
 training_args = Seq2SeqTrainingArguments(
-    output_dir="/results_test",
-    logging_dir="/results_test_logs",
+    output_dir=output_dir,
+    logging_dir=logging_dir,
     do_train=True,
     do_eval = True,
     evaluation_strategy="epoch",
@@ -57,15 +65,15 @@ training_args = Seq2SeqTrainingArguments(
     run_name=run_name,
 )
 
-# Log in to Weights & Biases
-wandb.login()
+# Create directories if they do not exist
+os.makedirs(training_args.output_dir, exist_ok=True)
+os.makedirs(training_args.logging_dir, exist_ok=True)
 
-run_name = "test_with_adapters"
+# Log in to Weights & Biases
+#wandb.login()
+
 
 wandb.init(project="bert2bert-translation", name=run_name)
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"device: {device}")
 
 def load_data(file_path):
     data = []
@@ -163,23 +171,37 @@ trainer = Seq2SeqTrainer(
 )
 
 
-input_ids = train_data["input_ids"]
-decoder_input_ids = train_data["decoder_input_ids"]
-labels = train_data["labels"]
-attention_mask = train_data["attention_mask"]
-decoder_attention_mask = train_data["decoder_attention_mask"]
+# input_ids = train_data["input_ids"].to(device)
+# decoder_input_ids = train_data["decoder_input_ids"].to(device)
+# labels = train_data["labels"].to(device)
+# attention_mask = train_data["attention_mask"].to(device)
+# decoder_attention_mask = train_data["decoder_attention_mask"].to(device)
 
-input_ids.to(device)
-decoder_input_ids.to(device)
-labels.to(device)
-attention_mask.to(device)
-decoder_attention_mask.to(device)
+# print(f"device: {device}")
 
-model.to(device)
+# # input_ids.to(device)
+# # decoder_input_ids.to(device)
+# # labels.to(device)
+# # attention_mask.to(device)
+# # decoder_attention_mask.to(device)
 
-# train...
-loss = model(input_ids=input_ids, decoder_input_ids=decoder_input_ids, labels=labels, attention_mask=attention_mask, decoder_attention_mask=decoder_attention_mask).loss
-loss.backward()
+# model.to(device)
+
+# print(f"model is on device: {next(model.parameters()).device}")
+# print(f"input_ids is on device: {input_ids.device}")
+# print(f"decoder_input_ids is on device: {decoder_input_ids.device}")
+# print(f"labels is on device: {labels.device}")
+# print(f"attention_mask is on device: {attention_mask.device}")
+# print(f"decoder_attention_mask is on device: {decoder_attention_mask.device}")
+
+# #output_ids = model.generate(input_ids).to(device)
+# #print(f"output_ids: {output_ids}")
+
+# # train...
+# loss = model(input_ids=input_ids, decoder_input_ids=decoder_input_ids, labels=labels, attention_mask=attention_mask, decoder_attention_mask=decoder_attention_mask).loss
+# loss.to(device)
+# #print(f"loss is on device: {loss.device}")
+# #loss.backward()
 
 # Train the model
 trainer.train()
