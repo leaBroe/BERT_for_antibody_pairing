@@ -40,54 +40,70 @@ decoder.set_active_adapters("decoder_adapter")
 encoder.train_adapter("encoder_adapter")
 decoder.train_adapter("decoder_adapter")
 
-print(encoder)
-print(decoder)
+print(f"print encoder: {encoder}")
+print(f"print decoder: {decoder}")
 
 # Create the model
 model = EncoderDecoderModel(encoder=encoder, decoder=decoder)
 
-print(model)
+print(f"print EncoderDecoderModel: {model}")
 
 # Load the tokenizer and model from Hugging Face
 tokenizer = BertTokenizer.from_pretrained("Exscientia/IgBert")
 
 
-batch_size = 16
-num_train_epochs = 3
-run_name="small_data_with_adapters_batch_size_16_generate_seq_epochs_10_automodel"
+batch_size = 32
+num_train_epochs = 5
+
+# Set up the run name
+run_name="MEDIUM_data_with_adapters_batch_size_32_generate_seq_epochs_5_automodel"
 
 output_dir = f"./{run_name}"
 logging_dir = f"./{run_name}_logging"
 
-# Define the generation config
+# Set up the Seq2Seq model configuration
+model.config.decoder_start_token_id = tokenizer.cls_token_id
+model.config.eos_token_id = tokenizer.sep_token_id
+model.config.pad_token_id = tokenizer.pad_token_id
+model.config.vocab_size = model.config.encoder.vocab_size
+
+model.config.max_length = 512
+model.config.min_length = 50
+#model.config.no_repeat_ngram_size = 3
+#model.config.early_stopping = False
+#model.config.length_penalty = 2.0
+#model.config.num_beams = 2
+
+
 generation_config = GenerationConfig(
-        max_new_tokens=64,
-        num_return_sequences=1,
-        max_length=512,
-        min_length=50,
+    num_return_sequences=1,
+    max_length=512,
+    min_length=50,
 
-        # sampling
-        do_sample=True,
-        top_k=100,
+    # sampling
+    do_sample=True,
+    top_k=100,
 
-        # distribution adjustment
-        temperature=0.001,
-        repetition_penalty=1, 
+    # distribution adjustment
+    temperature=0.001,
+    repetition_penalty=1,
 
-        vocab_size=model.config.encoder.vocab_size
+    vocab_size=model.config.encoder.vocab_size,
 
-        # token ids
-        pad_token_id=tokenizer.pad_token_id,
-        eos_token_id=tokenizer.sep_token_id,
-        decoder_start_token_id=tokenizer.cls_token_id,
+    # token ids
+    pad_token_id=tokenizer.pad_token_id,
+    eos_token_id=tokenizer.sep_token_id,
+    decoder_start_token_id=tokenizer.cls_token_id,
 
-        # others
-        use_cache=True,
-        output_logits=True,
-        output_scores=True,
-        output_hidden_states=True,
-        return_dict_in_generate=True,
-        )
+    # others
+    use_cache=True,
+    output_logits=True,
+    output_scores=True,
+    output_hidden_states=True,
+    return_dict_in_generate=True, )
+
+
+
 
 
 
@@ -140,16 +156,16 @@ def load_data(file_path):
 
 
 # SMALL training and validation data
-train_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_train_no_ids_small_SPACE_separated.txt'
-val_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_val_no_ids_small_SPACE_separated.txt'
+#train_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_train_no_ids_small_SPACE_separated.txt'
+#val_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_val_no_ids_small_SPACE_separated.txt'
 
 # FULL dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
 #train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids_space_separated.txt"
 #val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids_space_separated.txt"
 
 # MEDIUM dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
-#train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/medium_sized_train_data_seq2seq.txt"
-#val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/medium_sized_val_data_seq2seq.txt"
+train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/medium_sized_train_data_seq2seq.txt"
+val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/medium_sized_val_data_seq2seq.txt"
 
 
 train_df = load_data(train_file_path)
@@ -268,6 +284,7 @@ trainer.train()
 
 model.to(device)
 
+# test the model with single sequence
 
 #input_prompt = "C A R L F D P F V N D Y S P G T G Y G W L D P W G Q G T P V T V S A "
 input_prompt = "S T G V A F M E I N G L R S D D T A T Y F C A I N R V G D R G S N P S Y F Q D W G Q G T R V T V S S "
@@ -284,20 +301,22 @@ print(f"input_ids: {input_ids}")
 
 # Generate text using the model
 generated_seq = model.generate(input_ids=input_ids, 
-                                attention_mask=attention_mask, 
-                                max_length=100, 
-                                output_scores = True, 
-                                return_dict_in_generate=True).to(device)
+                               attention_mask=attention_mask, 
+                               max_length=100, 
+                               output_scores=True, 
+                               return_dict_in_generate=True)
 
-# turn output scores to probs
-#generated_seq_probs = torch.nn.functional.softmax(generated_seq[0], dim=-1)
+# Turn output scores to probabilities
+# generated_seq_probs = torch.nn.functional.softmax(generated_seq['scores'][0], dim=-1)
 
+# Print the generated sequences and probabilities
+print(f"encoded heavy sequence: {generated_seq}")
 
-#print(f"generated_seq_probs: {generated_seq_probs}")
-print(F"encoded heavy sequence: {generated_seq}")
+# Access the first sequence in the generated sequences
+sequence = generated_seq["sequences"][0]
 
 # Convert the generated IDs back to text
-generated_seq = tokenizer.decode(generated_seq[0], skip_special_tokens=True)
+generated_text = tokenizer.decode(sequence, skip_special_tokens=True)
 
-print("generated heavy sequence: ", generated_seq)
+print("generated heavy sequence: ", generated_text)
 
