@@ -1,5 +1,5 @@
 # environment: adapter_env
-from transformers import BertGenerationEncoder, BertGenerationDecoder, EncoderDecoderModel, Seq2SeqTrainingArguments, BertTokenizer, Seq2SeqTrainer
+from transformers import BertGenerationEncoder, BertGenerationDecoder, EncoderDecoderModel, Seq2SeqTrainingArguments, BertTokenizer, Seq2SeqTrainer, AutoModel, AutoModelForCausalLM, DataCollatorForSeq2Seq, GenerationConfig
 from adapters import BnConfig, Seq2SeqAdapterTrainer, AdapterTrainer, BertAdapterModel, init
 import wandb
 import torch
@@ -11,10 +11,18 @@ import os
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"device: {device}")
 
-encoder = BertGenerationEncoder.from_pretrained("Exscientia/IgBert")
+
+############################################ BERT2BERT with adapters ############################################
+
+# Load the encoder and decoder from Hugging Face
+
+encoder = AutoModel.from_pretrained("Exscientia/IgBert")
+decoder = AutoModelForCausalLM.from_pretrained("Exscientia/IgBert", add_cross_attention = True, is_decoder=True)
+
+#encoder = BertGenerationEncoder.from_pretrained("Exscientia/IgBert")
 #encoder = BertAdapterModel.from_pretrained("Exscientia/IgBert").base_model
 
-decoder = BertGenerationDecoder.from_pretrained("Exscientia/IgBert", add_cross_attention=True, is_decoder=True)
+#decoder = BertGenerationDecoder.from_pretrained("Exscientia/IgBert", add_cross_attention=True, is_decoder=True)
 #decoder = BertAdapterModel.from_pretrained("Exscientia/IgBert", add_cross_attention = True, is_decoder=True).base_model
 
 init(encoder)
@@ -35,6 +43,7 @@ decoder.train_adapter("decoder_adapter")
 print(encoder)
 print(decoder)
 
+# Create the model
 model = EncoderDecoderModel(encoder=encoder, decoder=decoder)
 
 print(model)
@@ -42,25 +51,44 @@ print(model)
 # Load the tokenizer and model from Hugging Face
 tokenizer = BertTokenizer.from_pretrained("Exscientia/IgBert")
 
-# Set up the Seq2Seq model configuration
-model.config.decoder_start_token_id = tokenizer.cls_token_id
-model.config.eos_token_id = tokenizer.sep_token_id
-model.config.pad_token_id = tokenizer.pad_token_id
-model.config.vocab_size = model.config.encoder.vocab_size
-
-model.config.max_length = 512
-model.config.min_length = 50
-#model.config.no_repeat_ngram_size = 3
-#model.config.early_stopping = False
-#model.config.length_penalty = 2.0
-model.config.num_beams = 2
 
 batch_size = 16
-num_train_epochs = 10
-run_name="MEDIUM_data_with_adapters_batch_size_16_generate_seq_epochs_10"
+num_train_epochs = 3
+run_name="small_data_with_adapters_batch_size_16_generate_seq_epochs_10_automodel"
 
 output_dir = f"./{run_name}"
 logging_dir = f"./{run_name}_logging"
+
+# Define the generation config
+generation_config = GenerationConfig(
+        max_new_tokens=64,
+        num_return_sequences=1,
+        max_length=512,
+        min_length=50,
+
+        # sampling
+        do_sample=True,
+        top_k=100,
+
+        # distribution adjustment
+        temperature=0.001,
+        repetition_penalty=1, 
+
+        vocab_size=model.config.encoder.vocab_size
+
+        # token ids
+        pad_token_id=tokenizer.pad_token_id,
+        eos_token_id=tokenizer.sep_token_id,
+        decoder_start_token_id=tokenizer.cls_token_id,
+
+        # others
+        use_cache=True,
+        output_logits=True,
+        output_scores=True,
+        output_hidden_states=True,
+        return_dict_in_generate=True,
+        )
+
 
 
 training_args = Seq2SeqTrainingArguments(
@@ -78,7 +106,10 @@ training_args = Seq2SeqTrainingArguments(
     predict_with_generate=True,
     report_to="wandb",
     run_name=run_name,
+    generation_config=generation_config,
 )
+
+data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
 
 # Create directories if they do not exist
 os.makedirs(training_args.output_dir, exist_ok=True)
@@ -108,25 +139,25 @@ def load_data(file_path):
     return df
 
 
-# Load training and validation data SMALL
-#train_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_train_no_ids_small_SPACE_separated.txt'
-#val_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_val_no_ids_small_SPACE_separated.txt'
+# SMALL training and validation data
+train_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_train_no_ids_small_SPACE_separated.txt'
+val_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_val_no_ids_small_SPACE_separated.txt'
 
 # FULL dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
 #train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids_space_separated.txt"
 #val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids_space_separated.txt"
 
 # MEDIUM dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
-train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/medium_sized_train_data_seq2seq.txt"
-val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/medium_sized_val_data_seq2seq.txt"
+#train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/medium_sized_train_data_seq2seq.txt"
+#val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/medium_sized_val_data_seq2seq.txt"
 
 
 train_df = load_data(train_file_path)
 val_df = load_data(val_file_path)
 
 
-encoder_max_length = 512
-decoder_max_length = 512
+encoder_max_length = 200
+decoder_max_length = 200
 
 def process_data_to_model_inputs(batch):
     # tokenize the inputs and labels
@@ -190,6 +221,7 @@ trainer = Seq2SeqTrainer(
     args=training_args,
     train_dataset=train_data,
     eval_dataset=val_data,
+    data_collator=data_collator,
 )
 
 
@@ -251,12 +283,21 @@ print(f"attention_mask: {attention_mask}")
 print(f"input_ids: {input_ids}")
 
 # Generate text using the model
-generated_text = model.generate(input_ids=input_ids, attention_mask=attention_mask, max_length=100).to(device)
+generated_seq = model.generate(input_ids=input_ids, 
+                                attention_mask=attention_mask, 
+                                max_length=100, 
+                                output_scores = True, 
+                                return_dict_in_generate=True).to(device)
 
-print(F"encoded heavy sequence: {generated_text}")
+# turn output scores to probs
+#generated_seq_probs = torch.nn.functional.softmax(generated_seq[0], dim=-1)
+
+
+#print(f"generated_seq_probs: {generated_seq_probs}")
+print(F"encoded heavy sequence: {generated_seq}")
 
 # Convert the generated IDs back to text
-generated_text = tokenizer.decode(generated_text[0], skip_special_tokens=True)
+generated_seq = tokenizer.decode(generated_seq[0], skip_special_tokens=True)
 
-print("generated heavy sequence: ", generated_text)
+print("generated heavy sequence: ", generated_seq)
 
