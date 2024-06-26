@@ -64,20 +64,23 @@ print(f"Tokenizer's vocab_size: {tokenizer.vocab_size}")
 
 print("Model's vocab size from embeddings:", model.bert.embeddings.word_embeddings.num_embeddings)
 
+batch_size=16
+num_train_epochs = 100
+learning_rate = 2e-6
+
 # Initialize wandb
-run_name = "full_data_10_epochs_new_metrics_lr2e-6_batch_size_8"
+run_name = f"full_data_{num_train_epochs}_epochs_lr{learning_rate}_batch_size_{batch_size}"
 
 wandb.init(project="paired_model_nsp_mlm_protbert", name=run_name)
 
 output_dir = f"./{run_name}"
 logging_dir = f"./{run_name}_logging"
 
-batch_size=8
 
 # define the arguments for the trainer
 training_args = TrainingArguments(
     output_dir=output_dir,          # output directory
-    num_train_epochs=10,              # total # of training epochs
+    num_train_epochs=num_train_epochs,              # total # of training epochs
     per_device_train_batch_size=batch_size,  # batch size per device during training (try 16 if needed)
     per_device_eval_batch_size=batch_size,   # batch size for evaluation
     warmup_steps=500,                # number of warmup steps for learning rate scheduler
@@ -210,6 +213,7 @@ data_collator = DataCollatorForLanguageModeling(
 #     }
 
 def compute_metrics(mlm_preds, mlm_labels, nsp_preds, nsp_labels):
+    print("Computing metrics...")
     true_mlm_labels = []
     true_mlm_preds = []
     true_nsp_labels = nsp_labels
@@ -229,8 +233,8 @@ def compute_metrics(mlm_preds, mlm_labels, nsp_preds, nsp_labels):
     print(f"length of true nsp labels {len(true_nsp_labels)}")
     print(f"length of nsp preds {len(true_nsp_preds)}")
 
-    print(f"true mlm labels {true_mlm_labels}")
-    print(f"mlm predictions {true_mlm_preds}")
+    #print(f"true mlm labels {true_mlm_labels}")
+    #print(f"mlm predictions {true_mlm_preds}")
 
     print(f"true nsp labels {true_nsp_labels}")
     print(f"nsp predictions {true_nsp_preds}")
@@ -242,14 +246,16 @@ def compute_metrics(mlm_preds, mlm_labels, nsp_preds, nsp_labels):
     print(f"length of filtered mlm labels {len(filtered_mlm_labels)}")
     print(f"length of filtered mlm preds {len(filtered_mlm_preds)}")
 
-    print(f"Filtered mlm labels: {filtered_mlm_labels}")
-    print(f"Filtered mlm preds: {filtered_mlm_preds}")
+    #print(f"Filtered mlm labels: {filtered_mlm_labels}")
+    #print(f"Filtered mlm preds: {filtered_mlm_preds}")
     
     mlm_precision, mlm_recall, mlm_f1, _ = precision_recall_fscore_support(filtered_mlm_labels, filtered_mlm_preds, average='macro', zero_division=0)
     acc_mlm = accuracy_score(filtered_mlm_labels, filtered_mlm_preds)
 
     nsp_precision, nsp_recall, nsp_f1, _ = precision_recall_fscore_support(true_nsp_labels, true_nsp_preds, average='macro', zero_division=0)
     acc_nsp = accuracy_score(true_nsp_labels, true_nsp_preds)
+
+    print("done computing metrics")
     
     return {
         'mlm accuracy': acc_mlm, 
@@ -306,7 +312,6 @@ print("finished=",datetime.now(PST))
 
 #log_input_ids(train_data_loader)
 
-learning_rate = 2e-6
 
 optimizer = AdamW(model.parameters(), lr=learning_rate)
 
@@ -538,7 +543,7 @@ for epoch in range(training_args.num_train_epochs):
             # For MLM
             mlm_preds = torch.argmax(prediction_logits, dim=-1)
 
-            print(f"mlm_preds {mlm_preds}")
+            #print(f"mlm_preds {mlm_preds}")
 
             all_preds.extend(mlm_preds.cpu().numpy())
             all_labels.extend(batch['labels'].cpu().numpy())
@@ -550,7 +555,10 @@ for epoch in range(training_args.num_train_epochs):
             # index 1: sequence B is a random sequence
 
             # For NSP 
-            nsp_true_labels.extend(batch['next_sentence_label'].cpu().numpy())
+            nsp_true_labels_per_batch = batch['next_sentence_label']
+            print(f"nsp_true_labels_per_batch: {nsp_true_labels_per_batch}")
+            print(f"length of nsp_true_labels_per_batch: {len(nsp_true_labels_per_batch)}")
+            nsp_true_labels.extend(nsp_true_labels_per_batch.cpu().numpy())
 
             nsp_preds = torch.softmax(seq_relationship_logits, dim=1)
             print(f"seq_relationship_logits: {seq_relationship_logits}")
@@ -563,7 +571,7 @@ for epoch in range(training_args.num_train_epochs):
             nsp_preds_labels = torch.argmax(nsp_preds, dim=1)
             nsp_all_preds.extend(nsp_preds_labels.cpu().numpy())
 
-            print(f"nsp_preds_labels: {nsp_preds_labels}")
+            print(f"nsp_preds_labels per batch: {nsp_preds_labels}")
 
             print(f"true nsp labels: {nsp_true_labels}")
 
@@ -582,6 +590,8 @@ for epoch in range(training_args.num_train_epochs):
     print(f"Eval dataloader length: {len(eval_data_loader)}")
     # def compute_metrics(mlm_preds, mlm_labels, nsp_preds, nsp_labels):
     metrics = compute_metrics(mlm_preds = all_preds, mlm_labels = all_labels, nsp_preds = nsp_all_preds, nsp_labels = nsp_true_labels)
+    print("length nsp_all_preds", len(nsp_all_preds))
+    print("length nsp_true_labels ", len(nsp_true_labels))
     print(f"Epoch {epoch} avg Evaluation Loss of this epoch: {avg_eval_loss}")
     print(f"Evaluation Metrics: {metrics}")
 
