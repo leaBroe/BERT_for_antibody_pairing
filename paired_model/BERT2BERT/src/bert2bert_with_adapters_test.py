@@ -29,6 +29,8 @@ decoder = AutoModelForCausalLM.from_pretrained("Exscientia/IgBert", add_cross_at
 init(encoder)
 init(decoder)
 
+############################################ add adapters ############################################
+
 config = BnConfig(mh_adapter=True, output_adapter=True, reduction_factor=16, non_linearity="relu")
 
 encoder.add_adapter("encoder_adapter", config=config)
@@ -44,20 +46,29 @@ decoder.train_adapter("decoder_adapter")
 print(f"print encoder: {encoder}")
 print(f"print decoder: {decoder}")
 
+
+############################################ create the model ############################################
+
 # Create the model
 model = EncoderDecoderModel(encoder=encoder, decoder=decoder)
+
+#encoder.print_trainable_parameters()
+#decoder.print_trainable_parameters()
+
 
 print(f"print EncoderDecoderModel: {model}")
 
 # Load the tokenizer and model from Hugging Face
 tokenizer = BertTokenizer.from_pretrained("Exscientia/IgBert")
 
+############################################ model configuration ############################################
+
 
 batch_size = 32
-num_train_epochs = 3
+num_train_epochs = 5
 
 # Set up the run name
-run_name="SMALL_data_with_adapters_batch_size_32_generate_seq_epochs_5_automodel"
+run_name=f"small_data_with_adapters_batch_size_{batch_size}_epochs_{num_train_epochs}_automodel"
 
 output_dir = f"./{run_name}"
 logging_dir = f"./{run_name}_logging"
@@ -106,6 +117,7 @@ generation_config = GenerationConfig(
 
 
 
+############################################ Training Arguments ############################################
 
 
 
@@ -138,6 +150,9 @@ os.makedirs(training_args.logging_dir, exist_ok=True)
 
 
 wandb.init(project="bert2bert-translation", name=run_name)
+
+############################################ load the data ############################################
+
 
 def load_data(file_path):
     data = []
@@ -302,6 +317,15 @@ trainer.train()
 
 model.to(device)
 
+# For the sake of this demonstration an example path for loading and storing is given below
+output_path = os.path.join(os.getcwd(), run_name)
+
+# Save model
+model.save_pretrained(output_path)
+# Save adapter
+encoder.save_adapter(output_path, "encoder_adapter")
+decoder.save_adapter(output_path, "decoder_adapter")
+
 # test the model with single sequence
 
 #input_prompt = "C A R L F D P F V N D Y S P G T G Y G W L D P W G Q G T P V T V S A "
@@ -352,7 +376,7 @@ print(f"length of light sequences {len(light_sequences)}")
 
 generated_heavy_seqs = []
 
-# Iterate through each example in the dataset
+# Iterate through each sequence in the test dataset
 for i in range(50):
     inputs = tokenizer(light_sequences[i], padding="max_length", truncation=True, max_length=512, return_tensors="pt")
     print(f"inputs: {inputs}")
