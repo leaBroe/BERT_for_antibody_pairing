@@ -6,6 +6,7 @@ import torch
 import pandas as pd
 from datasets import Dataset
 import os
+import datasets
 
 # print device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -53,10 +54,10 @@ tokenizer = BertTokenizer.from_pretrained("Exscientia/IgBert")
 
 
 batch_size = 32
-num_train_epochs = 5
+num_train_epochs = 3
 
 # Set up the run name
-run_name="MEDIUM_data_with_adapters_batch_size_32_generate_seq_epochs_5_automodel"
+run_name="SMALL_data_with_adapters_batch_size_32_generate_seq_epochs_5_automodel"
 
 output_dir = f"./{run_name}"
 logging_dir = f"./{run_name}_logging"
@@ -68,11 +69,12 @@ model.config.pad_token_id = tokenizer.pad_token_id
 model.config.vocab_size = model.config.encoder.vocab_size
 
 model.config.max_length = 512
-model.config.min_length = 50
-#model.config.no_repeat_ngram_size = 3
-#model.config.early_stopping = False
-#model.config.length_penalty = 2.0
-#model.config.num_beams = 2
+model.config.min_length = 5
+
+model.config.no_repeat_ngram_size = 3
+model.config.early_stopping = True
+model.config.length_penalty = 2.0
+model.config.num_beams = 4
 
 
 generation_config = GenerationConfig(
@@ -156,20 +158,22 @@ def load_data(file_path):
 
 
 # SMALL training and validation data
-#train_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_train_no_ids_small_SPACE_separated.txt'
-#val_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_val_no_ids_small_SPACE_separated.txt'
+train_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_train_no_ids_small_SPACE_separated.txt'
+val_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_val_no_ids_small_SPACE_separated.txt'
+test_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated_SMALL.txt'
 
 # FULL dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
 #train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids_space_separated.txt"
 #val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids_space_separated.txt"
 
 # MEDIUM dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
-train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/medium_sized_train_data_seq2seq.txt"
-val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/medium_sized_val_data_seq2seq.txt"
+#train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/medium_sized_train_data_seq2seq.txt"
+#val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/medium_sized_val_data_seq2seq.txt"
 
 
 train_df = load_data(train_file_path)
 val_df = load_data(val_file_path)
+test_df = load_data(test_file_path)
 
 
 encoder_max_length = 200
@@ -193,9 +197,11 @@ def process_data_to_model_inputs(batch):
 
 
 
+
 # Convert the dataframes to Hugging Face datasets
 train_dataset = Dataset.from_pandas(train_df[['heavy', 'light']])
 val_dataset = Dataset.from_pandas(val_df[['heavy', 'light']])
+test_dataset = Dataset.from_pandas(test_df[['heavy', 'light']])
 
 
 train_data = train_dataset.map(
@@ -220,10 +226,22 @@ val_data.set_format(
     type="torch", columns=["input_ids", "attention_mask", "decoder_attention_mask", "labels"],
 )
 
+test_data = test_dataset.map(
+    process_data_to_model_inputs,   
+    batched=True,
+    batch_size=batch_size,
+)   
+
+# "decoder_input_ids",
+test_data.set_format(
+    type="torch", columns=["input_ids", "attention_mask", "decoder_attention_mask", "labels"],
+)
+
+
 
 
 # print heavy and light seq from the first example in the training data (train_dataset)
-print(f"first example heavy and light seq {train_dataset[0]}")
+print(f"first example heavy and light seq {train_dataset[0]}, {train_dataset[1]}")
 
 # Print a few examples from the tokenized dataset
 for example in train_data.select(range(1)):
@@ -277,7 +295,7 @@ trainer = Seq2SeqTrainer(
 
 TORCH_DEBUG=1
 
-model.requires_grad_(True)
+#model.requires_grad_(True)
 
 # Train the model
 trainer.train()
@@ -309,14 +327,61 @@ generated_seq = model.generate(input_ids=input_ids,
 # Turn output scores to probabilities
 # generated_seq_probs = torch.nn.functional.softmax(generated_seq['scores'][0], dim=-1)
 
-# Print the generated sequences and probabilities
-print(f"encoded heavy sequence: {generated_seq}")
-
-# Access the first sequence in the generated sequences
+# Access the first element in the generated sequence
 sequence = generated_seq["sequences"][0]
+
+# Print the generated sequences and probabilities
+print(f"encoded heavy sequence: {sequence}.")
 
 # Convert the generated IDs back to text
 generated_text = tokenizer.decode(sequence, skip_special_tokens=True)
 
-print("generated heavy sequence: ", generated_text)
+print("decoded heavy sequence: ", generated_text)
 
+# print(test_data)
+
+# Load your test data
+test_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated_SMALL.txt'
+test_df = load_data(test_file_path)
+
+# extract the light sequences from test_df
+light_sequences = test_df["light"]
+
+print("light_sequences: ", light_sequences)
+print(f"length of light sequences {len(light_sequences)}")
+
+generated_heavy_seqs = []
+
+# Iterate through each example in the dataset
+for i in range(50):
+    inputs = tokenizer(light_sequences[i], padding="max_length", truncation=True, max_length=512, return_tensors="pt")
+    print(f"inputs: {inputs}")
+    input_ids = inputs.input_ids.to(device)
+    print(f"input_ids: {input_ids}")
+    attention_mask = inputs.attention_mask.to(device)
+    print(f"attention_mask: {attention_mask}")
+
+    generated_seq = model.generate(input_ids=input_ids, 
+                               attention_mask=attention_mask, 
+                               max_length=100, 
+                               output_scores=True, 
+                               return_dict_in_generate=True)
+    
+    # Access the first element in the generated sequence
+    sequence = generated_seq["sequences"][0]
+
+    # Print the generated sequences and probabilities
+    print(f"encoded heavy sequence: {sequence}.")
+
+    # Convert the generated IDs back to text
+    generated_text = tokenizer.decode(sequence, skip_special_tokens=True)
+
+    print("decoded heavy sequence: ", generated_text)
+
+    generated_heavy_seqs.append(generated_text)
+
+
+print("generated_heavy_seqs:")
+# print each generated sequence on new line
+for seq in generated_heavy_seqs:
+    print(seq)
