@@ -1,4 +1,5 @@
-# environment: adapter_env
+# environment: adap_2
+# use pip install git+https://github.com/adapter-hub/adapters.git for installing adapters
 from transformers import BertGenerationEncoder, BertGenerationDecoder, EncoderDecoderModel, Seq2SeqTrainingArguments, BertTokenizer, Seq2SeqTrainer, AutoModel, AutoModelForCausalLM, DataCollatorForSeq2Seq, GenerationConfig
 from adapters import BnConfig, Seq2SeqAdapterTrainer, AdapterTrainer, BertAdapterModel, init
 import wandb
@@ -17,43 +18,49 @@ print(f"device: {device}")
 
 # Load the encoder and decoder from Hugging Face
 
-encoder = AutoModel.from_pretrained("Exscientia/IgBert")
-decoder = AutoModelForCausalLM.from_pretrained("Exscientia/IgBert", add_cross_attention = True, is_decoder=True)
+model = EncoderDecoderModel.from_encoder_decoder_pretrained("Exscientia/IgBert", "Exscientia/IgBert")
+init(model)
 
-#encoder = BertGenerationEncoder.from_pretrained("Exscientia/IgBert")
-#encoder = BertAdapterModel.from_pretrained("Exscientia/IgBert").base_model
+#encoder = AutoModel.from_pretrained("Exscientia/IgBert")
+#decoder = AutoModelForCausalLM.from_pretrained("Exscientia/IgBert", add_cross_attention = True, is_decoder=True)
 
-#decoder = BertGenerationDecoder.from_pretrained("Exscientia/IgBert", add_cross_attention=True, is_decoder=True)
-#decoder = BertAdapterModel.from_pretrained("Exscientia/IgBert", add_cross_attention = True, is_decoder=True).base_model
+# #encoder = BertGenerationEncoder.from_pretrained("Exscientia/IgBert")
+# #encoder = BertAdapterModel.from_pretrained("Exscientia/IgBert").base_model
 
-init(encoder)
-init(decoder)
+# #decoder = BertGenerationDecoder.from_pretrained("Exscientia/IgBert", add_cross_attention=True, is_decoder=True)
+# #decoder = BertAdapterModel.from_pretrained("Exscientia/IgBert", add_cross_attention = True, is_decoder=True).base_model
 
-############################################ add adapters ############################################
+# init(encoder)
+# init(decoder)
+
+# ############################################ add adapters ############################################
 
 config = BnConfig(mh_adapter=True, output_adapter=True, reduction_factor=16, non_linearity="relu")
 
-encoder.add_adapter("encoder_adapter", config=config)
-decoder.add_adapter("decoder_adapter", config=config)
+model.add_adapter("seq2seq_adapter", config=config)
+model.train_adapter("seq2seq_adapter")
 
-encoder.set_active_adapters("encoder_adapter")
-decoder.set_active_adapters("decoder_adapter")
+# encoder.add_adapter("encoder_adapter", config=config)
+# decoder.add_adapter("decoder_adapter", config=config)
 
-# Activate the adapter
-encoder.train_adapter("encoder_adapter")
-decoder.train_adapter("decoder_adapter")
+# encoder.set_active_adapters("encoder_adapter")
+# decoder.set_active_adapters("decoder_adapter")
 
-print(f"print encoder: {encoder}")
-print(f"print decoder: {decoder}")
+# # Activate the adapter
+# encoder.train_adapter("encoder_adapter")
+# decoder.train_adapter("decoder_adapter")
+
+# print(f"print encoder: {encoder}")
+# print(f"print decoder: {decoder}")
 
 
-############################################ create the model ############################################
+# ############################################ create the model ############################################
 
-# Create the model
-model = EncoderDecoderModel(encoder=encoder, decoder=decoder)
+# # Create the model
+# model = EncoderDecoderModel(encoder=encoder, decoder=decoder)
 
-#encoder.print_trainable_parameters()
-#decoder.print_trainable_parameters()
+#model.print_trainable_parameters()
+# #decoder.print_trainable_parameters()
 
 
 print(f"print EncoderDecoderModel: {model}")
@@ -68,7 +75,7 @@ batch_size = 32
 num_train_epochs = 5
 
 # Set up the run name
-run_name=f"small_data_with_adapters_batch_size_{batch_size}_epochs_{num_train_epochs}_automodel"
+run_name=f"new_small_data_with_adapters_batch_size_{batch_size}_epochs_{num_train_epochs}_automodel"
 
 output_dir = f"./{run_name}"
 logging_dir = f"./{run_name}_logging"
@@ -264,7 +271,7 @@ for example in train_data.select(range(1)):
 
 
 # Initialize the trainer
-trainer = Seq2SeqTrainer(
+trainer = Seq2SeqAdapterTrainer(
     model=model,
     tokenizer=tokenizer,
     args=training_args,
@@ -323,8 +330,8 @@ output_path = os.path.join(os.getcwd(), run_name)
 # Save model
 model.save_pretrained(output_path)
 # Save adapter
-encoder.save_adapter(output_path, "encoder_adapter")
-decoder.save_adapter(output_path, "decoder_adapter")
+#encoder.save_adapter(output_path, "encoder_adapter")
+#decoder.save_adapter(output_path, "decoder_adapter")
 
 # test the model with single sequence
 
