@@ -1,6 +1,16 @@
 # environment: adap_2
-# use pip install git+https://github.com/adapter-hub/adapters.git for installing adapters
-from transformers import BertGenerationEncoder, BertGenerationDecoder, EncoderDecoderModel, Seq2SeqTrainingArguments, BertTokenizer, Seq2SeqTrainer, AutoModel, AutoModelForCausalLM, DataCollatorForSeq2Seq, GenerationConfig
+# use pip install git+https://github.com/adapter-hub/adapters.git for installing adapters!
+# commands for environment:
+# pip install git+https://github.com/adapter-hub/adapters.git
+# pip install wandb
+# pip install pandas
+# pip install datasets
+# conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
+# conda install chardet
+# pip install accelerate -U
+# no need to install transformers since adapters will automatically install the correct version needed
+
+from transformers import BertGenerationEncoder, BertGenerationDecoder, EncoderDecoderModel, Seq2SeqTrainingArguments, BertTokenizer, Seq2SeqTrainer, AutoModel, AutoModelForCausalLM, DataCollatorForSeq2Seq, GenerationConfig, DataCollatorWithPadding
 from adapters import BnConfig, Seq2SeqAdapterTrainer, AdapterTrainer, BertAdapterModel, init
 import wandb
 import torch
@@ -8,6 +18,7 @@ import pandas as pd
 from datasets import Dataset
 import os
 import datasets
+
 
 # print device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -18,7 +29,7 @@ print(f"device: {device}")
 
 # Load the encoder and decoder from Hugging Face
 
-model = EncoderDecoderModel.from_encoder_decoder_pretrained("Exscientia/IgBert", "Exscientia/IgBert")
+model = EncoderDecoderModel.from_encoder_decoder_pretrained("Exscientia/IgBert", "Exscientia/IgBert", add_cross_attention=True)
 init(model)
 
 #encoder = AutoModel.from_pretrained("Exscientia/IgBert")
@@ -38,6 +49,7 @@ init(model)
 config = BnConfig(mh_adapter=True, output_adapter=True, reduction_factor=16, non_linearity="relu")
 
 model.add_adapter("seq2seq_adapter", config=config)
+model.set_active_adapters("seq2seq_adapter")
 model.train_adapter("seq2seq_adapter")
 
 # encoder.add_adapter("encoder_adapter", config=config)
@@ -71,11 +83,13 @@ tokenizer = BertTokenizer.from_pretrained("Exscientia/IgBert")
 ############################################ model configuration ############################################
 
 
-batch_size = 32
-num_train_epochs = 5
+batch_size = 64
+num_train_epochs = 3
+learning_rate = 1e-4
+
 
 # Set up the run name
-run_name=f"new_small_data_with_adapters_batch_size_{batch_size}_epochs_{num_train_epochs}_automodel"
+run_name=f"FULL_data_cross_attention_with_adapters_batch_size_{batch_size}_epochs_{num_train_epochs}_lr_{learning_rate}"
 
 output_dir = f"./{run_name}"
 logging_dir = f"./{run_name}_logging"
@@ -86,27 +100,27 @@ model.config.eos_token_id = tokenizer.sep_token_id
 model.config.pad_token_id = tokenizer.pad_token_id
 model.config.vocab_size = model.config.encoder.vocab_size
 
-model.config.max_length = 512
-model.config.min_length = 5
-
-model.config.no_repeat_ngram_size = 3
-model.config.early_stopping = True
-model.config.length_penalty = 2.0
-model.config.num_beams = 4
-
-
 generation_config = GenerationConfig(
     num_return_sequences=1,
     max_length=512,
     min_length=50,
+    early_stopping = True,
+    
+    #length_penalty = -2.0,
+    
+    num_beams = 3,
 
     # sampling
     do_sample=True,
-    top_k=100,
+    penalty_alpha=0.6,
+    top_k=4,
+    
+    no_repeat_ngram_size = 2,
 
     # distribution adjustment
     temperature=0.001,
     repetition_penalty=1,
+    encoder_repetition_penalty=1.5,
 
     vocab_size=model.config.encoder.vocab_size,
 
@@ -123,18 +137,22 @@ generation_config = GenerationConfig(
     return_dict_in_generate=True, )
 
 
+generation_config.save_pretrained("generation_config", "generation_config_4.json")
+
+generation_config_name = "generation_config_4"
+generation_config = GenerationConfig.from_pretrained("generation_config", f"{generation_config_name}.json")
 
 ############################################ Training Arguments ############################################
-
 
 
 training_args = Seq2SeqTrainingArguments(
     output_dir=output_dir,
     logging_dir=logging_dir,
-    evaluation_strategy="epoch",
+    evaluation_strategy="steps",
+    save_strategy="steps", 
     logging_strategy="steps",
-    logging_steps=10,
-    learning_rate=2e-5,
+    logging_steps=1,
+    learning_rate=learning_rate,
     per_device_train_batch_size=batch_size,
     per_device_eval_batch_size=batch_size,
     weight_decay=0.01,
@@ -144,6 +162,8 @@ training_args = Seq2SeqTrainingArguments(
     report_to="wandb",
     run_name=run_name,
     generation_config=generation_config,
+    eval_steps=1,
+    save_steps=1,
 )
 
 data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
@@ -180,13 +200,13 @@ def load_data(file_path):
 
 
 # SMALL training and validation data
-train_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_train_no_ids_small_SPACE_separated.txt'
-val_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_val_no_ids_small_SPACE_separated.txt'
-test_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated_SMALL.txt'
+#train_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_train_no_ids_small_SPACE_separated.txt'
+#val_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_val_no_ids_small_SPACE_separated.txt'
+#test_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated_SMALL.txt'
 
 # FULL dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
-#train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids_space_separated.txt"
-#val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids_space_separated.txt"
+train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids_space_separated.txt"
+val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids_space_separated.txt"
 
 # MEDIUM dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
 #train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/medium_sized_train_data_seq2seq.txt"
@@ -195,7 +215,7 @@ test_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_tes
 
 train_df = load_data(train_file_path)
 val_df = load_data(val_file_path)
-test_df = load_data(test_file_path)
+#test_df = load_data(test_file_path)
 
 
 encoder_max_length = 200
@@ -223,7 +243,7 @@ def process_data_to_model_inputs(batch):
 # Convert the dataframes to Hugging Face datasets
 train_dataset = Dataset.from_pandas(train_df[['heavy', 'light']])
 val_dataset = Dataset.from_pandas(val_df[['heavy', 'light']])
-test_dataset = Dataset.from_pandas(test_df[['heavy', 'light']])
+#test_dataset = Dataset.from_pandas(test_df[['heavy', 'light']])
 
 
 train_data = train_dataset.map(
@@ -248,16 +268,16 @@ val_data.set_format(
     type="torch", columns=["input_ids", "attention_mask", "decoder_attention_mask", "labels"],
 )
 
-test_data = test_dataset.map(
-    process_data_to_model_inputs,   
-    batched=True,
-    batch_size=batch_size,
-)   
+# test_data = test_dataset.map(
+#     process_data_to_model_inputs,   
+#     batched=True,
+#     batch_size=batch_size,
+# )   
 
-# "decoder_input_ids",
-test_data.set_format(
-    type="torch", columns=["input_ids", "attention_mask", "decoder_attention_mask", "labels"],
-)
+# # "decoder_input_ids",
+# test_data.set_format(
+#     type="torch", columns=["input_ids", "attention_mask", "decoder_attention_mask", "labels"],
+# )
 
 
 
@@ -278,6 +298,7 @@ trainer = Seq2SeqAdapterTrainer(
     train_dataset=train_data,
     eval_dataset=val_data,
     data_collator=data_collator,
+    adapter_names=["seq2seq_adapter"],
 )
 
 
@@ -315,12 +336,15 @@ trainer = Seq2SeqAdapterTrainer(
 # print(f"loss is on device: {loss.device}")
 # #loss.backward()
 
-TORCH_DEBUG=1
+#TORCH_DEBUG=1
 
 #model.requires_grad_(True)
 
+#print(f"trainer.get_train_dataloader().collate_fn: {trainer.get_train_dataloader().collate_fn}")
+
 # Train the model
 trainer.train()
+#trainer.evaluate()
 
 model.to(device)
 
@@ -335,7 +359,6 @@ model.save_pretrained(output_path)
 
 # test the model with single sequence
 
-#input_prompt = "C A R L F D P F V N D Y S P G T G Y G W L D P W G Q G T P V T V S A "
 input_prompt = "S T G V A F M E I N G L R S D D T A T Y F C A I N R V G D R G S N P S Y F Q D W G Q G T R V T V S S "
 print(f"input_prompt: {input_prompt}")
 
@@ -343,10 +366,10 @@ inputs = tokenizer(input_prompt, padding="max_length", truncation=True, max_leng
 input_ids = inputs.input_ids.to(device)
 attention_mask = inputs.attention_mask.to(device)
 
-print(f"attention_mask: {attention_mask}")
+#print(f"attention_mask: {attention_mask}")
 
 #input_ids = tokenizer.encode(input_prompt, return_tensors="pt").to(device)
-print(f"input_ids: {input_ids}")
+#print(f"input_ids: {input_ids}")
 
 # Generate text using the model
 generated_seq = model.generate(input_ids=input_ids, 
@@ -362,7 +385,7 @@ generated_seq = model.generate(input_ids=input_ids,
 sequence = generated_seq["sequences"][0]
 
 # Print the generated sequences and probabilities
-print(f"encoded heavy sequence: {sequence}.")
+#print(f"encoded heavy sequence: {sequence}.")
 
 # Convert the generated IDs back to text
 generated_text = tokenizer.decode(sequence, skip_special_tokens=True)
@@ -375,41 +398,57 @@ print("decoded heavy sequence: ", generated_text)
 test_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated_SMALL.txt'
 test_df = load_data(test_file_path)
 
+
 # extract the light sequences from test_df
 light_sequences = test_df["light"]
+true_heavy_sequences = test_df["heavy"]
 
-print("light_sequences: ", light_sequences)
-print(f"length of light sequences {len(light_sequences)}")
+#print("light_sequences: ", light_sequences)
+#print(f"length of light sequences {len(light_sequences)}")
 
 generated_heavy_seqs = []
 
 # Iterate through each sequence in the test dataset
 for i in range(50):
     inputs = tokenizer(light_sequences[i], padding="max_length", truncation=True, max_length=512, return_tensors="pt")
-    print(f"inputs: {inputs}")
     input_ids = inputs.input_ids.to(device)
-    print(f"input_ids: {input_ids}")
     attention_mask = inputs.attention_mask.to(device)
-    print(f"attention_mask: {attention_mask}")
 
     generated_seq = model.generate(input_ids=input_ids, 
                                attention_mask=attention_mask, 
                                max_length=100, 
                                output_scores=True, 
-                               return_dict_in_generate=True)
+                               return_dict_in_generate=True,
+                                   generation_config=generation_config)
     
     # Access the first element in the generated sequence
     sequence = generated_seq["sequences"][0]
 
-    # Print the generated sequences and probabilities
-    print(f"encoded heavy sequence: {sequence}.")
-
     # Convert the generated IDs back to text
     generated_text = tokenizer.decode(sequence, skip_special_tokens=True)
+    true_heavy_seq = true_heavy_sequences[i]
 
     print("decoded heavy sequence: ", generated_text)
+    print("true heavy sequence: ", true_heavy_seq)
 
     generated_heavy_seqs.append(generated_text)
+    
+    generated_text = generated_text.replace(" ", "")
+    true_heavy_seq = true_heavy_seq.replace(" ", "")
+    
+    # Determine the length of the shorter sequence
+    min_length = min(len(generated_text), len(true_heavy_seq))
+    print(f"min_length:, {min_length}")
+    
+    # Calculate the number of matches
+    matches = sum(res1 == res2 for res1, res2 in zip(generated_text, true_heavy_seq))
+    print(f"matches:, {matches}")
+
+    
+    # Calculate the similarity percentage
+    similarity_percentage = (matches / min_length) * 100
+    
+    print(f"similarity percentage: {similarity_percentage}")
 
 
 print("generated_heavy_seqs:")
