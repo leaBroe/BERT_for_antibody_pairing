@@ -18,6 +18,7 @@ import pandas as pd
 from datasets import Dataset
 import os
 import datasets
+import re
 
 
 # print device
@@ -51,6 +52,17 @@ config = BnConfig(mh_adapter=True, output_adapter=True, reduction_factor=16, non
 model.add_adapter("seq2seq_adapter", config=config)
 model.set_active_adapters("seq2seq_adapter")
 model.train_adapter("seq2seq_adapter")
+
+model.named_parameters
+
+# Loop through all parameters and enable gradient computation only for 'crossattention' parameters
+for name, param in model.named_parameters():
+    if re.match(r"crossattention", name):
+        param.requires_grad = True
+    else:
+        param.requires_grad = False  # Assuming you want to freeze other parameters
+
+# The model is now set up to train only the cross-attention layers and the added adapter.
 
 # encoder.add_adapter("encoder_adapter", config=config)
 # decoder.add_adapter("decoder_adapter", config=config)
@@ -89,7 +101,7 @@ learning_rate = 1e-4
 
 
 # Set up the run name
-run_name=f"FULL_data_cross_attention_with_adapters_batch_size_{batch_size}_epochs_{num_train_epochs}_lr_{learning_rate}"
+run_name=f"freeze_FULL_data_cross_attention_with_adapters_batch_size_{batch_size}_epochs_{num_train_epochs}_lr_{learning_rate}"
 
 output_dir = f"./{run_name}"
 logging_dir = f"./{run_name}_logging"
