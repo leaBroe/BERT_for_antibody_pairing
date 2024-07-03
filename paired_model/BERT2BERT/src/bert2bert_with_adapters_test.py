@@ -55,12 +55,18 @@ model.train_adapter("seq2seq_adapter")
 
 model.named_parameters
 
-# Loop through all parameters and enable gradient computation only for 'crossattention' parameters
+# Loop through all parameters, print and enable gradient computation for 'crossattention' parameters
 for name, param in model.named_parameters():
-    if re.match(r"crossattention", name):
+    if re.match(".*crossattention.*", name):
+        print(f"Parameter Name: {name}")
+        print(f"   Requires Grad: {param.requires_grad}")
+        print(f"   Parameter Shape: {param.size()}")
+        print(f"   Parameter Device: {param.device}")
         param.requires_grad = True
-    else:
-        param.requires_grad = False  # Assuming you want to freeze other parameters
+        print(f"   Requires Grad: {param.requires_grad}")
+
+
+# Your model is now set up to train only the cross-attention layers and the added adapter.
 
 # The model is now set up to train only the cross-attention layers and the added adapter.
 
