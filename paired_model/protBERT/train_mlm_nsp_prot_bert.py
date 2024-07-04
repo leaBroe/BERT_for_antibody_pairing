@@ -55,21 +55,22 @@ model = BertForPreTraining(config=config)
 # Move model to the appropriate device (GPU or CPU)
 model.to(device)  # 'device' is determined by torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# confirm model is on the right device
-print(f"Model is on device: {next(model.parameters()).device}")  # It will show cuda:0 if on GPU
+# # confirm model is on the right device
+# print(f"Model is on device: {next(model.parameters()).device}")  # It will show cuda:0 if on GPU
 
-# Load your model's configuration and check the vocab_size parameter. It must match the total number of tokens in your tokenizer’s vocabulary!
-print(f"Model's vocab_size: {model.config.vocab_size}")
-print(f"Tokenizer's vocab_size: {tokenizer.vocab_size}")
+# # Load your model's configuration and check the vocab_size parameter. It must match the total number of tokens in your tokenizer’s vocabulary!
+# print(f"Model's vocab_size: {model.config.vocab_size}")
+# print(f"Tokenizer's vocab_size: {tokenizer.vocab_size}")
 
-print("Model's vocab size from embeddings:", model.bert.embeddings.word_embeddings.num_embeddings)
+# print("Model's vocab size from embeddings:", model.bert.embeddings.word_embeddings.num_embeddings)
 
 batch_size=16
-num_train_epochs = 100
-learning_rate = 2e-6
+num_train_epochs = 50
+learning_rate = 2e-4
+weight_decay = 0.3
 
 # Initialize wandb
-run_name = f"full_data_{num_train_epochs}_epochs_lr{learning_rate}_batch_size_{batch_size}"
+run_name = f"n_FULL_data_{num_train_epochs}_epochs_lr{learning_rate}_batch_size_{batch_size}"
 
 wandb.init(project="paired_model_nsp_mlm_protbert", name=run_name)
 
@@ -81,10 +82,10 @@ logging_dir = f"./{run_name}_logging"
 training_args = TrainingArguments(
     output_dir=output_dir,          # output directory
     num_train_epochs=num_train_epochs,              # total # of training epochs
-    per_device_train_batch_size=batch_size,  # batch size per device during training (try 16 if needed)
+    per_device_train_batch_size=batch_size,  # batch size per device during training 
     per_device_eval_batch_size=batch_size,   # batch size for evaluation
     warmup_steps=500,                # number of warmup steps for learning rate scheduler
-    weight_decay=0.01,               # strength of weight decay
+    weight_decay=weight_decay,               # strength of weight decay
     logging_dir=logging_dir,     # directory for storing logs
     do_train=True,
     eval_strategy="epoch",
@@ -542,53 +543,61 @@ for epoch in range(training_args.num_train_epochs):
             
             # For MLM
             mlm_preds = torch.argmax(prediction_logits, dim=-1)
+            mlm_preds_cpu = mlm_preds.cpu().numpy()
 
             #print(f"mlm_preds {mlm_preds}")
 
+            mlm_labels = batch['labels']
+            mlm_labels_cpu = mlm_labels.cpu().numpy()
+
             all_preds.extend(mlm_preds.cpu().numpy())
-            all_labels.extend(batch['labels'].cpu().numpy())
+            all_labels.extend(mlm_labels.cpu().numpy())
 
             #print(f"all_labels {all_labels}")
 
             # we still need softmax to convert the logits into probabilities
-            # index 0: sequence B is a continuation of sequence A
-            # index 1: sequence B is a random sequence
 
             # For NSP 
             nsp_true_labels_per_batch = batch['next_sentence_label']
+            nsp_true_labels_per_batch_to_cpu = nsp_true_labels_per_batch.cpu()
             print(f"nsp_true_labels_per_batch: {nsp_true_labels_per_batch}")
             print(f"length of nsp_true_labels_per_batch: {len(nsp_true_labels_per_batch)}")
             nsp_true_labels.extend(nsp_true_labels_per_batch.cpu().numpy())
 
             nsp_preds = torch.softmax(seq_relationship_logits, dim=1)
-            print(f"seq_relationship_logits: {seq_relationship_logits}")
-            print(f"nsp_preds: {nsp_preds}")
-
-            # tensor([[9.9993e-01, 6.7607e-05]], grad_fn=<SoftmaxBackward>)
-            # very high value for index 0: high probability of seq_B being a continuation of seq_A
-            # which is what we expect
+            #print(f"seq_relationship_logits: {seq_relationship_logits}")
+            #print(f"nsp_preds: {nsp_preds}")
 
             nsp_preds_labels = torch.argmax(nsp_preds, dim=1)
+            nsp_predictions = nsp_preds_labels.cpu().numpy()
             nsp_all_preds.extend(nsp_preds_labels.cpu().numpy())
 
             print(f"nsp_preds_labels per batch: {nsp_preds_labels}")
+            print(f"length of nsp_preds_labels per batch: {len(nsp_preds_labels)}")
 
-            print(f"true nsp labels: {nsp_true_labels}")
+
+            print(f"true nsp labels (concatenated): {nsp_true_labels}")
 
             print(f"Epoch: {epoch}, Step: {step}, evaluation Loss: {loss.item()}")
+
+            # compute metrics for each batch
+            print("Computing metrics for batch...")
+            metrics_for_batch = compute_metrics(mlm_preds = mlm_preds_cpu, mlm_labels = mlm_labels_cpu, nsp_preds = nsp_predictions, nsp_labels = nsp_true_labels_per_batch_to_cpu)
+            wandb.log({"metrics_for_batch": metrics_for_batch, "epoch": epoch, "step": step})
+
 
             # Additional logging
             if step % 10 == 0:
                 print(f"Detailed logging at Epoch: {epoch}, Step: {step}")
-                print(f"Input IDs: {batch['input_ids']}")
-                print(f"Attention Mask: {batch['attention_mask']}")
+                #print(f"Input IDs: {batch['input_ids']}")
+                #print(f"Attention Mask: {batch['attention_mask']}")
                 print(f"Evaluation Loss: {loss.item()}")
                 wandb.log({"eval_loss": loss.item(), "epoch": epoch, "step": step})
     
     avg_eval_loss = eval_loss / len(eval_data_loader)
     # print len(eval_data_loader)
     print(f"Eval dataloader length: {len(eval_data_loader)}")
-    # def compute_metrics(mlm_preds, mlm_labels, nsp_preds, nsp_labels):
+    print("compute metrics for whole epoch:")
     metrics = compute_metrics(mlm_preds = all_preds, mlm_labels = all_labels, nsp_preds = nsp_all_preds, nsp_labels = nsp_true_labels)
     print("length nsp_all_preds", len(nsp_all_preds))
     print("length nsp_true_labels ", len(nsp_true_labels))
@@ -597,7 +606,7 @@ for epoch in range(training_args.num_train_epochs):
 
     # Log evaluation metrics
     wandb.log({"avg eval_loss": avg_eval_loss, "epoch": epoch})
-    wandb.log(metrics)
+    wandb.log({"metrics for epoch": metrics, "epoch": epoch})
     
     # Save model checkpoint
     checkpoint_dir = os.path.join(training_args.output_dir, f"checkpoint-epoch-{epoch}")
