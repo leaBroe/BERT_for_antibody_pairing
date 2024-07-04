@@ -87,13 +87,13 @@ def train():
         config = wandb.config
 
         # Load the tokenizer and configuration
-        #model_config = AutoConfig.from_pretrained('Rostlab/prot_bert_bfd', do_lower_case=False, vocab_size=len(tokenizer))
+        model_config = AutoConfig.from_pretrained('Rostlab/prot_bert_bfd', do_lower_case=False, vocab_size=len(tokenizer))
 
         # Device setup
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Load model, optimizer, scheduler with specific hyperparameters
-        model = BertForPreTraining(config=config).to(device)
+        model = BertForPreTraining(config=model_config).to(device)
         optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate)
         num_training_steps = len(train_data_loader) * config.num_train_epochs
         lr_scheduler = get_scheduler(
