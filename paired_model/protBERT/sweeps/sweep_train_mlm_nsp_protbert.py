@@ -13,16 +13,7 @@ from transformers import AutoConfig, AutoModel
 from transformers import LineByLineTextDataset
 from transformers import DataCollatorForLanguageModeling
 from transformers import AutoTokenizer
-import evaluate
-# from nlp import load_dataset
-# from datasets import load_dataset
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
-import seqeval
-import json
-import math
-import logging
-from datetime import datetime
-import pytz     # for time zone
 from torch.optim import AdamW
 from transformers import get_scheduler
 import wandb
@@ -31,7 +22,7 @@ import wandb
 sweep_config = {
     "method": "bayes",  # You can also use "grid", "random", etc.
     "metric": {
-        "name": "nsp accuracy",  # The metric to optimize
+        "name": "metrics for epoch.acc_nsp",  # The metric to optimize
         "goal": "maximize"        # Could be "minimize" or "maximize"
     },
     "parameters": {
@@ -45,29 +36,34 @@ sweep_config = {
         "weight_decay": {
             "min": 0.01,
             "max": 0.8
-        }
+        },
     }
 }
 
-batch_size = 16
+batch_size = 8
 
 # small dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
 small_train_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids_small_SPACE_separated.txt"
 small_val_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids_small_SPACE_separated.txt"
+
+# FULL dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
+full_train_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids_space_separated.txt"
+full_val_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids_space_separated.txt"
+
 
 tokenizer = AutoTokenizer.from_pretrained('Rostlab/prot_bert_bfd', do_lower_case=False )
 
 train_dataset = TextDatasetForNextSentencePrediction(
     tokenizer=tokenizer,
     file_path=small_train_dataset_path,
-    block_size=512
+    block_size=256
 )
 
 # Prepare the eval_dataset
 eval_dataset = TextDatasetForNextSentencePrediction(
     tokenizer=tokenizer,
     file_path=small_val_dataset_path,
-    block_size=512
+    block_size=256
 )
 
 # Initialize the Data Collator
@@ -129,7 +125,7 @@ def compute_metrics(mlm_preds, mlm_labels, nsp_preds, nsp_labels):
         'mlm f1': mlm_f1,
         'mlm precision': mlm_precision,
         'mlm recall': mlm_recall,
-        'nsp accuracy': acc_nsp,
+        'acc_nsp': acc_nsp,
         'nsp precision': nsp_precision,
         'nsp f1': nsp_f1,
         'nsp recall': nsp_recall
@@ -265,7 +261,7 @@ def train():
         wandb.log({"metrics for epoch": metrics, "epoch": epoch})
 
         # Save the model and any important metrics
-        model.save_pretrained(f'.model_checkpoints/model_checkpoint_{run.id}')
+        model.save_pretrained(f'model_checkpoints_small_data_batch_size_8_7.july/model_checkpoint_{run.id}')
 
 
 sweep_id = wandb.sweep(sweep_config, project="sweep_train_mlm_nsp_protbert")
