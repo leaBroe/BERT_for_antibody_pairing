@@ -2,9 +2,9 @@
 
 
 #SBATCH --gres=gpu:a100:1
-#SBATCH --job-name=no_adaps
-#SBATCH --output=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/no_adapters_%j.o
-#SBATCH --error=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/no_adapters_%j.e
+#SBATCH --job-name=b2b_no_adaps
+#SBATCH --output=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/b2b_no_adaps_%j.o
+#SBATCH --error=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/b2b_no_adaps_%j.e
 
 eval "$(conda shell.bash hook)"
 conda init bash

@@ -1,11 +1,14 @@
+# environment: adap_2
 
 from transformers import BertGenerationEncoder, BertGenerationDecoder, EncoderDecoderModel, Seq2SeqTrainingArguments, BertTokenizer, Seq2SeqTrainer, AutoModel, AutoModelForCausalLM, DataCollatorForSeq2Seq, GenerationConfig, DataCollatorWithPadding
+from adapters import BnConfig, Seq2SeqAdapterTrainer, AdapterTrainer, BertAdapterModel, init
 import wandb
 import torch
 import pandas as pd
 from datasets import Dataset
 import os
 import datasets
+import re
 
 
 # print device
@@ -18,7 +21,42 @@ print(f"device: {device}")
 # Load the encoder and decoder from Hugging Face
 
 model = EncoderDecoderModel.from_encoder_decoder_pretrained("Exscientia/IgBert", "Exscientia/IgBert", add_cross_attention=True)
+init(model)
 
+model.named_parameters
+
+# Loop through all parameters, print and enable gradient computation for 'crossattention' parameters
+for name, param in model.named_parameters():
+    if re.match(".*crossattention.*", name):
+        print(f"Parameter Name: {name}")
+        print(f"   Requires Grad: {param.requires_grad}")
+        print(f"   Parameter Shape: {param.size()}")
+        print(f"   Parameter Device: {param.device}")
+        param.requires_grad = True
+        print(f"   Requires Grad: {param.requires_grad}")
+
+
+def print_trainable_parameters(model):
+    """
+    Prints the number of trainable parameters in the model.
+    """
+    trainable_params = 0
+    all_param = 0
+    for _, param in model.named_parameters():
+        all_param += param.numel()
+        if param.requires_grad:
+            trainable_params += param.numel()
+    print(
+        f"trainable params: {trainable_params} || all params: {all_param} || trainable%: {100 * trainable_params / all_param}"
+    )
+
+def count_trainable_params(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+print(f"number of trainable parameters: {count_trainable_params(model)}")
+
+
+# ############################################ create the model ############################################
 
 print(f"print EncoderDecoderModel: {model}")
 
@@ -29,15 +67,16 @@ tokenizer = BertTokenizer.from_pretrained("Exscientia/IgBert")
 
 
 batch_size = 32
-num_train_epochs = 3
-learning_rate = 1e-5
-
+num_train_epochs = 100
+learning_rate = 1e-4
+weight_decay = 0.1
 
 # Set up the run name
-run_name=f"l_FULL_data_cross_attention_without_adapters_batch_size_{batch_size}_epochs_{num_train_epochs}_lr_{learning_rate}"
+run_name=f"2nd_run_small_data_cross_attention_without_adapters_batch_size_{batch_size}_epochs_{num_train_epochs}_lr_{learning_rate}_weight_decay_{weight_decay}"
 
-output_dir = f"./{run_name}"
-logging_dir = f"./{run_name}_logging"
+output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/bert2bert-translation_heavy-to-light_model_checkpoints/{run_name}"
+logging_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/bert2bert-translation_heavy-to-light_model_checkpoints/{run_name}_logging"
+
 
 # Set up the Seq2Seq model configuration
 model.config.decoder_start_token_id = tokenizer.cls_token_id
@@ -93,35 +132,35 @@ generation_config = GenerationConfig.from_pretrained("generation_config", f"{gen
 training_args = Seq2SeqTrainingArguments(
     output_dir=output_dir,
     logging_dir=logging_dir,
-    evaluation_strategy="steps",
-    save_strategy="steps", 
-    logging_strategy="steps",
-    logging_steps=1,
+    evaluation_strategy="epoch",
+    save_strategy="epoch", 
+    logging_strategy="epoch",
+    #logging_steps=2, # 200 for full data
     learning_rate=learning_rate,
     per_device_train_batch_size=batch_size,
     per_device_eval_batch_size=batch_size,
-    weight_decay=0.01,
-    save_total_limit=3,
+    weight_decay=weight_decay,
     num_train_epochs=num_train_epochs,
     predict_with_generate=True,
     report_to="wandb",
     run_name=run_name,
     generation_config=generation_config,
-    eval_steps=1,
-    save_steps=1,
+    #eval_steps=4000,
+    #save_steps=100,
 )
+
 
 data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
 
 # Create directories if they do not exist
-os.makedirs(training_args.output_dir, exist_ok=True)
-os.makedirs(training_args.logging_dir, exist_ok=True)
+os.makedirs(training_args.output_dir)
+os.makedirs(training_args.logging_dir)
 
 # Log in to Weights & Biases
 #wandb.login()
 
 
-wandb.init(project="bert2bert-translation", name=run_name)
+wandb.init(project="bert2bert-translation_heavy-to-light", name=run_name)
 
 ############################################ load the data ############################################
 
@@ -145,13 +184,13 @@ def load_data(file_path):
 
 
 # SMALL training and validation data
-#train_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_train_no_ids_small_SPACE_separated.txt'
-#val_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_val_no_ids_small_SPACE_separated.txt'
+train_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_train_no_ids_small_SPACE_separated.txt'
+val_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_val_no_ids_small_SPACE_separated.txt'
 #test_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated_SMALL.txt'
 
 # FULL dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
-train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids_space_separated.txt"
-val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids_space_separated.txt"
+#train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids_space_separated.txt"
+#val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids_space_separated.txt"
 
 # MEDIUM dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
 #train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/medium_sized_train_data_seq2seq.txt"
@@ -168,8 +207,8 @@ decoder_max_length = 200
 
 def process_data_to_model_inputs(batch):
     # tokenize the inputs and labels
-    inputs = tokenizer(batch["light"], padding="max_length", truncation=True, max_length=encoder_max_length)
-    outputs = tokenizer(batch["heavy"], padding="max_length", truncation=True, max_length=decoder_max_length)
+    inputs = tokenizer(batch["heavy"], padding="max_length", truncation=True, max_length=encoder_max_length)
+    outputs = tokenizer(batch["light"], padding="max_length", truncation=True, max_length=decoder_max_length)
 
     batch["input_ids"] = inputs.input_ids
     batch["attention_mask"] = inputs.attention_mask
@@ -246,12 +285,6 @@ trainer = Seq2SeqTrainer(
 )
 
 
-#TORCH_DEBUG=1
-
-#model.requires_grad_(True)
-
-#print(f"trainer.get_train_dataloader().collate_fn: {trainer.get_train_dataloader().collate_fn}")
-
 # Train the model
 trainer.train()
 #trainer.evaluate()
@@ -259,48 +292,48 @@ trainer.train()
 model.to(device)
 
 # For the sake of this demonstration an example path for loading and storing is given below
-output_path = os.path.join(os.getcwd(), run_name)
+model_output_path = os.path.join("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/bert2bert-translation_heavy-to-light_model_checkpoints/", run_name)
 
 # Save model
-model.save_pretrained(output_path)
+model.save_pretrained(model_output_path)
 # Save adapter
 #encoder.save_adapter(output_path, "encoder_adapter")
 #decoder.save_adapter(output_path, "decoder_adapter")
 
 # test the model with single sequence
 
-input_prompt = "S T G V A F M E I N G L R S D D T A T Y F C A I N R V G D R G S N P S Y F Q D W G Q G T R V T V S S "
-print(f"input_prompt: {input_prompt}")
+# input_prompt = "S T G V A F M E I N G L R S D D T A T Y F C A I N R V G D R G S N P S Y F Q D W G Q G T R V T V S S "
+# print(f"input_prompt: {input_prompt}")
 
-inputs = tokenizer(input_prompt, padding="max_length", truncation=True, max_length=512, return_tensors="pt")
-input_ids = inputs.input_ids.to(device)
-attention_mask = inputs.attention_mask.to(device)
+# inputs = tokenizer(input_prompt, padding="max_length", truncation=True, max_length=512, return_tensors="pt")
+# input_ids = inputs.input_ids.to(device)
+# attention_mask = inputs.attention_mask.to(device)
 
-#print(f"attention_mask: {attention_mask}")
+# #print(f"attention_mask: {attention_mask}")
 
-#input_ids = tokenizer.encode(input_prompt, return_tensors="pt").to(device)
-#print(f"input_ids: {input_ids}")
+# #input_ids = tokenizer.encode(input_prompt, return_tensors="pt").to(device)
+# #print(f"input_ids: {input_ids}")
 
-# Generate text using the model
-generated_seq = model.generate(input_ids=input_ids, 
-                               attention_mask=attention_mask, 
-                               max_length=100, 
-                               output_scores=True, 
-                               return_dict_in_generate=True)
+# # Generate text using the model
+# generated_seq = model.generate(input_ids=input_ids, 
+#                                attention_mask=attention_mask, 
+#                                max_length=100, 
+#                                output_scores=True, 
+#                                return_dict_in_generate=True)
 
-# Turn output scores to probabilities
-# generated_seq_probs = torch.nn.functional.softmax(generated_seq['scores'][0], dim=-1)
+# # Turn output scores to probabilities
+# # generated_seq_probs = torch.nn.functional.softmax(generated_seq['scores'][0], dim=-1)
 
-# Access the first element in the generated sequence
-sequence = generated_seq["sequences"][0]
+# # Access the first element in the generated sequence
+# sequence = generated_seq["sequences"][0]
 
-# Print the generated sequences and probabilities
-#print(f"encoded heavy sequence: {sequence}.")
+# # Print the generated sequences and probabilities
+# #print(f"encoded heavy sequence: {sequence}.")
 
-# Convert the generated IDs back to text
-generated_text = tokenizer.decode(sequence, skip_special_tokens=True)
+# # Convert the generated IDs back to text
+# generated_text = tokenizer.decode(sequence, skip_special_tokens=True)
 
-print("decoded heavy sequence: ", generated_text)
+# print("decoded heavy sequence: ", generated_text)
 
 # print(test_data)
 
@@ -310,17 +343,17 @@ test_df = load_data(test_file_path)
 
 
 # extract the light sequences from test_df
-light_sequences = test_df["light"]
-true_heavy_sequences = test_df["heavy"]
+heavy_sequences = test_df["heavy"]
+true_light_sequences = test_df["light"]
 
 #print("light_sequences: ", light_sequences)
 #print(f"length of light sequences {len(light_sequences)}")
 
-generated_heavy_seqs = []
+generated_light_seqs = []
 
 # Iterate through each sequence in the test dataset
 for i in range(50):
-    inputs = tokenizer(light_sequences[i], padding="max_length", truncation=True, max_length=512, return_tensors="pt")
+    inputs = tokenizer(heavy_sequences[i], padding="max_length", truncation=True, max_length=512, return_tensors="pt")
     input_ids = inputs.input_ids.to(device)
     attention_mask = inputs.attention_mask.to(device)
 
@@ -336,22 +369,22 @@ for i in range(50):
 
     # Convert the generated IDs back to text
     generated_text = tokenizer.decode(sequence, skip_special_tokens=True)
-    true_heavy_seq = true_heavy_sequences[i]
+    true_light_seq = true_light_sequences[i]
 
-    print("decoded heavy sequence: ", generated_text)
-    print("true heavy sequence: ", true_heavy_seq)
+    print("decoded light sequence: ", generated_text)
+    print("true light sequence: ", true_light_seq)
 
-    generated_heavy_seqs.append(generated_text)
+    generated_light_seqs.append(generated_text)
     
     generated_text = generated_text.replace(" ", "")
-    true_heavy_seq = true_heavy_seq.replace(" ", "")
+    true_light_seq = true_light_seq.replace(" ", "")
     
     # Determine the length of the shorter sequence
-    min_length = min(len(generated_text), len(true_heavy_seq))
+    min_length = min(len(generated_text), len(true_light_seq))
     print(f"min_length:, {min_length}")
     
     # Calculate the number of matches
-    matches = sum(res1 == res2 for res1, res2 in zip(generated_text, true_heavy_seq))
+    matches = sum(res1 == res2 for res1, res2 in zip(generated_text, true_light_seq))
     print(f"matches:, {matches}")
 
     
@@ -361,7 +394,7 @@ for i in range(50):
     print(f"similarity percentage: {similarity_percentage}")
 
 
-print("generated_heavy_seqs:")
+print("generated_light_seqs:")
 # print each generated sequence on new line
-for seq in generated_heavy_seqs:
+for seq in generated_light_seqs:
     print(seq)
