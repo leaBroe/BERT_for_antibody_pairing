@@ -121,7 +121,7 @@ tokenizer = BertTokenizer.from_pretrained("Exscientia/IgBert")
 
 
 batch_size = 64
-num_train_epochs = 100
+num_train_epochs = 20
 learning_rate = 1e-4
 weight_decay = 0.1
 
