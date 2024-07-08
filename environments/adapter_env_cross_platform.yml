@@ -1,0 +1,12 @@
+name: adap_2
+channels:
+  - defaults
+dependencies:
+  - python=3.9
+  - pytorch
+  - torchaudio
+  - pytorch-cuda=11.8
+  - torchvision
+  - chardet
+  - ipykernel
+prefix: /home/leab/anaconda3/envs/adap_2

@@ -1,0 +1,7 @@
+name: bug_env
+channels:
+  - defaults
+dependencies:
+  - python=3.9
+  - ipykernel
+prefix: /home/leab/anaconda3/envs/bug_env
