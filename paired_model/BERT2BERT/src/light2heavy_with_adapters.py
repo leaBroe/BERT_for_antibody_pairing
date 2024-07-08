@@ -71,9 +71,6 @@ for name, param in model.named_parameters():
 
 
 def print_trainable_parameters(model):
-    """
-    Prints the number of trainable parameters in the model.
-    """
     trainable_params = 0
     all_param = 0
     for _, param in model.named_parameters():
@@ -127,12 +124,12 @@ tokenizer = AutoTokenizer.from_pretrained('/ibmm_data2/oas_database/paired_lea_t
 
 
 batch_size = 64
-num_train_epochs = 3
+num_train_epochs = 10
 learning_rate = 1e-4
 
 
 # Set up the run name
-run_name=f"test_small_data_light2heavy_with_adapters_batch_size_{batch_size}_epochs_{num_train_epochs}_lr_{learning_rate}"
+run_name=f"test3_small_data_light2heavy_with_adapters_batch_size_{batch_size}_epochs_{num_train_epochs}_lr_{learning_rate}"
 
 output_dir = f"./{run_name}"
 logging_dir = f"./{run_name}_logging"
@@ -192,9 +189,9 @@ training_args = Seq2SeqTrainingArguments(
     output_dir=output_dir,
     logging_dir=logging_dir,
     evaluation_strategy="steps",
-    save_strategy="epoch", 
+    save_strategy="steps", # set to epoch for full data
     logging_strategy="steps",
-    logging_steps=200,
+    logging_steps=1, # set to 200 for full data
     learning_rate=learning_rate,
     per_device_train_batch_size=batch_size,
     per_device_eval_batch_size=batch_size,
@@ -204,8 +201,8 @@ training_args = Seq2SeqTrainingArguments(
     report_to="wandb",
     run_name=run_name,
     generation_config=generation_config,
-    eval_steps=2000,
-    #save_steps=100,
+    eval_steps=1, # for full data, set to 2000
+    save_steps=100, # comment out for full data
 )
 
 data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
@@ -416,7 +413,7 @@ attention_mask = inputs.attention_mask.to(device)
 # Generate text using the model
 generated_seq = model.generate(input_ids=input_ids, 
                                attention_mask=attention_mask, 
-                               max_length=100, 
+                               max_length=150, 
                                output_scores=True, 
                                return_dict_in_generate=True)
 
@@ -458,7 +455,7 @@ for i in range(50):
 
     generated_seq = model.generate(input_ids=input_ids, 
                                attention_mask=attention_mask, 
-                               max_length=100, 
+                               max_length=150, 
                                output_scores=True, 
                                return_dict_in_generate=True,
                                    generation_config=generation_config)
