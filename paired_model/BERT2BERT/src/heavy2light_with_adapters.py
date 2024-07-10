@@ -91,13 +91,13 @@ tokenizer = AutoTokenizer.from_pretrained('/ibmm_data2/oas_database/paired_lea_t
 
 
 batch_size = 64
-num_train_epochs = 20
+num_train_epochs = 50
 learning_rate = 1e-4
 weight_decay = 0.1
 
 
 # Set up the run name
-run_name=f"FULL_data_heavy2light_with_adapters_batch_size_{batch_size}_epochs_{num_train_epochs}_lr_{learning_rate}_weight_decay_{weight_decay}"
+run_name=f"FULL_data_max_length_150_early_stopping_false_heavy2light_with_adapters_batch_size_{batch_size}_epochs_{num_train_epochs}_lr_{learning_rate}_weight_decay_{weight_decay}"
 
 output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/{run_name}"
 logging_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/{run_name}_logging"
@@ -113,7 +113,7 @@ generation_config = GenerationConfig(
     num_return_sequences=1,
     max_length=512,
     min_length=50,
-    early_stopping = True,
+    early_stopping = False,
     
     #length_penalty = -2.0,
     
@@ -157,10 +157,10 @@ generation_config = GenerationConfig.from_pretrained("generation_config", f"{gen
 training_args = Seq2SeqTrainingArguments(
     output_dir=output_dir,
     logging_dir=logging_dir,
-    evaluation_strategy="steps",
-    save_strategy="steps", # set to epoch for full data
-    logging_strategy="steps",
-    logging_steps=1, # set to 200 for full data
+    evaluation_strategy="epoch",
+    save_strategy="epoch", # set to epoch for full data
+    logging_strategy="epoch",
+    #logging_steps=200, # set to 200 for full data
     learning_rate=learning_rate,
     per_device_train_batch_size=batch_size,
     per_device_eval_batch_size=batch_size,
@@ -170,8 +170,8 @@ training_args = Seq2SeqTrainingArguments(
     report_to="wandb",
     run_name=run_name,
     generation_config=generation_config,
-    eval_steps=1, # for full data, set to 2000
-    save_steps=100, # comment out for full data
+    #eval_steps=1, # for full data, set to 2000
+    #save_steps=100, # comment out for full data
 )
 
 data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
@@ -388,7 +388,7 @@ for i in range(50):
 
     generated_seq = model.generate(input_ids=input_ids, 
                                attention_mask=attention_mask, 
-                               max_length=100, 
+                               max_length=150, 
                                output_scores=True, 
                                return_dict_in_generate=True,
                                    generation_config=generation_config)

@@ -77,7 +77,7 @@ weight_decay = 0.1
 
 
 # Set up the run name
-run_name=f"2ndr_run_FULL_data_heavy2light_with_adapters_batch_size_{batch_size}_epochs_{num_train_epochs}_lr_{learning_rate}_weight_decay_{weight_decay}"
+run_name=f"FULL_data_heavy2light_without_adapters_batch_size_{batch_size}_epochs_{num_train_epochs}_lr_{learning_rate}_weight_decay_{weight_decay}"
 
 output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/{run_name}"
 logging_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/{run_name}_logging"
@@ -280,7 +280,7 @@ for example in train_data.select(range(1)):
 
 
 # Initialize the trainer
-trainer = Seq2SeqAdapterTrainer(
+trainer = Seq2SeqTrainer(
     model=model,
     tokenizer=tokenizer,
     args=training_args,
