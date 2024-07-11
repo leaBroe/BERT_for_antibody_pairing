@@ -11,7 +11,7 @@ import wandb
 
 
 ########################################################################################################################################################################################################################
-# sequence classification with own classifier
+# sequence classification with BertForSequenceClassification
 ########################################################################################################################################################################################################################
 
 # Set up parameters
@@ -19,12 +19,14 @@ bert_model_name = 'Exscientia/IgBERT'
 #bert_model_name = 'Rostlab/prot_bert_bfd'
 num_classes = 2
 max_length = 256
-batch_size = 16
+batch_size = 32
 num_epochs = 10
-learning_rate = 2e-5
+learning_rate = 1e-4
+weight_decay = 0.01
+max_grad_norm = 1.0
+warmup_steps = 1000
 
-
-run_name = f'trainer_small_test_lr_{learning_rate}_batch_{batch_size}_epochs_{num_epochs}'
+run_name = f'trainer_small_test_lr_{learning_rate}_batch_{batch_size}_epochs_{num_epochs}_weight_decay_{weight_decay}_max_grad_norm_{max_grad_norm}_warmup_steps_{warmup_steps}'
 output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/checkpoints_light_heavy_classification/{run_name}"
 
 # create checkpoint directory
@@ -104,31 +106,45 @@ def compute_metrics(pred):
     }
 
 
+#small data
 train_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_train_with_unpaired_small_space_separated_rm.csv"
 val_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_val_with_unpaired_small_space_separated_rm.csv"
+
+# small data 2000 lines in val, 3000 lines in train
+#train_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_train_with_unpaired_SMALL_3000_lines_SPACE_sep_space_removed.csv"
+#val_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_VAL_SMALL_DATASET_2000_lines_SPACE_sep_space_removed.csv"
 
 train_heavy, train_light, train_labels = load_paired_data(train_file)
 val_heavy, val_light, val_labels = load_paired_data(val_file)
 
 tokenizer = BertTokenizer.from_pretrained(bert_model_name)
 train_dataset = PairedChainsDataset(train_heavy, train_light, train_labels, tokenizer, max_length)
+# print the first item in the dataset
+print(f"first item in train dataset: {train_dataset[0]}")
+
 val_dataset = PairedChainsDataset(val_heavy, val_light, val_labels, tokenizer, max_length)
+# print the first item in the dataset
+print(f"first item in val dataset: {val_dataset[0]}")
 
 model = BertForSequenceClassification.from_pretrained(bert_model_name, num_labels=num_classes).to(device)
 
 
 training_args = TrainingArguments(
+    do_train=True,
+    do_eval=True,
     output_dir=output_dir,
     num_train_epochs=num_epochs,
     per_device_train_batch_size=batch_size,
     per_device_eval_batch_size=batch_size,
-    warmup_steps=500,
-    weight_decay=0.01,
+    warmup_steps=warmup_steps,
+    weight_decay=weight_decay,
     logging_strategy="epoch",
     evaluation_strategy="epoch",
     save_strategy="epoch",
     load_best_model_at_end=True,
     report_to="wandb",
+    learning_rate=learning_rate,
+    max_grad_norm=max_grad_norm,  # Gradient clipping
 )
 
 
@@ -144,7 +160,7 @@ trainer = Trainer(
 trainer.train()
 
 # Evaluate the model
-trainer.evaluate()
+#trainer.evaluate()
 
 # Save the full model
 trainer.save_model(output_dir)
@@ -178,3 +194,4 @@ test_heavy = "QLQLQESGPGLVKPSETLSLTCTVSGGSISSSSYYWGWIRQPPGKGLEWIGNFFYSGSTNYNPSLK
 test_light = "SYEVTQAPSVSVSPGQTASVTCSGDKLDKKYTSWYQQRPGQSPTVVIYQNNKRPSGIPERFSASKSGNTATLTISGTQAVDEADYYCQAWDDSDGVFGPGTTVTVL"
 pairing = predict_pairing(test_heavy, test_light, model, tokenizer, device)
 print(f"Predicted pairing: {pairing}")
+
