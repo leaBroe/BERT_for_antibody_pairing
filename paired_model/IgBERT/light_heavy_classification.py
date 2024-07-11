@@ -19,14 +19,14 @@ bert_model_name = 'Exscientia/IgBERT'
 #bert_model_name = 'Rostlab/prot_bert_bfd'
 num_classes = 2
 max_length = 256
-batch_size = 32
+batch_size = 64
 num_epochs = 10
-learning_rate = 1e-4
+learning_rate = 2e-5
 weight_decay = 0.01
 max_grad_norm = 1.0
 warmup_steps = 1000
 
-run_name = f'trainer_small_test_lr_{learning_rate}_batch_{batch_size}_epochs_{num_epochs}_weight_decay_{weight_decay}_max_grad_norm_{max_grad_norm}_warmup_steps_{warmup_steps}'
+run_name = f'trainer_MEDIUM_test_lr_{learning_rate}_batch_{batch_size}_epochs_{num_epochs}_weight_decay_{weight_decay}_max_grad_norm_{max_grad_norm}_warmup_steps_{warmup_steps}'
 output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/checkpoints_light_heavy_classification/{run_name}"
 
 # create checkpoint directory
@@ -107,12 +107,17 @@ def compute_metrics(pred):
 
 
 #small data
-train_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_train_with_unpaired_small_space_separated_rm.csv"
-val_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_val_with_unpaired_small_space_separated_rm.csv"
+#train_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_train_with_unpaired_small_space_separated_rm.csv"
+#val_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_val_with_unpaired_small_space_separated_rm.csv"
 
 # small data 2000 lines in val, 3000 lines in train
 #train_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_train_with_unpaired_SMALL_3000_lines_SPACE_sep_space_removed.csv"
 #val_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_VAL_SMALL_DATASET_2000_lines_SPACE_sep_space_removed.csv"
+
+# FULL data
+train_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_train_with_unpaired_SPACE_sep_space_removed.csv"
+val_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_val_with_unpaired_SPACE_sep_space_removed.csv"
+
 
 train_heavy, train_light, train_labels = load_paired_data(train_file)
 val_heavy, val_light, val_labels = load_paired_data(val_file)
