@@ -2,14 +2,13 @@
 import torch
 import os
 from torch import nn
-from torch.utils.data import DataLoader, Dataset
-from transformers import BertTokenizer, BertModel, get_linear_schedule_with_warmup
-from torch.optim import AdamW
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report, precision_score, recall_score, f1_score
+from torch.utils.data import Dataset
+from transformers import BertTokenizer, BertModel, BertForSequenceClassification, Trainer, TrainingArguments
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 import pandas as pd
 import logging
 import wandb
+
 
 ########################################################################################################################################################################################################################
 # sequence classification with own classifier
@@ -24,11 +23,12 @@ batch_size = 16
 num_epochs = 10
 learning_rate = 2e-5
 
-run_name = f'small_test_lr_{learning_rate}_batch_{batch_size}_epochs_{num_epochs}'
-checkpoint_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/checkpoints_light_heavy_classification/{run_name}"
+
+run_name = f'trainer_small_test_lr_{learning_rate}_batch_{batch_size}_epochs_{num_epochs}'
+output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/checkpoints_light_heavy_classification/{run_name}"
 
 # create checkpoint directory
-os.makedirs(checkpoint_dir)
+os.makedirs(output_dir)
 
 # initialize Weights & Biases
 wandb.init(project='classification_heavy_light_own_classifier', name=run_name)
@@ -84,91 +84,72 @@ class PairedChainsDataset(Dataset):
         return {
             'input_ids': encoding['input_ids'].squeeze(0),  # Remove batch dimension
             'attention_mask': encoding['attention_mask'].squeeze(0),  # Remove batch dimension
-            'label': torch.tensor(label, dtype=torch.long)
+            'labels': torch.tensor(label, dtype=torch.long)
         }
+    
 
 
-class BERTPairedClassifier(nn.Module):
-    def __init__(self, bert_model_name, num_classes):
-        super(BERTPairedClassifier, self).__init__()
-        self.bert = BertModel.from_pretrained(bert_model_name)
-        self.dropout = nn.Dropout(0.1)
-        self.fc = nn.Linear(self.bert.config.hidden_size, num_classes)
-
-    def forward(self, input_ids, attention_mask):
-        outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
-        pooled_output = outputs.pooler_output
-        x = self.dropout(pooled_output)
-        logits = self.fc(x)
-        return logits
-
-# num classes 1 
-
-def train(model, data_loader, optimizer, scheduler, device, loss_fn):
-    model.train()
-    total_loss = 0
-    for batch in data_loader:
-        optimizer.zero_grad()
-        input_ids = batch['input_ids'].to(device)
-        attention_mask = batch['attention_mask'].to(device)
-        labels = batch['label'].to(device)
-        outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-        loss = loss_fn(outputs, labels)
-        loss.backward()
-        optimizer.step()
-        scheduler.step()
-        total_loss += loss.item()
-
-    average_loss = total_loss / len(data_loader)
-    wandb.log({"Train Loss": average_loss})
-
-
-def evaluate(model, data_loader, device, loss_fn):
-    model.eval()
-    predictions = []
-    actual_labels = []
-    total_loss = 0
-
-    with torch.no_grad():
-        for batch in data_loader:
-            input_ids = batch['input_ids'].to(device)
-            attention_mask = batch['attention_mask'].to(device)
-            labels = batch['label'].to(device)
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-            loss = loss_fn(outputs, labels)
-            total_loss += loss.item()
-
-            _, preds = torch.max(outputs, dim=1)
-            predictions.extend(preds.cpu().tolist())
-            actual_labels.extend(labels.cpu().tolist())
-
-    accuracy = accuracy_score(actual_labels, predictions)
-    classification_rep = classification_report(actual_labels, predictions, zero_division=1)
-    precision = precision_score(actual_labels, predictions, average='binary', zero_division=1)
-    recall = recall_score(actual_labels, predictions, average='binary', zero_division=1)
-    f1 = f1_score(actual_labels, predictions, average='binary', zero_division=1)
-
-    average_loss = total_loss / len(data_loader)
-
-    metrics = {
+def compute_metrics(pred):
+    labels = pred.label_ids
+    preds = pred.predictions.argmax(-1)
+    precision = precision_score(labels, preds, average='binary', zero_division=1)
+    recall = recall_score(labels, preds, average='binary', zero_division=1)
+    f1 = f1_score(labels, preds, average='binary', zero_division=1)
+    accuracy = accuracy_score(labels, preds)
+    return {
         'accuracy': accuracy,
-        'precision': precision,
-        'recall': recall,
         'f1': f1,
-        'average_loss': average_loss,
-        'classification_report': classification_rep
+        'precision': precision,
+        'recall': recall
     }
-    wandb.log({
-        "Validation Loss": average_loss,
-        "Validation Accuracy": accuracy,
-        "Validation F1 Score": f1,
-        "Validation Precision": precision,
-        "Validation Recall": recall
-    })
-    return metrics
 
 
+train_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_train_with_unpaired_small_space_separated_rm.csv"
+val_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_val_with_unpaired_small_space_separated_rm.csv"
 
+train_heavy, train_light, train_labels = load_paired_data(train_file)
+val_heavy, val_light, val_labels = load_paired_data(val_file)
+
+tokenizer = BertTokenizer.from_pretrained(bert_model_name)
+train_dataset = PairedChainsDataset(train_heavy, train_light, train_labels, tokenizer, max_length)
+val_dataset = PairedChainsDataset(val_heavy, val_light, val_labels, tokenizer, max_length)
+
+model = BertForSequenceClassification.from_pretrained(bert_model_name, num_labels=num_classes).to(device)
+
+
+training_args = TrainingArguments(
+    output_dir=output_dir,
+    num_train_epochs=num_epochs,
+    per_device_train_batch_size=batch_size,
+    per_device_eval_batch_size=batch_size,
+    warmup_steps=500,
+    weight_decay=0.01,
+    logging_strategy="epoch",
+    evaluation_strategy="epoch",
+    save_strategy="epoch",
+    load_best_model_at_end=True,
+    report_to="wandb",
+)
+
+
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=train_dataset,
+    eval_dataset=val_dataset,
+    compute_metrics=compute_metrics
+)
+
+# Train the model
+trainer.train()
+
+# Evaluate the model
+trainer.evaluate()
+
+# Save the full model
+trainer.save_model(output_dir)
+
+# Test pairing prediction
 def predict_pairing(heavy, light, model, tokenizer, device, max_length=512):
     model.eval()
     encoding = tokenizer(
@@ -184,80 +165,10 @@ def predict_pairing(heavy, light, model, tokenizer, device, max_length=512):
 
     with torch.no_grad():
         outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-        _, preds = torch.max(outputs, dim=1)
+        preds = torch.argmax(outputs.logits, dim=1)
 
     return "paired" if preds.item() == 1 else "not paired"
 
-
-# Load the training and validation data from separate files
-#train_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_train_with_unpaired.csv"
-#val_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_val_with_unpaired.csv"
-
-train_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_train_with_unpaired_small_space_separated_rm.csv"
-val_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_val_with_unpaired_small_space_separated_rm.csv"
-
-train_heavy, train_light, train_labels = load_paired_data(train_file)
-val_heavy, val_light, val_labels = load_paired_data(val_file)
-
-tokenizer = BertTokenizer.from_pretrained(bert_model_name)
-train_dataset = PairedChainsDataset(train_heavy, train_light, train_labels, tokenizer, max_length)
-val_dataset = PairedChainsDataset(val_heavy, val_light, val_labels, tokenizer, max_length)
-
-train_dataloader = DataLoader(train_dataset, batch_size=batch_size)
-val_dataloader = DataLoader(val_dataset, batch_size=batch_size)
-
-model = BERTPairedClassifier(bert_model_name, num_classes).to(device)
-
-optimizer = AdamW(model.parameters(), lr=learning_rate)
-total_steps = len(train_dataloader) * num_epochs
-scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
-loss_fn = nn.CrossEntropyLoss()
-
-wandb.config.update({
-    "bert_model_name": bert_model_name,
-    "num_classes": num_classes,
-    "max_length": max_length,
-    "batch_size": batch_size,
-    "num_epochs": num_epochs,
-    "learning_rate": learning_rate,
-    "total_steps": total_steps
-})
-
-
-for epoch in range(num_epochs):
-    logging.info(f"Epoch {epoch + 1}/{num_epochs}")
-    train(model, train_dataloader, optimizer, scheduler, device, loss_fn)
-    metrics = evaluate(model, val_dataloader, device, loss_fn)
-    logging.info(f"Validation Accuracy: {metrics['accuracy']:.4f}")
-    logging.info(f"F1 Score: {metrics['f1']:.4f}")
-    logging.info(f"Precision: {metrics['precision']:.4f}")
-    logging.info(f"Recall: {metrics['recall']:.4f}")
-    logging.info(metrics['classification_report'])
-
-    # Save checkpoint
-    checkpoint_path = os.path.join(checkpoint_dir, f'{run_name}_epoch_{epoch + 1}.pth')
-    torch.save({
-        'epoch': epoch + 1,
-        'model_state_dict': model.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict(),
-        'scheduler_state_dict': scheduler.state_dict(),
-        'loss': metrics['average_loss'],
-    }, checkpoint_path)
-    logging.info(f"Saved checkpoint: {checkpoint_path}")
-
-
-# Save the full model at the end of training
-full_model_path = 'paired_antibody_classifier_full_model.pth'
-torch.save(model, full_model_path)
-logging.info(f"Saved full model: {full_model_path}")
-
-
-# Save the model
-model_name = f'full_model_{run_name}.pth'
-torch.save(model.state_dict(), model_name)
-#wandb.save('paired_antibody_classifier_state_dict_2e-5.pth')
-
-# Test pairing prediction
 test_heavy = "GLEWIAYIYFSGSTNYNPSLKSRVTLSVDTSKNQFSLKLSSVTAADSAVYYCARDVGPYNSISPGRYYFDYWGPGTLVTVSS"
 test_light = "QSALTQPASVSGSPGQSITISCTGTSSDVGNYNLVSWYQHHPGKAPKLMIYEVSKRPSGISNRFSGSKSGNTASLTISGLQADDEADYYCCSYAGSRILYVFGSGTKVTVL"
 pairing = predict_pairing(test_heavy, test_light, model, tokenizer, device)
