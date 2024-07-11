@@ -1,3 +1,4 @@
+# used env: lea_env
 import torch
 import os
 from torch import nn
@@ -5,29 +6,32 @@ from torch.utils.data import DataLoader, Dataset
 from transformers import BertTokenizer, BertModel, get_linear_schedule_with_warmup
 from torch.optim import AdamW
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score, classification_report, precision_score, recall_score, f1_score
 import pandas as pd
 import logging
-from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score, classification_report
 import wandb
 
 ########################################################################################################################################################################################################################
 # sequence classification with own classifier
 ########################################################################################################################################################################################################################
 
-
 # Set up parameters
 bert_model_name = 'Exscientia/IgBERT'
 #bert_model_name = 'Rostlab/prot_bert_bfd'
 num_classes = 2
-max_length = 512
+max_length = 256
 batch_size = 16
-num_epochs = 50
+num_epochs = 10
 learning_rate = 2e-5
 
-# initialize Weights & Biases
+run_name = f'small_test_lr_{learning_rate}_batch_{batch_size}_epochs_{num_epochs}'
+checkpoint_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/checkpoints_light_heavy_classification/{run_name}"
 
-wandb.init(project='classification_heavy_light_own_classifier', name=f'igbert_full_lr_{learning_rate}_batch_{batch_size}_epochs_{num_epochs}')
+# create checkpoint directory
+os.makedirs(checkpoint_dir)
+
+# initialize Weights & Biases
+wandb.init(project='classification_heavy_light_own_classifier', name=run_name)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -69,7 +73,8 @@ class PairedChainsDataset(Dataset):
         label = self.labels[idx]
 
         encoding = self.tokenizer(
-            heavy, light,
+            text=heavy, 
+            text_pair=light,
             return_tensors='pt',
             max_length=self.max_length,
             padding='max_length',
@@ -77,8 +82,8 @@ class PairedChainsDataset(Dataset):
         )
 
         return {
-            'input_ids': encoding['input_ids'].flatten(),
-            'attention_mask': encoding['attention_mask'].flatten(),
+            'input_ids': encoding['input_ids'].squeeze(0),  # Remove batch dimension
+            'attention_mask': encoding['attention_mask'].squeeze(0),  # Remove batch dimension
             'label': torch.tensor(label, dtype=torch.long)
         }
 
@@ -88,7 +93,7 @@ class BERTPairedClassifier(nn.Module):
         super(BERTPairedClassifier, self).__init__()
         self.bert = BertModel.from_pretrained(bert_model_name)
         self.dropout = nn.Dropout(0.1)
-        self.fc = nn.Linear(self.bert.config.hidden_size, num_classes) # linear layer that uses the pooled output to compute logits for the final classification
+        self.fc = nn.Linear(self.bert.config.hidden_size, num_classes)
 
     def forward(self, input_ids, attention_mask):
         outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
@@ -99,7 +104,7 @@ class BERTPairedClassifier(nn.Module):
 
 # num classes 1 
 
-def train(model, data_loader, optimizer, scheduler, device):
+def train(model, data_loader, optimizer, scheduler, device, loss_fn):
     model.train()
     total_loss = 0
     for batch in data_loader:
@@ -108,7 +113,7 @@ def train(model, data_loader, optimizer, scheduler, device):
         attention_mask = batch['attention_mask'].to(device)
         labels = batch['label'].to(device)
         outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-        loss = nn.CrossEntropyLoss()(outputs, labels)
+        loss = loss_fn(outputs, labels)
         loss.backward()
         optimizer.step()
         scheduler.step()
@@ -118,12 +123,11 @@ def train(model, data_loader, optimizer, scheduler, device):
     wandb.log({"Train Loss": average_loss})
 
 
-def evaluate(model, data_loader, device):
+def evaluate(model, data_loader, device, loss_fn):
     model.eval()
     predictions = []
     actual_labels = []
     total_loss = 0
-    loss_fn = nn.CrossEntropyLoss()  # Define the loss function
 
     with torch.no_grad():
         for batch in data_loader:
@@ -131,8 +135,6 @@ def evaluate(model, data_loader, device):
             attention_mask = batch['attention_mask'].to(device)
             labels = batch['label'].to(device)
             outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-
-            # Calculate loss
             loss = loss_fn(outputs, labels)
             total_loss += loss.item()
 
@@ -141,20 +143,12 @@ def evaluate(model, data_loader, device):
             actual_labels.extend(labels.cpu().tolist())
 
     accuracy = accuracy_score(actual_labels, predictions)
-    classification_rep = classification_report(
-        actual_labels, predictions, zero_division=1
-    )
-    precision = precision_score(
-        actual_labels, predictions, average='binary', zero_division=1
-    )
-    recall = recall_score(
-        actual_labels, predictions, average='binary', zero_division=1
-    )
-    f1 = f1_score(
-        actual_labels, predictions, average='binary', zero_division=1
-    )
+    classification_rep = classification_report(actual_labels, predictions, zero_division=1)
+    precision = precision_score(actual_labels, predictions, average='binary', zero_division=1)
+    recall = recall_score(actual_labels, predictions, average='binary', zero_division=1)
+    f1 = f1_score(actual_labels, predictions, average='binary', zero_division=1)
 
-    average_loss = total_loss / len(data_loader) if len(data_loader) > 0 else 0
+    average_loss = total_loss / len(data_loader)
 
     metrics = {
         'accuracy': accuracy,
@@ -178,7 +172,8 @@ def evaluate(model, data_loader, device):
 def predict_pairing(heavy, light, model, tokenizer, device, max_length=512):
     model.eval()
     encoding = tokenizer(
-        heavy, light,
+        text=heavy, 
+        text_pair=light,
         return_tensors='pt',
         max_length=max_length,
         padding='max_length',
@@ -204,11 +199,11 @@ val_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_f
 train_heavy, train_light, train_labels = load_paired_data(train_file)
 val_heavy, val_light, val_labels = load_paired_data(val_file)
 
-# Tokenizer and DataLoader setup
 tokenizer = BertTokenizer.from_pretrained(bert_model_name)
 train_dataset = PairedChainsDataset(train_heavy, train_light, train_labels, tokenizer, max_length)
 val_dataset = PairedChainsDataset(val_heavy, val_light, val_labels, tokenizer, max_length)
-train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
+train_dataloader = DataLoader(train_dataset, batch_size=batch_size)
 val_dataloader = DataLoader(val_dataset, batch_size=batch_size)
 
 model = BERTPairedClassifier(bert_model_name, num_classes).to(device)
@@ -216,8 +211,8 @@ model = BERTPairedClassifier(bert_model_name, num_classes).to(device)
 optimizer = AdamW(model.parameters(), lr=learning_rate)
 total_steps = len(train_dataloader) * num_epochs
 scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
+loss_fn = nn.CrossEntropyLoss()
 
-# Log hyperparameters to Weights & Biases
 wandb.config.update({
     "bert_model_name": bert_model_name,
     "num_classes": num_classes,
@@ -231,16 +226,34 @@ wandb.config.update({
 
 for epoch in range(num_epochs):
     logging.info(f"Epoch {epoch + 1}/{num_epochs}")
-    train(model, train_dataloader, optimizer, scheduler, device)
-    metrics = evaluate(model, val_dataloader, device)
+    train(model, train_dataloader, optimizer, scheduler, device, loss_fn)
+    metrics = evaluate(model, val_dataloader, device, loss_fn)
     logging.info(f"Validation Accuracy: {metrics['accuracy']:.4f}")
     logging.info(f"F1 Score: {metrics['f1']:.4f}")
     logging.info(f"Precision: {metrics['precision']:.4f}")
     logging.info(f"Recall: {metrics['recall']:.4f}")
     logging.info(metrics['classification_report'])
 
+    # Save checkpoint
+    checkpoint_path = os.path.join(checkpoint_dir, f'{run_name}_epoch_{epoch + 1}.pth')
+    torch.save({
+        'epoch': epoch + 1,
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'scheduler_state_dict': scheduler.state_dict(),
+        'loss': metrics['average_loss'],
+    }, checkpoint_path)
+    logging.info(f"Saved checkpoint: {checkpoint_path}")
+
+
+# Save the full model at the end of training
+full_model_path = 'paired_antibody_classifier_full_model.pth'
+torch.save(model, full_model_path)
+logging.info(f"Saved full model: {full_model_path}")
+
+
 # Save the model
-model_name = 'paired_antibody_classifier_full_seqs_2e-5.pth'
+model_name = f'full_model_{run_name}.pth'
 torch.save(model.state_dict(), model_name)
 #wandb.save('paired_antibody_classifier_state_dict_2e-5.pth')
 
