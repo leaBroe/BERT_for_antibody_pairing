@@ -17,4 +17,4 @@ This guide describes the various environments available and the specific use-cas
 **Usage:** Environment or Next Sentence Prediction (NSP) and MLM fine-tuning with the ProtBERT bfd model. 
 
 ### `OAS_paired_env`
-**Usage:** This environment was used for data preprocessing and clustering tasks. 
+**Usage:** This environment was used for data preprocessing and clustering. 
