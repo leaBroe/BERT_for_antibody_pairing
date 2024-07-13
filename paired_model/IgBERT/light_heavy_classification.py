@@ -1,4 +1,5 @@
 # used env: lea_env
+# use adap_2 when using adapters
 import torch
 import os
 from torch import nn
@@ -8,6 +9,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 import pandas as pd
 import logging
 import wandb
+from adapters import BnConfig, Seq2SeqAdapterTrainer, AdapterTrainer, BertAdapterModel, init
 
 
 ########################################################################################################################################################################################################################
@@ -26,7 +28,7 @@ weight_decay = 0.01
 max_grad_norm = 1.0
 warmup_steps = 1000
 
-run_name = f'trainer_MEDIUM_test_lr_{learning_rate}_batch_{batch_size}_epochs_{num_epochs}_weight_decay_{weight_decay}_max_grad_norm_{max_grad_norm}_warmup_steps_{warmup_steps}'
+run_name = f'adapters_FULL_data_lr_{learning_rate}_batch_{batch_size}_epochs_{num_epochs}_weight_decay_{weight_decay}_warmup_steps_{warmup_steps}_max_grad_norm{max_grad_norm}'
 output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/checkpoints_light_heavy_classification/{run_name}"
 
 # create checkpoint directory
@@ -122,6 +124,21 @@ val_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_f
 train_heavy, train_light, train_labels = load_paired_data(train_file)
 val_heavy, val_light, val_labels = load_paired_data(val_file)
 
+def print_trainable_parameters(model):
+    trainable_params = 0
+    all_param = 0
+    for _, param in model.named_parameters():
+        all_param += param.numel()
+        if param.requires_grad:
+            trainable_params += param.numel()
+    print(
+        f"trainable params: {trainable_params} || all params: {all_param} || trainable%: {100 * trainable_params / all_param}"
+    )
+
+def count_trainable_params(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
 tokenizer = BertTokenizer.from_pretrained(bert_model_name)
 train_dataset = PairedChainsDataset(train_heavy, train_light, train_labels, tokenizer, max_length)
 # print the first item in the dataset
@@ -131,8 +148,18 @@ val_dataset = PairedChainsDataset(val_heavy, val_light, val_labels, tokenizer, m
 # print the first item in the dataset
 print(f"first item in val dataset: {val_dataset[0]}")
 
+config = BnConfig(mh_adapter=True, output_adapter=True, reduction_factor=16, non_linearity="relu")
+
 model = BertForSequenceClassification.from_pretrained(bert_model_name, num_labels=num_classes).to(device)
 
+init(model)
+
+model.add_adapter("class_adap", config=config)
+model.set_active_adapters("class_adap")
+model.train_adapter("class_adap")
+
+print(f"number of trainable parameters: {count_trainable_params(model)}")
+print_trainable_parameters(model)
 
 training_args = TrainingArguments(
     do_train=True,
@@ -153,12 +180,13 @@ training_args = TrainingArguments(
 )
 
 
-trainer = Trainer(
+trainer = AdapterTrainer(
     model=model,
     args=training_args,
     train_dataset=train_dataset,
     eval_dataset=val_dataset,
-    compute_metrics=compute_metrics
+    compute_metrics=compute_metrics,
+    adapter_names=["class_adap"],
 )
 
 # Train the model
