@@ -21,22 +21,25 @@ sweep_configuration = {
     },
     'parameters': {
         'learning_rate': {
-            'values': [1e-5, 2e-5, 3e-5]
+            "min": 1e-7,
+            "max": 1e-5
         },
         'batch_size': {
             'values': [16, 32, 64]
         },
         'num_epochs': {
-            'values': [3, 5, 10]
+            'values': [10, 50, 100]
         },
         'weight_decay': {
-            'values': [0.01, 0.1]
+            "min": 0.01,
+            "max": 0.8
         },
         'warmup_steps': {
             'values': [500, 1000]
         },
         'max_grad_norm': {
-            'values': [1.0, 5.0]
+            "min": 0.1,
+            "max": 1.0
         }
     }
 }
@@ -182,8 +185,8 @@ def train():
     trainer.save_model(output_dir)
 
 
-sweep_id = wandb.sweep(sweep=sweep_configuration, project="classification_heavy_light_own_classifier")
+sweep_id = wandb.sweep(sweep=sweep_configuration, project="sweeps_classification_heavy_light")
 
-number_of_runs = 10
+number_of_runs = 20
 wandb.agent(sweep_id, train, count=number_of_runs)  
 
