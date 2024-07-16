@@ -40,7 +40,7 @@ sweep_config = {
     }
 }
 
-batch_size = 8
+batch_size = 32
 
 # small dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
 small_train_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids_small_SPACE_separated.txt"
