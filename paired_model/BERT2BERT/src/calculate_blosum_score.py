@@ -3,8 +3,15 @@ from Bio.Align import substitution_matrices
 import re
 import pandas as pd
 
+
+# heavy2light
+#file_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/HEAVY2LIGHT_114312.o"
+
+# IgBERT2IgBERT run name: FULL_data_cross_attention_with_adapters_batch_size_64_epochs_20_lr_0.0001_weight_decay_0.1
+file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/b2b_adaps_114271.o"
+
 # Read the file content
-with open('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/HEAVY2LIGHT_114312.o', 'r') as file:
+with open(file_path, 'r') as file:
     file_content = file.read()
 
 # Use regex to extract the sequences
