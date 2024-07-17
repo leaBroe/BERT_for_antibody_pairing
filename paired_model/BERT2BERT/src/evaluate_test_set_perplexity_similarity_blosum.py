@@ -8,6 +8,8 @@ from adapters import init
 # "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/2ndr_run_FULL_data_heavy2light_with_adapters_batch_size_64_epochs_20_lr_0.0001_weight_decay_0.1"
 # /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/FULL_data_temperature_0.5_tests_max_length_150_early_stopping_true_heavy2light_with_adapters_batch_size_64_epochs_30_lr_0.0001_weight_decay_0.1
 
+#################################### heavy2light ################################################
+
 # model heavy2light run name: save_adapter_FULL_data_temperature_0.5_tests_max_length_150_early_stopping_true_heavy2light_with_adapters_batch_size_64_epochs_40_lr_0.0001_weight_decay_0.1
 adapter_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/save_adapter_FULL_data_temperature_0.5/final_adapter"
 
@@ -24,16 +26,46 @@ init(model)
 model.load_adapter(adapter_path)
 model.set_active_adapters("heavy2light_adapter")
 
-#model_name = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/FULL_data_temperature_0.5_tests_max_length_150_early_stopping_true_heavy2light_with_adapters_batch_size_64_epochs_30_lr_0.0001_weight_decay_0.1"
-#tokenizer = AutoTokenizer.from_pretrained("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/FULL_data_temperature_0.5_tests_max_length_150_early_stopping_true_heavy2light_with_adapters_batch_size_64_epochs_30_lr_0.0001_weight_decay_0.1/checkpoint-252030")
-#model = EncoderDecoderModel.from_pretrained(model_name)
+#################################### IgBERT2IgBERT ################################################
+
+# #run name: FULL_data_cross_attention_with_adapters_batch_size_64_epochs_20_lr_0.0001_weight_decay_0.1
+
+# # model heavy2light run name: save_adapter_FULL_data_temperature_0.5_tests_max_length_150_early_stopping_true_heavy2light_with_adapters_batch_size_64_epochs_40_lr_0.0001_weight_decay_0.1
+# adapter_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/bert2bert-translation_heavy-to-light_model_checkpoints/FULL_data_cross_attention_with_adapters_batch_size_64_epochs_20_lr_0.0001_weight_decay_0.1/checkpoint-168020/seq2seq_adapter"
+
+# # pretrained tokenizer and model
+# tokenizer_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/bert2bert-translation_heavy-to-light_model_checkpoints/FULL_data_cross_attention_with_adapters_batch_size_64_epochs_20_lr_0.0001_weight_decay_0.1/checkpoint-168020"
+# tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+# model_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/bert2bert-translation_heavy-to-light_model_checkpoints/FULL_data_cross_attention_with_adapters_batch_size_64_epochs_20_lr_0.0001_weight_decay_0.1"
+# model = EncoderDecoderModel.from_pretrained(model_path)
+# init(model)
+# model.load_adapter(adapter_path)
+# model.set_active_adapters("seq2seq_adapter")
+
+
 
 # input sequences: generated light sequences
 # target sequences: true light sequences
 
-# Prepare your input data
-input_sequences = ["D I Q M T Q S P S T L S A S V G D R V T I T C R A N Q N I N N W L A W Y Q Q K P G K A P K L L I Y K T S S L E S G V P L R F S D T G S E T E F T F I I S N L Q P D D F A T Y Y C Q H Y N S Y P W A F G Q G T K V E I K"]
-target_sequences = ["E I V M T Q S P G T L S L S P G E T A T L S C R A S Q S V S S H F A W Y Q Q T P G Q A P R L V I Y A T S T R A A G V P A R F S G S G S G T E F T L T I S S L Q S E D F A V Y Y C H Q Y N N W P F N F G G G T K V E I K"]
+def extract_sequences_from_file(file_path):
+    decoded_sequences = []
+    true_sequences = []
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+        for line in lines:
+            if line.startswith("decoded light sequence:"):
+                decoded_sequences.append(line.split(":")[1].strip())
+            elif line.startswith("true light sequence:"):
+                true_sequences.append(line.split(":")[1].strip())
+    return decoded_sequences, true_sequences
+
+
+# heavy2light
+file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/HEAVY2LIGHT_114312.o" 
+
+# IgBERT2IgBERT
+#file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/b2b_adaps_114271.o"
+input_sequences, target_sequences = extract_sequences_from_file(file_path)
 
 # Tokenize input and target sequences
 inputs = tokenizer(input_sequences, padding=True, truncation=True, return_tensors="pt")
