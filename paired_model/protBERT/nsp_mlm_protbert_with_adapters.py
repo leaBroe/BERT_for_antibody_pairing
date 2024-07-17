@@ -1,11 +1,9 @@
 # use adap_2 as environment
 import os
-import sys
 import torch
 from torch.utils.data import DataLoader
 import numpy as np
 from numpy import random
-import matplotlib.pyplot as plt
 from transformers import BertConfig, BertForPreTraining, BertLMHeadModel, BertTokenizer, logging
 from transformers.data.datasets.language_modeling import TextDatasetForNextSentencePrediction
 from transformers import pipeline, Trainer, TrainingArguments
@@ -41,7 +39,6 @@ print(f'tokenizer: {tokenizer}')
 print(f'config: {config}')
 
 #instantiate the model
-print("start loading model=",datetime.now(PST))
 model = BertForPreTraining(config=config)
 
 # Move model to the appropriate device (GPU or CPU)
@@ -105,7 +102,6 @@ full_train_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/
 full_val_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids_space_separated.txt"
 
 # Prepare the train_dataset
-print("start building train_dataset=", datetime.now(PST))
 train_dataset = TextDatasetForNextSentencePrediction(
     tokenizer=tokenizer,
     file_path=small_train_dataset_path,
@@ -113,7 +109,6 @@ train_dataset = TextDatasetForNextSentencePrediction(
 )
 
 # Prepare the eval_dataset
-print("start building eval_dataset=", datetime.now(PST))
 eval_dataset = TextDatasetForNextSentencePrediction(
     tokenizer=tokenizer,
     file_path=small_val_dataset_path,
