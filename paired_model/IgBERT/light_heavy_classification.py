@@ -23,8 +23,8 @@ num_classes = 2
 max_length = 256
 batch_size = 64
 num_epochs = 10
-learning_rate = 2e-5
-weight_decay = 0.01
+learning_rate = 2e-6
+weight_decay = 0.3
 max_grad_norm = 1.0
 warmup_steps = 1000
 
@@ -197,6 +197,7 @@ trainer.train()
 
 # Save the full model
 trainer.save_model(output_dir)
+model.save_pretrained(output_dir)
 
 # Test pairing prediction
 def predict_pairing(heavy, light, model, tokenizer, device, max_length=512):
