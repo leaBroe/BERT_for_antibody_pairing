@@ -17,6 +17,7 @@ from transformers import get_scheduler
 import wandb
 from adapters import AdapterTrainer, init, BnConfig
 
+
 # NSP and MLM tasks using ProtBERT bfd -> https://huggingface.co/Rostlab/prot_bert_bfd
 # Input data has to be of the form heavyseq[SEP]lightseq with each AA single space separated!!
 # example:
@@ -32,7 +33,7 @@ print(f'device: {device}')
 
 # Load the tokenizer and configuration
 tokenizer = AutoTokenizer.from_pretrained('Rostlab/prot_bert_bfd', do_lower_case=False )
-config = AutoConfig.from_pretrained('Rostlab/prot_bert_bfd', do_lower_case=False, vocab_size=len(tokenizer), force_download=True)
+config = AutoConfig.from_pretrained('Rostlab/prot_bert_bfd', do_lower_case=False, vocab_size=len(tokenizer))
 
 # print tokenizer and config
 print(f'tokenizer: {tokenizer}')
@@ -49,11 +50,11 @@ init(model)
 ######################## Set up Adapters ################################################
 
 
-config = BnConfig(mh_adapter=True, output_adapter=True, reduction_factor=16, non_linearity="relu")
+adapter_config = BnConfig(mh_adapter=True, output_adapter=True, reduction_factor=16, non_linearity="relu")
 
 adapter_name = "nsp_adapter"
 
-model.add_adapter(adapter_name, config=config)
+model.add_adapter(adapter_name, config=adapter_config)
 model.set_active_adapters(adapter_name)
 model.train_adapter(adapter_name)
 
@@ -67,12 +68,11 @@ weight_decay = 0.3
 ######################## wandb ################################################
 
 # Initialize wandb
-run_name = f"exp_Small_data_{num_train_epochs}_epochs_lr{learning_rate}_batch_size_{batch_size}_weight_decay_{weight_decay}"
+run_name = f"adapters_test_small_data_{num_train_epochs}_epochs_lr{learning_rate}_batch_size_{batch_size}_weight_decay_{weight_decay}"
 
-wandb.init(project="paired_model_nsp_mlm_protbert", name=run_name)
+wandb.init(project="paired_model_nsp_mlm_protbert_adapters", name=run_name)
 
-output_dir = f"./{run_name}"
-logging_dir = f"./{run_name}_logging"
+output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/protBERT/nsp_model_checkpoints/{run_name}"
 
 ######################## training arguments ################################################
 
@@ -84,9 +84,8 @@ training_args = TrainingArguments(
     per_device_eval_batch_size=batch_size,   # batch size for evaluation
     warmup_steps=500,                # number of warmup steps for learning rate scheduler
     weight_decay=weight_decay,               # strength of weight decay
-    logging_dir=logging_dir,     # directory for storing logs
     do_train=True,
-    eval_strategy="epoch",
+    evaluation_strategy="epoch",
     logging_steps=5
 )
 

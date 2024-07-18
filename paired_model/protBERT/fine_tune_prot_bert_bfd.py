@@ -27,7 +27,7 @@ print(f"Model is on device: {next(model.parameters()).device}")
 
 # Define training arguments
 training_args = TrainingArguments(
-    output_dir='pytorch_finetuned_model',
+    output_dir='pytorch_finetuned_model_prot_bert_bfd',
     num_train_epochs=3,
     per_device_train_batch_size=16,
     per_device_eval_batch_size=64,

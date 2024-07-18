@@ -64,13 +64,13 @@ model.to(device)  # 'device' is determined by torch.device("cuda" if torch.cuda.
 
 # print("Model's vocab size from embeddings:", model.bert.embeddings.word_embeddings.num_embeddings)
 
-batch_size=16
-num_train_epochs = 50
-learning_rate = 2e-4
+batch_size=32
+num_train_epochs = 20
+learning_rate = 2e-6
 weight_decay = 0.3
 
 # Initialize wandb
-run_name = f"n_FULL_data_{num_train_epochs}_epochs_lr{learning_rate}_batch_size_{batch_size}"
+run_name = f"exp_Small_data_{num_train_epochs}_epochs_lr{learning_rate}_batch_size_{batch_size}_weight_decay_{weight_decay}"
 
 wandb.init(project="paired_model_nsp_mlm_protbert", name=run_name)
 
@@ -125,8 +125,8 @@ full_val_dataset_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/tr
 print("start building train_dataset=", datetime.now(PST))
 train_dataset = TextDatasetForNextSentencePrediction(
     tokenizer=tokenizer,
-    file_path=full_train_dataset_path,
-    block_size=512
+    file_path=small_train_dataset_path,
+    block_size=256
 )
 
 # Check train_dataset input_ids
@@ -137,8 +137,8 @@ train_dataset = TextDatasetForNextSentencePrediction(
 print("start building eval_dataset=", datetime.now(PST))
 eval_dataset = TextDatasetForNextSentencePrediction(
     tokenizer=tokenizer,
-    file_path=full_val_dataset_path,
-    block_size=512
+    file_path=small_val_dataset_path,
+    block_size=256
 )
 
 # Check eval_dataset input_ids
@@ -530,69 +530,69 @@ for epoch in range(training_args.num_train_epochs):
     all_labels = []
     nsp_true_labels = []
     nsp_all_preds = []
-    with torch.no_grad():
-        for step, batch in enumerate(eval_data_loader):
-            batch = {k: v.to(device) for k, v in batch.items()}
+    #with torch.no_grad():
+    for step, batch in enumerate(eval_data_loader):
+        batch = {k: v.to(device) for k, v in batch.items()}
             
-            outputs = model(**batch)
-            loss = outputs.loss
-            eval_loss += loss.item()
+        outputs = model(**batch)
+        loss = outputs.loss
+        eval_loss += loss.item()
 
-            prediction_logits = outputs.prediction_logits
-            seq_relationship_logits = outputs.seq_relationship_logits
+        prediction_logits = outputs.prediction_logits
+        seq_relationship_logits = outputs.seq_relationship_logits
             
-            # For MLM
-            mlm_preds = torch.argmax(prediction_logits, dim=-1)
-            mlm_preds_cpu = mlm_preds.cpu().numpy()
+        # For MLM
+        mlm_preds = torch.argmax(prediction_logits, dim=-1)
+        mlm_preds_cpu = mlm_preds.cpu().numpy()
 
-            #print(f"mlm_preds {mlm_preds}")
+        #print(f"mlm_preds {mlm_preds}")
 
-            mlm_labels = batch['labels']
-            mlm_labels_cpu = mlm_labels.cpu().numpy()
+        mlm_labels = batch['labels']
+        mlm_labels_cpu = mlm_labels.cpu().numpy()
 
-            all_preds.extend(mlm_preds.cpu().numpy())
-            all_labels.extend(mlm_labels.cpu().numpy())
+        all_preds.extend(mlm_preds.cpu().numpy())
+        all_labels.extend(mlm_labels.cpu().numpy())
 
-            #print(f"all_labels {all_labels}")
+        #print(f"all_labels {all_labels}")
 
-            # we still need softmax to convert the logits into probabilities
+        # we still need softmax to convert the logits into probabilities
 
-            # For NSP 
-            nsp_true_labels_per_batch = batch['next_sentence_label']
-            nsp_true_labels_per_batch_to_cpu = nsp_true_labels_per_batch.cpu()
-            print(f"nsp_true_labels_per_batch: {nsp_true_labels_per_batch}")
-            print(f"length of nsp_true_labels_per_batch: {len(nsp_true_labels_per_batch)}")
-            nsp_true_labels.extend(nsp_true_labels_per_batch.cpu().numpy())
+        # For NSP 
+        nsp_true_labels_per_batch = batch['next_sentence_label']
+        nsp_true_labels_per_batch_to_cpu = nsp_true_labels_per_batch.cpu()
+        print(f"nsp_true_labels_per_batch: {nsp_true_labels_per_batch}")
+        print(f"length of nsp_true_labels_per_batch: {len(nsp_true_labels_per_batch)}")
+        nsp_true_labels.extend(nsp_true_labels_per_batch.cpu().numpy())
 
-            nsp_preds = torch.softmax(seq_relationship_logits, dim=1)
-            #print(f"seq_relationship_logits: {seq_relationship_logits}")
-            #print(f"nsp_preds: {nsp_preds}")
+        nsp_preds = torch.softmax(seq_relationship_logits, dim=1)
+        #print(f"seq_relationship_logits: {seq_relationship_logits}")
+        #print(f"nsp_preds: {nsp_preds}")
 
-            nsp_preds_labels = torch.argmax(nsp_preds, dim=1)
-            nsp_predictions = nsp_preds_labels.cpu().numpy()
-            nsp_all_preds.extend(nsp_preds_labels.cpu().numpy())
+        nsp_preds_labels = torch.argmax(nsp_preds, dim=1)
+        nsp_predictions = nsp_preds_labels.cpu().numpy()
+        nsp_all_preds.extend(nsp_preds_labels.cpu().numpy())
 
-            print(f"nsp_preds_labels per batch: {nsp_preds_labels}")
-            print(f"length of nsp_preds_labels per batch: {len(nsp_preds_labels)}")
-
-
-            print(f"true nsp labels (concatenated): {nsp_true_labels}")
-
-            print(f"Epoch: {epoch}, Step: {step}, evaluation Loss: {loss.item()}")
-
-            # compute metrics for each batch
-            print("Computing metrics for batch...")
-            metrics_for_batch = compute_metrics(mlm_preds = mlm_preds_cpu, mlm_labels = mlm_labels_cpu, nsp_preds = nsp_predictions, nsp_labels = nsp_true_labels_per_batch_to_cpu)
-            wandb.log({"metrics_for_batch": metrics_for_batch, "epoch": epoch, "step": step})
+        print(f"nsp_preds_labels per batch: {nsp_preds_labels}")
+        print(f"length of nsp_preds_labels per batch: {len(nsp_preds_labels)}")
 
 
-            # Additional logging
-            if step % 10 == 0:
-                print(f"Detailed logging at Epoch: {epoch}, Step: {step}")
-                #print(f"Input IDs: {batch['input_ids']}")
-                #print(f"Attention Mask: {batch['attention_mask']}")
-                print(f"Evaluation Loss: {loss.item()}")
-                wandb.log({"eval_loss": loss.item(), "epoch": epoch, "step": step})
+        print(f"true nsp labels (concatenated): {nsp_true_labels}")
+
+        print(f"Epoch: {epoch}, Step: {step}, evaluation Loss: {loss.item()}")
+
+        # compute metrics for each batch
+        #print("Computing metrics for batch...")
+        #metrics_for_batch = compute_metrics(mlm_preds = mlm_preds_cpu, mlm_labels = mlm_labels_cpu, nsp_preds = nsp_predictions, nsp_labels = nsp_true_labels_per_batch_to_cpu)
+        #wandb.log({"metrics_for_batch": metrics_for_batch, "epoch": epoch, "step": step})
+
+
+        # Additional logging
+        if step % 10 == 0:
+            print(f"Detailed logging at Epoch: {epoch}, Step: {step}")
+            #print(f"Input IDs: {batch['input_ids']}")
+            #print(f"Attention Mask: {batch['attention_mask']}")
+            print(f"Evaluation Loss: {loss.item()}")
+            wandb.log({"eval_loss": loss.item(), "epoch": epoch, "step": step})
     
     avg_eval_loss = eval_loss / len(eval_data_loader)
     # print len(eval_data_loader)
