@@ -2,7 +2,7 @@ from transformers import EncoderDecoderModel, AutoTokenizer, GenerationConfig
 import torch
 import pandas as pd
 from adapters import init
-from Bio import substitution_matrices
+from Bio.Align import substitution_matrices
 import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -38,6 +38,8 @@ def initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, gen
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"device: {device}")
 
+#################################### heavy2light with adapters ################################################
+# model heavy2light run name: save_adapter_FULL_data_temperature_0.5_tests_max_length_150_early_stopping_true_heavy2light_with_adapters_batch_size_64_epochs_40_lr_0.0001_weight_decay_0.1
 model_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/save_adapter_FULL_data_temperature_0.5"
 tokenizer_path = f"{model_path}/checkpoint-336040"
 adapter_path = f"{model_path}/final_adapter"
@@ -68,6 +70,9 @@ test_df = load_data(test_file_path)
 heavy_sequences = test_df["heavy"]
 true_light_sequences = test_df["light"]
 
+# convert true_light_sequences to list
+true_light_sequences = true_light_sequences.tolist()
+
 # Generate sequences
 generated_light_seqs = []
 
@@ -79,6 +84,7 @@ for i in range(len(heavy_sequences)):
     sequence = generated_seq["sequences"][0]
     generated_text = tokenizer.decode(sequence, skip_special_tokens=True)
     generated_light_seqs.append(generated_text)
+
 
 # Calculate BLOSUM scores
 def calculate_blosum_score(true_seq, generated_seq, matrix):
@@ -97,6 +103,7 @@ def calculate_blosum_score(true_seq, generated_seq, matrix):
             matches += 1
     similarity_percentage = (matches / min_length) * 100
     return score, min_length, matches, similarity_percentage
+
 
 blosum62 = substitution_matrices.load("BLOSUM62")
 scores = []
@@ -122,7 +129,8 @@ print(f"Average Similarity Percentage: {average_similarity_percentage}%")
 # Calculate perplexity
 inputs = tokenizer(generated_light_seqs, padding=True, truncation=True, return_tensors="pt")
 targets = tokenizer(true_light_sequences, padding=True, truncation=True, return_tensors="pt")
-outputs = model(input_ids=inputs.input_ids, decoder_input_ids=targets.input_ids)
+
+outputs = model(input_ids=inputs.input_ids, decoder_input_ids=targets.input_ids).to(device)
 logits = outputs.logits
 shift_logits = logits[:, :-1, :].contiguous()
 shift_labels = targets.input_ids[:, 1:].contiguous()

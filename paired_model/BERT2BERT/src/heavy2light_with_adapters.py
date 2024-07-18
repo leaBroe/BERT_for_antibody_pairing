@@ -85,19 +85,19 @@ def count_trainable_params(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 print(f"number of trainable parameters: {count_trainable_params(model)}")
-
+print_trainable_parameters(model)
 
 tokenizer = AutoTokenizer.from_pretrained('/ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-56556520')
 
 
 batch_size = 64
-num_train_epochs = 50
+num_train_epochs = 100
 learning_rate = 1e-4
 weight_decay = 0.1
 
 
 # Set up the run name
-run_name=f"FULL_data_max_length_150_early_stopping_false_heavy2light_with_adapters_batch_size_{batch_size}_epochs_{num_train_epochs}_lr_{learning_rate}_weight_decay_{weight_decay}"
+run_name=f"test_data_temp_0.5_max_length_150_early_stopping_true_batch_size_{batch_size}_epochs_{num_train_epochs}_lr_{learning_rate}_wd_{weight_decay}"
 
 output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/{run_name}"
 logging_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/{run_name}_logging"
@@ -113,7 +113,7 @@ generation_config = GenerationConfig(
     num_return_sequences=1,
     max_length=512,
     min_length=50,
-    early_stopping = False,
+    early_stopping = True,
     
     #length_penalty = -2.0,
     
@@ -127,7 +127,7 @@ generation_config = GenerationConfig(
     no_repeat_ngram_size = 2,
 
     # distribution adjustment
-    temperature=0.001,
+    temperature=0.5, # before: 0.001
     repetition_penalty=1,
     encoder_repetition_penalty=1.5,
 
@@ -146,9 +146,9 @@ generation_config = GenerationConfig(
     return_dict_in_generate=True, )
 
 
-generation_config.save_pretrained("generation_config", "generation_config_4.json")
+generation_config.save_pretrained("generation_config", "generation_config_7.json")
 
-generation_config_name = "generation_config_4"
+generation_config_name = "generation_config_7"
 generation_config = GenerationConfig.from_pretrained("generation_config", f"{generation_config_name}.json")
 
 ############################################ Training Arguments ############################################
@@ -208,13 +208,13 @@ def load_data(file_path):
 
 
 # SMALL training and validation data
-#train_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_train_no_ids_small_SPACE_separated.txt'
-#val_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_val_no_ids_small_SPACE_separated.txt'
+train_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_train_no_ids_small_SPACE_separated.txt'
+val_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_val_no_ids_small_SPACE_separated.txt'
 #test_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated_SMALL.txt'
 
 # FULL dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
-train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids_space_separated.txt"
-val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids_space_separated.txt"
+#train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids_space_separated.txt"
+#val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids_space_separated.txt"
 
 # MEDIUM dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
 #train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/medium_sized_train_data_seq2seq.txt"
@@ -357,13 +357,15 @@ trainer.train()
 
 model.to(device)
 
-# For the sake of this demonstration an example path for loading and storing is given below
 model_output_path = os.path.join("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/", run_name)
+adapter_output_path = f"{model_output_path}/final_adapter"
+
+os.makedirs(adapter_output_path)
 
 # Save model
 model.save_pretrained(model_output_path)
 # Save adapter
-#encoder.save_adapter(output_path, "encoder_adapter")
+model.save_adapter(adapter_output_path, "heavy2light_adapter")
 #decoder.save_adapter(output_path, "decoder_adapter")
 
 # Load your test data
