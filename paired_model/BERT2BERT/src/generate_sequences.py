@@ -1,18 +1,35 @@
 from transformers import EncoderDecoderModel, AutoTokenizer, GenerationConfig
 import torch
 import pandas as pd
+from adapters import init
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"device: {device}")
 
-# Load the model and tokenizer
-model_name = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/FULL_data_max_length_150_early_stopping_false_heavy2light_with_adapters_batch_size_64_epochs_50_lr_0.0001_weight_decay_0.1"
-tokenizer = AutoTokenizer.from_pretrained("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/FULL_data_max_length_150_early_stopping_false_heavy2light_with_adapters_batch_size_64_epochs_50_lr_0.0001_weight_decay_0.1/checkpoint-420050")
-model = EncoderDecoderModel.from_pretrained(model_name)
-model.to(device)
+#################################### heavy2light with adapters ################################################
 
-generation_config_name = "generation_config_4"
-generation_config = GenerationConfig.from_pretrained("generation_config", f"{generation_config_name}.json")
+# model heavy2light run name: save_adapter_FULL_data_temperature_0.5_tests_max_length_150_early_stopping_true_heavy2light_with_adapters_batch_size_64_epochs_40_lr_0.0001_weight_decay_0.1
+adapter_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/save_adapter_FULL_data_temperature_0.5/final_adapter"
+
+# tokenizer and model not pretrained (models before finetuning)
+#tokenizer = AutoTokenizer.from_pretrained('/ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-56556520')
+#model = EncoderDecoderModel.from_encoder_decoder_pretrained("/ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-117674391", "/ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-56556520", add_cross_attention=True)
+
+# pretrained tokenizer and model
+tokenizer_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/save_adapter_FULL_data_temperature_0.5/checkpoint-336040"
+tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+model_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/save_adapter_FULL_data_temperature_0.5"
+model = EncoderDecoderModel.from_pretrained(model_path)
+init(model)
+model.to(device)
+model.load_adapter(adapter_path)
+model.set_active_adapters("heavy2light_adapter")
+
+generation_config_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/save_adapter_FULL_data_temperature_0.5"
+generation_config = GenerationConfig.from_pretrained(generation_config_path)
+
+# heavy2light with adapters output file path
+#file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/HEAVY2LIGHT_114312.o" 
 
 
 def load_data(file_path):
@@ -58,7 +75,7 @@ for i in range(50):
                                max_length=150, 
                                output_scores=True, 
                                return_dict_in_generate=True,
-                                   generation_config=generation_config)
+                                generation_config=generation_config)
     
     # Access the first element in the generated sequence
     sequence = generated_seq["sequences"][0]
