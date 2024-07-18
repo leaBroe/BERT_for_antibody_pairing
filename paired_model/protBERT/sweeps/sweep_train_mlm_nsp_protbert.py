@@ -22,8 +22,8 @@ import wandb
 sweep_config = {
     "method": "bayes",  # You can also use "grid", "random", etc.
     "metric": {
-        "name": "metrics for epoch.acc_nsp",  # The metric to optimize
-        "goal": "maximize"        # Could be "minimize" or "maximize"
+        "name": "avg_eval_loss",  # The metric to optimize
+        "goal": "minimize"        # Could be "minimize" or "maximize"
     },
     "parameters": {
         "learning_rate": {
@@ -265,6 +265,6 @@ def train():
 
 
 sweep_id = wandb.sweep(sweep_config, project="sweep_train_mlm_nsp_protbert")
-wandb.agent(sweep_id, train, count=10)  # Number of runs to execute
+wandb.agent(sweep_id, train, count=20)  # Number of runs to execute
 
 
