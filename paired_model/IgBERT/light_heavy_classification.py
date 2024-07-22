@@ -22,13 +22,13 @@ bert_model_name = 'Exscientia/IgBERT'
 num_classes = 2
 max_length = 256
 batch_size = 64
-num_epochs = 10
+num_epochs = 40
 learning_rate = 2e-6
 weight_decay = 0.3
 max_grad_norm = 1.0
 warmup_steps = 1000
 
-run_name = f'adapters_FULL_data_lr_{learning_rate}_batch_{batch_size}_epochs_{num_epochs}_weight_decay_{weight_decay}_warmup_steps_{warmup_steps}_max_grad_norm{max_grad_norm}'
+run_name = f'FULL_DATA_lr_{learning_rate}_batch_{batch_size}_epochs_{num_epochs}_weight_decay_{weight_decay}_warmup_steps_{warmup_steps}_max_grad_norm_{max_grad_norm}'
 output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/checkpoints_light_heavy_classification/{run_name}"
 
 # create checkpoint directory
@@ -195,9 +195,14 @@ trainer.train()
 # Evaluate the model
 #trainer.evaluate()
 
+adapter_output_dir = f"{output_dir}/final_adapter"
+
 # Save the full model
-trainer.save_model(output_dir)
-model.save_pretrained(output_dir)
+#trainer.save_model(output_dir)
+model.save_adapter(adapter_output_dir, "class_adap")
+#model.save_pretrained(output_dir)
+model.base_model.save_pretrained(output_dir)
+
 
 # Test pairing prediction
 def predict_pairing(heavy, light, model, tokenizer, device, max_length=512):
