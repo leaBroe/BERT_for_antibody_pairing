@@ -73,23 +73,6 @@ test_df = load_data(test_file_path)
 heavy_sequences = test_df["heavy"]
 true_light_sequences = test_df["light"]
 
-# convert true_light_sequences to list
-true_light_sequences = true_light_sequences.tolist()
-
-# Generate sequences
-generated_light_seqs = []
-
-for i in range(len(heavy_sequences)):
-    inputs = tokenizer(heavy_sequences[i], padding="max_length", truncation=True, max_length=512, return_tensors="pt").to(device)
-    input_ids = inputs.input_ids
-    attention_mask = inputs.attention_mask
-    model.to(device)
-    generated_seq = model.generate(input_ids=input_ids, attention_mask=attention_mask, max_length=150, output_scores=True, return_dict_in_generate=True, generation_config=generation_config)
-    sequence = generated_seq["sequences"][0]
-    generated_text = tokenizer.decode(sequence, skip_special_tokens=True)
-    generated_light_seqs.append(generated_text)
-
-
 # Calculate BLOSUM scores
 def calculate_blosum_score(true_seq, generated_seq, matrix):
     score = 0
@@ -106,58 +89,31 @@ def calculate_blosum_score(true_seq, generated_seq, matrix):
         if true_seq[i] == generated_seq[i]:
             matches += 1
     similarity_percentage = (matches / min_length) * 100
-    return score, min_length, matches, similarity_percentage
-
+    return score, similarity_percentage
 
 blosum62 = substitution_matrices.load("BLOSUM62")
+
+# Lists to store the results
 scores = []
 similarities = []
-
-for i in range(len(generated_light_seqs)):
-    score, min_length, matches, similarity_percentage = calculate_blosum_score(true_light_sequences[i], generated_light_seqs[i], blosum62)
-    scores.append(score)
-    similarities.append(similarity_percentage)
-    print(f"\nSequence pair {i+1}:")
-    print(f"True Sequence: {true_light_sequences[i]}")
-    print(f"Generated Sequence: {generated_light_seqs[i]}")
-    print(f"BLOSUM Score: {score}")
-    print(f"Minimum Length: {min_length}")
-    print(f"Matches: {matches}")
-    print(f"Similarity Percentage: {similarity_percentage}%")
-
-average_blosum_score = sum(scores) / len(scores)
-average_similarity_percentage = sum(similarities) / len(similarities)
-print(f"\nAverage BLOSUM Score: {average_blosum_score}")
-print(f"Average Similarity Percentage: {average_similarity_percentage}%")
-
-# # Calculate perplexity
-# inputs = tokenizer(generated_light_seqs, padding=True, truncation=True, return_tensors="pt")
-# targets = tokenizer(true_light_sequences, padding=True, truncation=True, return_tensors="pt")
-
-# outputs = model(input_ids=inputs.input_ids, decoder_input_ids=targets.input_ids)
-# logits = outputs.logits
-# shift_logits = logits[:, :-1, :].contiguous()
-# shift_labels = targets.input_ids[:, 1:].contiguous()
-# loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
-# loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
-# target_mask = (shift_labels != tokenizer.pad_token_id).float()
-# loss = loss.view(shift_labels.size()) * target_mask
-# log_likelihood = loss.sum(dim=1)
-# perplexity = torch.exp(log_likelihood / target_mask.sum(dim=1)).cpu().detach().numpy()
-
-# for seq, ppl in zip(generated_light_seqs, perplexity):
-#     print(f"Generated Sequence: {seq}")
-#     print(f"Perplexity: {ppl}")
-
-# mean_perplexity = np.mean(perplexity)
-# print(f"Mean Perplexity: {mean_perplexity}")
-
-# Calculate perplexity for each sequence
 perplexities = []
 
-for generated_seq, true_seq in zip(generated_light_seqs, true_light_sequences):
-    inputs = tokenizer(generated_seq, padding=True, truncation=True, return_tensors="pt").to(device)
-    targets = tokenizer(true_seq, padding=True, truncation=True, return_tensors="pt").to(device)
+for i in range(len(heavy_sequences)):
+    # Generate sequence
+    inputs = tokenizer(heavy_sequences[i], padding="max_length", truncation=True, max_length=512, return_tensors="pt").to(device)
+    model.to(device)
+    generated_seq = model.generate(input_ids=inputs.input_ids, attention_mask=inputs.attention_mask, max_length=150, output_scores=True, return_dict_in_generate=True, generation_config=generation_config)
+    sequence = generated_seq["sequences"][0]
+    generated_text = tokenizer.decode(sequence, skip_special_tokens=True)
+    
+    # Calculate BLOSUM score and similarity
+    score, similarity_percentage = calculate_blosum_score(true_light_sequences[i], generated_text, blosum62)
+    scores.append(score)
+    similarities.append(similarity_percentage)
+    
+    # Calculate perplexity
+    inputs = tokenizer(generated_text, padding=True, truncation=True, return_tensors="pt").to(device)
+    targets = tokenizer(true_light_sequences[i], padding=True, truncation=True, return_tensors="pt").to(device)
     
     with torch.no_grad():
         outputs = model(input_ids=inputs.input_ids, decoder_input_ids=targets.input_ids)
@@ -176,18 +132,23 @@ for generated_seq, true_seq in zip(generated_light_seqs, true_light_sequences):
     perplexity = torch.exp(log_likelihood / target_mask.sum(dim=1)).cpu().detach().numpy()
     
     perplexities.append(perplexity[0])
+    
+    # Print results for each sequence pair
+    print(f"\nSequence pair {i+1}:")
+    print(f"True Sequence: {true_light_sequences[i]}")
+    print(f"Generated Sequence: {generated_text}")
+    print(f"BLOSUM Score: {score}")
+    print(f"Similarity Percentage: {similarity_percentage}%")
+    print(f"Perplexity: {perplexity[0]}")
 
-
-# Print perplexity for each sequence
-for seq, ppl in zip(generated_light_seqs, perplexities):
-    print(f"Generated Sequence: {seq}")
-    print(f"Perplexity: {ppl}")
-
-
-# Calculate and print the mean perplexity
+# Calculate and print average scores and perplexity
+average_blosum_score = np.mean(scores)
+average_similarity_percentage = np.mean(similarities)
 mean_perplexity = np.mean(perplexities)
-print(f"Mean Perplexity: {mean_perplexity}")
 
+print(f"\nAverage BLOSUM Score: {average_blosum_score}")
+print(f"Average Similarity Percentage: {average_similarity_percentage}%")
+print(f"Mean Perplexity: {mean_perplexity}")
 
 
 
