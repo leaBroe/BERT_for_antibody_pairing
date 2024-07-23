@@ -26,8 +26,10 @@ def initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, gen
     """
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
     model = EncoderDecoderModel.from_pretrained(model_path)
-    init(model)
     model.to(device)
+    init(model)
+    print(f"model is on device: {model.device}")
+    #model.to(device)
     model.load_adapter(adapter_path)
     model.set_active_adapters(adapter_name)
     generation_config = GenerationConfig.from_pretrained(generation_config_path)
@@ -35,8 +37,6 @@ def initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, gen
     return model, tokenizer, generation_config
 
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"device: {device}")
 
 #################################### heavy2light with adapters ################################################
 # model heavy2light run name: save_adapter_FULL_data_temperature_0.5_tests_max_length_150_early_stopping_true_heavy2light_with_adapters_batch_size_64_epochs_40_lr_0.0001_weight_decay_0.1
@@ -48,8 +48,11 @@ adapter_name = "heavy2light_adapter"
 
 model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, generation_config_path, device, adapter_name)
 
-# Load test data
+# Load small test data
 test_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated_SMALL.txt'
+
+# load FULL test data
+#test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated.txt"
 
 def load_data(file_path):
     data = []
@@ -77,9 +80,10 @@ true_light_sequences = true_light_sequences.tolist()
 generated_light_seqs = []
 
 for i in range(len(heavy_sequences)):
-    inputs = tokenizer(heavy_sequences[i], padding="max_length", truncation=True, max_length=512, return_tensors="pt")
-    input_ids = inputs.input_ids.to(device)
-    attention_mask = inputs.attention_mask.to(device)
+    inputs = tokenizer(heavy_sequences[i], padding="max_length", truncation=True, max_length=512, return_tensors="pt").to(device)
+    input_ids = inputs.input_ids
+    attention_mask = inputs.attention_mask
+    model.to(device)
     generated_seq = model.generate(input_ids=input_ids, attention_mask=attention_mask, max_length=150, output_scores=True, return_dict_in_generate=True, generation_config=generation_config)
     sequence = generated_seq["sequences"][0]
     generated_text = tokenizer.decode(sequence, skip_special_tokens=True)
@@ -126,26 +130,62 @@ average_similarity_percentage = sum(similarities) / len(similarities)
 print(f"\nAverage BLOSUM Score: {average_blosum_score}")
 print(f"Average Similarity Percentage: {average_similarity_percentage}%")
 
-# Calculate perplexity
-inputs = tokenizer(generated_light_seqs, padding=True, truncation=True, return_tensors="pt")
-targets = tokenizer(true_light_sequences, padding=True, truncation=True, return_tensors="pt")
+# # Calculate perplexity
+# inputs = tokenizer(generated_light_seqs, padding=True, truncation=True, return_tensors="pt")
+# targets = tokenizer(true_light_sequences, padding=True, truncation=True, return_tensors="pt")
 
-outputs = model(input_ids=inputs.input_ids, decoder_input_ids=targets.input_ids).to(device)
-logits = outputs.logits
-shift_logits = logits[:, :-1, :].contiguous()
-shift_labels = targets.input_ids[:, 1:].contiguous()
-loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
-loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
-target_mask = (shift_labels != tokenizer.pad_token_id).float()
-loss = loss.view(shift_labels.size()) * target_mask
-log_likelihood = loss.sum(dim=1)
-perplexity = torch.exp(log_likelihood / target_mask.sum(dim=1)).cpu().detach().numpy()
+# outputs = model(input_ids=inputs.input_ids, decoder_input_ids=targets.input_ids)
+# logits = outputs.logits
+# shift_logits = logits[:, :-1, :].contiguous()
+# shift_labels = targets.input_ids[:, 1:].contiguous()
+# loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
+# loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+# target_mask = (shift_labels != tokenizer.pad_token_id).float()
+# loss = loss.view(shift_labels.size()) * target_mask
+# log_likelihood = loss.sum(dim=1)
+# perplexity = torch.exp(log_likelihood / target_mask.sum(dim=1)).cpu().detach().numpy()
 
-for seq, ppl in zip(generated_light_seqs, perplexity):
+# for seq, ppl in zip(generated_light_seqs, perplexity):
+#     print(f"Generated Sequence: {seq}")
+#     print(f"Perplexity: {ppl}")
+
+# mean_perplexity = np.mean(perplexity)
+# print(f"Mean Perplexity: {mean_perplexity}")
+
+# Calculate perplexity for each sequence
+perplexities = []
+
+for generated_seq, true_seq in zip(generated_light_seqs, true_light_sequences):
+    inputs = tokenizer(generated_seq, padding=True, truncation=True, return_tensors="pt").to(device)
+    targets = tokenizer(true_seq, padding=True, truncation=True, return_tensors="pt").to(device)
+    
+    with torch.no_grad():
+        outputs = model(input_ids=inputs.input_ids, decoder_input_ids=targets.input_ids)
+    
+    logits = outputs.logits
+    shift_logits = logits[:, :-1, :].contiguous()
+    shift_labels = targets.input_ids[:, 1:].contiguous()
+    
+    loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
+    loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+    
+    target_mask = (shift_labels != tokenizer.pad_token_id).float()
+    loss = loss.view(shift_labels.size()) * target_mask
+    
+    log_likelihood = loss.sum(dim=1)
+    perplexity = torch.exp(log_likelihood / target_mask.sum(dim=1)).cpu().detach().numpy()
+    
+    perplexities.append(perplexity[0])
+
+
+# Print perplexity for each sequence
+for seq, ppl in zip(generated_light_seqs, perplexities):
     print(f"Generated Sequence: {seq}")
     print(f"Perplexity: {ppl}")
 
-mean_perplexity = np.mean(perplexity)
+
+# Calculate and print the mean perplexity
+mean_perplexity = np.mean(perplexities)
 print(f"Mean Perplexity: {mean_perplexity}")
 
 
