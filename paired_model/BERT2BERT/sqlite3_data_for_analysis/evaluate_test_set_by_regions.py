@@ -1,4 +1,5 @@
 # !pip install biopython
+# used env: OAS_paired_env
 from Bio.Align import substitution_matrices
 import re
 import pandas as pd
@@ -22,10 +23,11 @@ def calculate_blosum_score(true_seq, generated_seq, matrix):
         if true_seq[i] == generated_seq[i]:
             matches += 1
 
+    # raise error if min_length is 0
     if min_length == 0:
-        similarity_percentage = 0
-    else:
-        similarity_percentage = (matches / min_length) * 100
+        raise ValueError("Minimum length is 0")
+    
+    similarity_percentage = (matches / min_length) * 100
 
     return score, min_length, matches, similarity_percentage
 
@@ -50,9 +52,13 @@ pattern = r"decoded light sequence:  ([A-Z ]+)\ntrue light sequence:  ([A-Z ]+)"
 matches = re.findall(pattern, file_content)
 df = pd.DataFrame(matches, columns=['Generated Sequence', 'True Sequence'])
 
+column_list = ['fwr1', 'cdr1', 'fwr2', 'cdr2', 'fwr3', 'cdr3', 'fwr4']
+
+#column_list = ['fwr1']
+
 # Initialize lists to store scores and similarities
-scores = {region: [] for region in ['fwr1', 'cdr1', 'fwr2', 'cdr2', 'fwr3', 'cdr3', 'fwr4']}
-similarities = {region: [] for region in ['fwr1', 'cdr1', 'fwr2', 'cdr2', 'fwr3', 'cdr3', 'fwr4']}
+scores = {region: [] for region in column_list}
+similarities = {region: [] for region in column_list}
 
 # Iterate through each sequence pair
 for index, row in df.iterrows():
@@ -60,14 +66,24 @@ for index, row in df.iterrows():
     generated_sequence = row['Generated Sequence'].replace(" ", "")
     
     sequence_id = regions_df.loc[index, 'sequence_id']
+    print(f"\nSequence ID: {sequence_id}")
     true_seq_row = regions_df[regions_df['sequence_id'] == sequence_id]
+    print(true_seq_row)
     
-    for region in ['fwr1', 'cdr1', 'fwr2', 'cdr2', 'fwr3', 'cdr3', 'fwr4']:
+    for region in column_list:
         start = true_seq_row[f'{region}_start'].values[0]
+        start = start if start == 1 else start//3
+        print(f"start: {start}")
         end = true_seq_row[f'{region}_end'].values[0]
+        end = end//3
+        print(f"end: {end}")
         
         true_region_seq = extract_region(true_sequence, start, end)
+        print(f"true_region_seq: {true_region_seq}")
+        print(f"true_region_seq length: {len(true_region_seq)}")
         generated_region_seq = extract_region(generated_sequence, start, end)
+        print(f"generated_region_seq: {generated_region_seq}")
+        print(f"generated_region_seq length: {len(generated_region_seq)}")
         
         score, min_length, matches, similarity_percentage = calculate_blosum_score(true_region_seq, generated_region_seq, blosum62)
         scores[region].append(score)
