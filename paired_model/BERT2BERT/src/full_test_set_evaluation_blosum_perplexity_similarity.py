@@ -1,9 +1,12 @@
+# used env: adap_2
 from transformers import EncoderDecoderModel, AutoTokenizer, GenerationConfig
 import torch
 import pandas as pd
 from adapters import init
 from Bio.Align import substitution_matrices
 import numpy as np
+from tqdm import tqdm
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"device: {device}")
@@ -40,6 +43,7 @@ def initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, gen
 
 #################################### heavy2light with adapters ################################################
 # model heavy2light run name: save_adapter_FULL_data_temperature_0.5_tests_max_length_150_early_stopping_true_heavy2light_with_adapters_batch_size_64_epochs_40_lr_0.0001_weight_decay_0.1
+run_name = "save_adapter_FULL_data_temperature_0.5_tests_max_length_150_early_stopping_true_heavy2light_with_adapters_batch_size_64_epochs_40_lr_0.0001_weight_decay_0.1"
 model_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/save_adapter_FULL_data_temperature_0.5"
 tokenizer_path = f"{model_path}/checkpoint-336040"
 adapter_path = f"{model_path}/final_adapter"
@@ -49,10 +53,12 @@ adapter_name = "heavy2light_adapter"
 model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, generation_config_path, device, adapter_name)
 
 # Load small test data
-test_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated_SMALL.txt'
+#test_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated_SMALL.txt'
 
 # load FULL test data
-#test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated.txt"
+test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated.txt"
+
+print(f"Fully evaluating model with run name: {run_name}")
 
 def load_data(file_path):
     data = []
@@ -98,10 +104,11 @@ scores = []
 similarities = []
 perplexities = []
 
-for i in range(len(heavy_sequences)):
+for i in tqdm(range(len(heavy_sequences)), desc="Processing sequences"):
     # Generate sequence
     inputs = tokenizer(heavy_sequences[i], padding="max_length", truncation=True, max_length=512, return_tensors="pt").to(device)
     model.to(device)
+    print(f"model is on device {model.device}")
     generated_seq = model.generate(input_ids=inputs.input_ids, attention_mask=inputs.attention_mask, max_length=150, output_scores=True, return_dict_in_generate=True, generation_config=generation_config)
     sequence = generated_seq["sequences"][0]
     generated_text = tokenizer.decode(sequence, skip_special_tokens=True)
