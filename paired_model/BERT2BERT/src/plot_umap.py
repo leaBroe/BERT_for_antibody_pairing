@@ -35,8 +35,17 @@ model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path,
 # Load small test data
 #test_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated_SMALL.txt'
 
+# load small test data with locus (kappa or lambda)
+#test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/data_for_umap_pca/small_data_heavyseplight_locus_no_dupl_spaces_rm.csv"
+
 # load FULL test data
-test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated.txt"
+#test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated.txt"
+
+# load FULL test data with locus (kappa or lambda)
+test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/data_for_umap_pca/full_data_heavyseplight_locus_no_dupl_spaces_rm.csv"
+
+# load test file as csv
+test_df_labels = pd.read_csv(test_file_path)
 
 
 def load_data(file_path):
@@ -55,7 +64,10 @@ def load_data(file_path):
     return df
 
 test_df = load_data(test_file_path)
-heavy_sequences = test_df["heavy"].tolist()
+#heavy_sequences = test_df["heavy"].tolist()
+light_sequences = test_df["light"].tolist()
+labels = test_df_labels['locus'].tolist()
+
 
 # Function to extract embeddings from the last layer
 def get_last_layer_embeddings(model, tokenizer, sequences, device):
@@ -71,18 +83,22 @@ def get_last_layer_embeddings(model, tokenizer, sequences, device):
     return np.vstack(embeddings)  # Stack into a numpy array
 
 # Get embeddings from the last layer
-embeddings = get_last_layer_embeddings(model, tokenizer, heavy_sequences, device)
+embeddings = get_last_layer_embeddings(model, tokenizer, light_sequences, device)
 
 # Apply UMAP
 umap_reducer = umap.UMAP(n_components=2, random_state=42)
 umap_result = umap_reducer.fit_transform(embeddings)
 
-# Plot UMAP result
+# Plot UMAP result with labels
 plt.figure(figsize=(8, 6))
-plt.scatter(umap_result[:, 0], umap_result[:, 1], c='blue', alpha=0.5)
-plt.title('UMAP of Last Layer Embeddings full data')
+for label in set(labels):
+    indices = [i for i, l in enumerate(labels) if l == label]
+    plt.scatter(umap_result[indices, 0], umap_result[indices, 1], label=label, alpha=0.5)
+plt.title('UMAP of Last Layer Embeddings with Labels FULL data')
 plt.xlabel('UMAP Component 1')
 plt.ylabel('UMAP Component 2')
+plt.legend()
 plt.show()
-plt.savefig('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/umap_last_heavy2light_FULL.png')
+plt.savefig('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/umap_heavy2light_FULL_labels.png')
+
 
