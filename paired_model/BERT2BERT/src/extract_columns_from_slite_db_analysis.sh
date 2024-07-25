@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --gres=gpu:a100:1
+#SBATCH --gres=gpu:h100:1
 #SBATCH --job-name=extract_columns_from_slite_db_analysis
 #SBATCH --output=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/extract_columns_from_slite_db_analysis_%j.o
 #SBATCH --error=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/extract_columns_from_slite_db_analysis_%j.e

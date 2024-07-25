@@ -30,12 +30,27 @@ print(f"device: {device}")
 
 # Load the encoder and decoder from Hugging Face
 
+############################################ light heavy model / light light model ############################################
 # decoder: light model smaller config and encoder: heavy model smaller config
 # decoder path epoch 40: /ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-56556520
 # encoder smaller model epoch 19: /ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-117674391
 
-model = EncoderDecoderModel.from_encoder_decoder_pretrained("/ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-117674391", "/ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-56556520", add_cross_attention=True)
+#small_heavy_encoder = "/ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-117674391"
+#small_light_decoder =  "/ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-56556520"
+
+############################################ big heavy model / big light model ############################################
+# decoder: light model big config and encoder: heavy model big config
+# decoder path epoch 23: /ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_3_roberta_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-32519999
+# encoder bigger model epoch 9: /ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/redo_ch/FULL_config_3_roberta_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-55740501
+
+big_heavy_encoder = "/ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/redo_ch/FULL_config_3_roberta_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-55740501"
+big_light_decoder =  "/ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_3_roberta_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-32519999"
+
+model = EncoderDecoderModel.from_encoder_decoder_pretrained(big_heavy_encoder, big_light_decoder , add_cross_attention=True)
 init(model)
+
+# model = EncoderDecoderModel.from_encoder_decoder_pretrained(small_heavy_encoder, small_light_decoder , add_cross_attention=True)
+# init(model)
 
 #encoder = AutoModel.from_pretrained("Exscientia/IgBert")
 #decoder = AutoModelForCausalLM.from_pretrained("Exscientia/IgBert", add_cross_attention = True, is_decoder=True)
@@ -91,13 +106,14 @@ tokenizer = AutoTokenizer.from_pretrained('/ibmm_data2/oas_database/paired_lea_t
 
 
 batch_size = 64
-num_train_epochs = 100
-learning_rate = 1e-4
+num_train_epochs = 30
+learning_rate = 5e-4
 weight_decay = 0.1
+temperature = 0.1
 
 
 # Set up the run name
-run_name=f"test_data_temp_0.5_max_length_150_early_stopping_true_batch_size_{batch_size}_epochs_{num_train_epochs}_lr_{learning_rate}_wd_{weight_decay}"
+run_name=f"FULL_data_big_big_temp_{temperature}_max_length_150_early_stopping_true_batch_size_{batch_size}_epochs_{num_train_epochs}_lr_{learning_rate}_wd_{weight_decay}"
 
 output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/{run_name}"
 logging_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/{run_name}_logging"
@@ -127,7 +143,7 @@ generation_config = GenerationConfig(
     no_repeat_ngram_size = 2,
 
     # distribution adjustment
-    temperature=0.5, # before: 0.001
+    temperature=temperature, # before: 0.001 or 0.5
     repetition_penalty=1,
     encoder_repetition_penalty=1.5,
 
@@ -146,7 +162,7 @@ generation_config = GenerationConfig(
     return_dict_in_generate=True, )
 
 
-generation_config.save_pretrained("generation_config", "generation_config_7.json")
+#generation_config.save_pretrained("generation_config", "generation_config_big_big.json")
 
 generation_config_name = "generation_config_7"
 generation_config = GenerationConfig.from_pretrained("generation_config", f"{generation_config_name}.json")
@@ -197,7 +213,7 @@ def load_data(file_path):
 
     sequences = []
     for entry in data:
-        split_entry = entry.split(' [SEP] ')
+        split_entry = entry.split('[SEP]') # otherwise [SEP] with spaces
         if (len(split_entry) == 2):
             sequences.append(split_entry)
         else:
@@ -208,18 +224,21 @@ def load_data(file_path):
 
 
 # SMALL training and validation data
-train_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_train_no_ids_small_SPACE_separated.txt'
-val_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_val_no_ids_small_SPACE_separated.txt'
+#train_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_train_no_ids_small_SPACE_separated.txt'
+#val_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/paired_full_seqs_sep_val_no_ids_small_SPACE_separated.txt'
 #test_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated_SMALL.txt'
 
 # FULL dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
-#train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids_space_separated.txt"
-#val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids_space_separated.txt"
+train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids_space_separated.txt"
+val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids_space_separated.txt"
 
 # MEDIUM dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
 #train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/medium_sized_train_data_seq2seq.txt"
 #val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/medium_sized_val_data_seq2seq.txt"
 
+# small train and val set without spaces
+#train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids_small.txt"
+#val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids_small.txt"
 
 train_df = load_data(train_file_path)
 val_df = load_data(val_file_path)
@@ -370,6 +389,10 @@ model.save_adapter(adapter_output_path, "heavy2light_adapter")
 
 # Load your test data
 test_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated_SMALL.txt'
+
+# small test file with no spaces
+#test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_small.txt"
+
 test_df = load_data(test_file_path)
 
 
@@ -390,7 +413,7 @@ for i in range(50):
 
     generated_seq = model.generate(input_ids=input_ids, 
                                attention_mask=attention_mask, 
-                               max_length=150, 
+                               max_length=130, # small small: 150, big big: 130
                                output_scores=True, 
                                return_dict_in_generate=True,
                                    generation_config=generation_config)

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-#SBATCH --gres=gpu:a100:1
+#SBATCH --gres=gpu:h100:1
 #SBATCH --job-name=b2b_adaps
 #SBATCH --output=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/b2b_adaps_%j.o
 #SBATCH --error=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/b2b_adaps_%j.e

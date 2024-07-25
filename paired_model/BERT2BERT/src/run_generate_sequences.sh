@@ -6,6 +6,8 @@
 #SBATCH --output=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/generate_sequences_%j.o
 #SBATCH --error=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/generate_sequences_%j.e
 
+#env: adap_2
+
 eval "$(conda shell.bash hook)"
 conda init bash
 conda activate adap_2

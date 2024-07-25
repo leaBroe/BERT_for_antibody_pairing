@@ -9,11 +9,17 @@ import pandas as pd
 # output path: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/blosum_score_114416.o
 
 # heavy2light without adapters run name: FULL_data_heavy2light_without_adapters_batch_size_64_epochs_20_lr_0.0001_weight_decay_0.1
-file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/h2l_no_adaps_114294.o"
+#file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/h2l_no_adaps_114294.o"
 
 # IgBERT2IgBERT run name: FULL_data_cross_attention_with_adapters_batch_size_64_epochs_20_lr_0.0001_weight_decay_0.1
 #file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/b2b_adaps_114271.o"
 # output path: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/blosum_score_114587.o
+
+# IgBERT2IgBERT without adapter run name: FULL_data_cross_attention_without_adapters_batch_size_32_epochs_20_lr_0.0001_weight_decay_0.1
+#file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/b2b_no_adaps_114272.o"
+
+# heavy2light with adapters 100 epochs run name: FULL_data_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_100_lr_0.0001_wd_0.1
+file_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/FULL_data_temp_0.5_max_length_150_early_stopping_true_118905.o"
 
 with open(file_path, 'r') as file:
     file_content = file.read()
@@ -48,7 +54,7 @@ def calculate_blosum_score(true_seq, generated_seq, matrix):
     
     return score, min_length, matches, similarity_percentage
 
-# Load the BLOSUM62 matrix
+
 blosum62 = substitution_matrices.load("BLOSUM62")
 
 scores = []
@@ -78,6 +84,5 @@ average_similarity_percentage = sum(similarities) / len(similarities)
 print(f"\nAverage BLOSUM Score: {average_blosum_score}")
 print(f"Average Similarity Percentage: {average_similarity_percentage}%")
 
-# Save the dataframe to a CSV file (if needed)
 #df.to_csv('sequences_with_scores.csv', index=False)
 
