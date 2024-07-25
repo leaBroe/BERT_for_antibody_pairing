@@ -2,6 +2,10 @@ import pandas as pd
 
 # Read the first file
 file1_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/full_eval_heavy2light_with_adapters125463.o'
+
+# Read the second file
+file2_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/B-cell_analysis/Btypes_full_paired_test_data_no_dupl.csv'
+
 with open(file1_path, 'r') as file:
     lines = file.readlines()
 
@@ -34,8 +38,6 @@ df1 = pd.DataFrame(data1)
 df1['True Sequence'] = df1['True Sequence'].apply(lambda x: ''.join(x))
 df1['Generated Sequence'] = df1['Generated Sequence'].apply(lambda x: ''.join(x))
 
-# Read the second file
-file2_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/B-cell_analysis/Btypes_full_paired_test_data_no_dupl.csv'
 df2 = pd.read_csv(file2_path)
 
 # Keep relevant columns and remove spaces from sequences
