@@ -3,8 +3,8 @@
 
 #SBATCH --gres=gpu:a100:1
 #SBATCH --job-name=class_adaps
-#SBATCH --output=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/logs/test_classification_with_adapters%j.o
-#SBATCH --error=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/logs/test_classification_with_adapters%j.e
+#SBATCH --output=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/logs/classification_with_adapters%j.o
+#SBATCH --error=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/logs/classification_with_adapters%j.e
 
 eval "$(conda shell.bash hook)"
 conda init bash

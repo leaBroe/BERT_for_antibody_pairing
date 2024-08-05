@@ -22,11 +22,11 @@ bert_model_name = 'Exscientia/IgBERT'
 num_classes = 2
 max_length = 256
 batch_size = 64
-num_epochs = 40
-learning_rate = 2e-6
-weight_decay = 0.3
+num_epochs = 10
+learning_rate = 2e-5
+weight_decay = 0.1
 max_grad_norm = 1.0
-warmup_steps = 1000
+warmup_steps = 500
 
 run_name = f'FULL_DATA_lr_{learning_rate}_batch_{batch_size}_epochs_{num_epochs}_weight_decay_{weight_decay}_warmup_steps_{warmup_steps}_max_grad_norm_{max_grad_norm}'
 output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/checkpoints_light_heavy_classification/{run_name}"
