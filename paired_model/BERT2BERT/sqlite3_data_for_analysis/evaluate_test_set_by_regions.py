@@ -4,10 +4,8 @@ from Bio.Align import substitution_matrices
 import re
 import pandas as pd
 
-# Load the BLOSUM62 matrix
 blosum62 = substitution_matrices.load("BLOSUM62")
 
-# Function to calculate BLOSUM score
 def calculate_blosum_score(true_seq, generated_seq, matrix):
     score = 0
     matches = 0
@@ -31,11 +29,9 @@ def calculate_blosum_score(true_seq, generated_seq, matrix):
 
     return score, min_length, matches, similarity_percentage
 
-# Function to extract regions
 def extract_region(sequence, start, end):
     return sequence[start-1:end]  # -1 because positions are 1-based
 
-# Read the CSV file with true sequences and their regions
 regions_file = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/extracted_data_from_PyIR/full_extraction_from_pyir_small_data.csv' 
 regions_df = pd.read_csv(regions_file)
 
@@ -47,7 +43,6 @@ file_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/H
 with open(file_path, 'r') as file:
     file_content = file.read()
 
-# Extract sequences from the log file
 pattern = r"decoded light sequence:  ([A-Z ]+)\ntrue light sequence:  ([A-Z ]+)"
 matches = re.findall(pattern, file_content)
 df = pd.DataFrame(matches, columns=['Generated Sequence', 'True Sequence'])
@@ -56,11 +51,9 @@ column_list = ['fwr1', 'cdr1', 'fwr2', 'cdr2', 'fwr3', 'cdr3', 'fwr4']
 
 #column_list = ['fwr1']
 
-# Initialize lists to store scores and similarities
 scores = {region: [] for region in column_list}
 similarities = {region: [] for region in column_list}
 
-# Iterate through each sequence pair
 for index, row in df.iterrows():
     true_sequence = row['True Sequence'].replace(" ", "")
     generated_sequence = row['Generated Sequence'].replace(" ", "")
