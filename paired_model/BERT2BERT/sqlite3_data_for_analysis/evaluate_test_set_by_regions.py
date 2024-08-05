@@ -61,28 +61,16 @@ with open(fasta_file, "w") as f:
     for header, sequence in fasta_entries:
         f.write(f"{header}\n{sequence}\n")
 
-# Step 4: Use PyIR to identify regions (example placeholder code)
-# Assuming PyIR can parse the FASTA file and annotate the regions
-# This is a simplified example, replace with actual PyIR usage
-regions_results = []
-for i, (true_header, generated_header) in enumerate(fasta_entries):
-    # Replace this with actual PyIR parsing logic
-    # PyIR would return something like:
-    true_regions = {
-        "FWR1": "GCTTATCAGGTCACCA",  # Example DNA sequence
-        "CDR1": "GTTGCT",  # Example DNA sequence
-        # ... other regions
-    }
-    generated_regions = {
-        "FWR1": "GCTTATCAGGTCACCC",  # Example DNA sequence
-        "CDR1": "GTTGCC",  # Example DNA sequence
-        # ... other regions
-    }
-    regions_results.append((true_regions, generated_regions))
+
+# Step 4: Use PyIR to identify regions 
+pyirfile = PyIR(query=fasta_file, args=['--outfmt', 'dict'])
+pyir_result = pyirfile.run()
+
 
 # Step 5: Calculate similarity and BLOSUM scores
 blosum62 = substitution_matrices.load("BLOSUM62")
 results = []
+
 
 def calculate_blosum_score(true_seq, generated_seq, matrix):
     score = 0
@@ -101,20 +89,21 @@ def calculate_blosum_score(true_seq, generated_seq, matrix):
     similarity_percentage = (matches / min_length) * 100
     return score, min_length, matches, similarity_percentage
 
-for true_regions, generated_regions in regions_results:
-    for region in true_regions.keys():
-        score, min_length, matches, similarity_percentage = calculate_blosum_score(
-            true_regions[region], generated_regions[region], blosum62
-        )
-        results.append({
-            "Region": region,
-            "True Sequence": true_regions[region],
-            "Generated Sequence": generated_regions[region],
-            "BLOSUM Score": score,
-            "Similarity Percentage": similarity_percentage
-        })
 
-# Convert results to DataFrame and display
-results_df = pd.DataFrame(results)
-print(results_df)
+# for true_regions, generated_regions in pyir_result:
+#     for region in true_regions.keys():
+#         score, min_length, matches, similarity_percentage = calculate_blosum_score(
+#             true_regions[region], generated_regions[region], blosum62
+#         )
+#         results.append({
+#             "Region": region,
+#             "True Sequence": true_regions[region],
+#             "Generated Sequence": generated_regions[region],
+#             "BLOSUM Score": score,
+#             "Similarity Percentage": similarity_percentage
+#         })
+
+# # Convert results to DataFrame and display
+# results_df = pd.DataFrame(results)
+# print(results_df)
 
