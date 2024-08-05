@@ -23,21 +23,25 @@ def calculate_blosum_score(true_seq, generated_seq, matrix):
 
     # raise error if min_length is 0
     if min_length == 0:
-        raise ValueError("Minimum length is 0")
+        #raise ValueError("Minimum length is 0")
+        min_length = 1
     
     similarity_percentage = (matches / min_length) * 100
 
     return score, min_length, matches, similarity_percentage
 
+
 def extract_region(sequence, start, end):
     return sequence[start-1:end]  # -1 because positions are 1-based
 
-regions_file = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/extracted_data_from_PyIR/full_extraction_from_pyir_small_data.csv' 
+#regions_file = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/extracted_data_from_PyIR/full_extraction_from_pyir_small_data.csv'
+regions_file = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/extracted_data_from_PyIR/full_extraction_pyir_full_data.csv'
 regions_df = pd.read_csv(regions_file)
 
 # Read the file containing generated and true sequences
 # heavy2light run name: save_adapter_FULL_data_temperature_0.5_tests_max_length_150_early_stopping_true_heavy2light_with_adapters_batch_size_64_epochs_40_lr_0.0001_weight_decay_0.1
-file_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/HEAVY2LIGHT_114312.o"
+#file_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/HEAVY2LIGHT_114312.o"
+file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/full_eval_heavy2light_with_adapters125463.o'
 # output path: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/blosum_score_114416.o
 
 with open(file_path, 'r') as file:
@@ -65,10 +69,10 @@ for index, row in df.iterrows():
     
     for region in column_list:
         start = true_seq_row[f'{region}_start'].values[0]
-        start = start if start == 1 else start//3
+        start = 1 if start == 1 else int(start//3)
         print(f"start: {start}")
         end = true_seq_row[f'{region}_end'].values[0]
-        end = end//3
+        end = int(end//3)
         print(f"end: {end}")
         
         true_region_seq = extract_region(true_sequence, start, end)

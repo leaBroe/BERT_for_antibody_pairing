@@ -22,55 +22,55 @@ def extract_columns_from_tsv(tsv_file, columns, output_csv):
 
 tsv_file = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/full_test_data/full_paired_data_sequence_alignment_light.tsv' 
 
-# columns_to_extract = [
-#     "sequence_id",
-#     "sequence",
-#     "sequence_alignment_aa",
-#     "germline_alignment_aa",
-#     "fwr1",
-#     "fwr1_aa",
-#     "cdr1",
-#     "cdr1_aa",
-#     "fwr2",
-#     "fwr2_aa",
-#     "cdr2",
-#     "cdr2_aa",
-#     "fwr3",
-#     "fwr3_aa",
-#     "fwr4",
-#     "fwr4_aa",
-#     "cdr3",
-#     "cdr3_aa",
-#     "fwr1_start",
-#     "fwr1_end",
-#     "cdr1_start",
-#     "cdr1_end",
-#     "fwr2_start",
-#     "fwr2_end",
-#     "cdr2_start",
-#     "cdr2_end",
-#     "fwr3_start",
-#     "fwr3_end",
-#     "fwr4_start",
-#     "fwr4_end",
-#     "cdr3_start",
-#     "cdr3_end",
-#     "np1",
-#     "np1_length",
-#     "np2",
-#     "np2_length",
-#     "cdr3_aa_length"
-# ]
-
 columns_to_extract = [
     "sequence_id",
     "sequence",
     "sequence_alignment_aa",
-    "locus",
-    "v_family"
+    "germline_alignment_aa",
+    "fwr1",
+    "fwr1_aa",
+    "cdr1",
+    "cdr1_aa",
+    "fwr2",
+    "fwr2_aa",
+    "cdr2",
+    "cdr2_aa",
+    "fwr3",
+    "fwr3_aa",
+    "fwr4",
+    "fwr4_aa",
+    "cdr3",
+    "cdr3_aa",
+    "fwr1_start",
+    "fwr1_end",
+    "cdr1_start",
+    "cdr1_end",
+    "fwr2_start",
+    "fwr2_end",
+    "cdr2_start",
+    "cdr2_end",
+    "fwr3_start",
+    "fwr3_end",
+    "fwr4_start",
+    "fwr4_end",
+    "cdr3_start",
+    "cdr3_end",
+    "np1",
+    "np1_length",
+    "np2",
+    "np2_length",
+    "cdr3_aa_length"
 ]
 
-output_csv = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/kappa_lambda_analysis/kappa_lambda_subtypes_extraction.csv' 
+# columns_to_extract = [
+#     "sequence_id",
+#     "sequence",
+#     "sequence_alignment_aa",
+#     "locus",
+#     "v_family"
+# ]
+
+output_csv = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/extracted_data_from_PyIR/full_extraction_pyir_full_data.csv' 
 
 extract_columns_from_tsv(tsv_file, columns_to_extract, output_csv)
 
