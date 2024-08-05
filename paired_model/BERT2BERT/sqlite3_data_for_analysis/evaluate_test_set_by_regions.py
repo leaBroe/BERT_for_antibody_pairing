@@ -42,30 +42,31 @@ def extract_sequences(file_path):
     return data
 
 # Example usage
-file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/full_eval_heavy2light_with_adapters125463.o' 
-data = extract_sequences(file_path)
+# file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/full_eval_heavy2light_with_adapters125463.o' 
+# data = extract_sequences(file_path)
 
-# Step 1 & 2: Extract sequences and convert to DNA
-fasta_entries = []
-for i, pair in enumerate(data):
-    true_seq_dna = protein_to_dna(pair['true_sequence'].replace(" ", ""))
-    generated_seq_dna = protein_to_dna(pair['generated_sequence'].replace(" ", ""))
+# # Step 1 & 2: Extract sequences and convert to DNA
+# fasta_entries = []
+# for i, pair in enumerate(data):
+#     true_seq_dna = protein_to_dna(pair['true_sequence'].replace(" ", ""))
+#     generated_seq_dna = protein_to_dna(pair['generated_sequence'].replace(" ", ""))
     
-    # Create FASTA entries
-    fasta_entries.append((f">True_Seq_{i+1}", true_seq_dna))
-    fasta_entries.append((f">Generated_Seq_{i+1}", generated_seq_dna))
+#     # Create FASTA entries
+#     fasta_entries.append((f">True_Seq_{i+1}", true_seq_dna))
+#     fasta_entries.append((f">Generated_Seq_{i+1}", generated_seq_dna))
 
-# Step 3: Write to FASTA file
+# # Step 3: Write to FASTA file
+# fasta_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/sequences.fasta"
+# with open(fasta_file, "w") as f:
+#     for header, sequence in fasta_entries:
+#         f.write(f"{header}\n{sequence}\n")
+
 fasta_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/sequences.fasta"
-with open(fasta_file, "w") as f:
-    for header, sequence in fasta_entries:
-        f.write(f"{header}\n{sequence}\n")
 
 
 # Step 4: Use PyIR to identify regions 
-pyirfile = PyIR(query=fasta_file, args=['--outfmt', 'dict'])
+pyirfile = PyIR(query=fasta_file, args=['--outfmt', 'tsv'])
 pyir_result = pyirfile.run()
-
 
 # Step 5: Calculate similarity and BLOSUM scores
 blosum62 = substitution_matrices.load("BLOSUM62")
