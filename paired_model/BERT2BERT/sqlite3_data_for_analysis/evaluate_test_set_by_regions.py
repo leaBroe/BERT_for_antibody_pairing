@@ -61,12 +61,12 @@ def extract_sequences(file_path):
 #     for header, sequence in fasta_entries:
 #         f.write(f"{header}\n{sequence}\n")
 
-fasta_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/sequences.fasta"
+# fasta_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/sequences.fasta"
 
 
-# Step 4: Use PyIR to identify regions 
-pyirfile = PyIR(query=fasta_file, args=['--outfmt', 'tsv'])
-pyir_result = pyirfile.run()
+# # Step 4: Use PyIR to identify regions 
+# pyirfile = PyIR(query=fasta_file, args=['--outfmt', 'tsv'])
+# pyir_result = pyirfile.run()
 
 # Step 5: Calculate similarity and BLOSUM scores
 blosum62 = substitution_matrices.load("BLOSUM62")
@@ -74,6 +74,9 @@ results = []
 
 
 def calculate_blosum_score(true_seq, generated_seq, matrix):
+    if not true_seq or not generated_seq:
+        raise ValueError("True sequence or generated sequence is empty.")
+    
     score = 0
     matches = 0
     min_length = min(len(true_seq), len(generated_seq))
@@ -87,24 +90,57 @@ def calculate_blosum_score(true_seq, generated_seq, matrix):
         if true_seq[i] == generated_seq[i]:
             matches += 1
 
-    similarity_percentage = (matches / min_length) * 100
+    similarity_percentage = (matches / min_length) * 100 if min_length > 0 else 0
     return score, min_length, matches, similarity_percentage
 
 
-# for true_regions, generated_regions in pyir_result:
-#     for region in true_regions.keys():
-#         score, min_length, matches, similarity_percentage = calculate_blosum_score(
-#             true_regions[region], generated_regions[region], blosum62
-#         )
-#         results.append({
-#             "Region": region,
-#             "True Sequence": true_regions[region],
-#             "Generated Sequence": generated_regions[region],
-#             "BLOSUM Score": score,
-#             "Similarity Percentage": similarity_percentage
-#         })
+# Read the CSV file into a DataFrame
+df = pd.read_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/full_test_set_true_gen_seqs_relevant_cols.csv')
 
-# # Convert results to DataFrame and display
-# results_df = pd.DataFrame(results)
-# print(results_df)
+# Define regions to process
+regions = ['fwr1_aa', 'cdr1_aa', 'fwr2_aa', 'cdr2_aa', 'fwr3_aa', 'cdr3_aa', 'fwr4_aa']
+
+# List to store results
+results = []
+
+# Iterate over the DataFrame in pairs (True, Generated)
+for i in range(0, len(df), 2):
+    true_seq_row = df.iloc[i]
+    generated_seq_row = df.iloc[i + 1]
+
+    result_entry = {'sequence_id': true_seq_row['sequence_id']}
+    
+    for region in regions:
+        true_seq = true_seq_row[region]
+        generated_seq = generated_seq_row[region]
+
+        # Handle missing values by setting them to empty strings
+        if pd.isna(true_seq):
+            true_seq = ""
+        if pd.isna(generated_seq):
+            generated_seq = ""
+        
+        # Skip if both sequences are empty
+        if not true_seq and not generated_seq:
+            print(f"Both sequences are empty for region {region} in sequence pair {true_seq_row['sequence_id']}. Skipping.")
+            continue
+        
+        try:
+            blosum_score, min_length, matches, similarity_percentage = calculate_blosum_score(true_seq, generated_seq, blosum62)
+        except ValueError as e:
+            print(f"Error processing sequences {true_seq_row['sequence_id']} in region {region}: {e}")
+            continue
+        
+        result_entry[f'{region}_blosum_score'] = blosum_score
+        result_entry[f'{region}_min_length'] = min_length
+        result_entry[f'{region}_matches'] = matches
+        result_entry[f'{region}_similarity_percentage'] = similarity_percentage
+    
+    results.append(result_entry)
+
+# Convert results to DataFrame for analysis or export
+results_df = pd.DataFrame(results)
+
+# save the results to a CSV file
+results_df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/region_similarity_scores.csv', index=False)
 
