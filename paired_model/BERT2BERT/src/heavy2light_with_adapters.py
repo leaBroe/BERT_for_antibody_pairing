@@ -35,8 +35,11 @@ print(f"device: {device}")
 # decoder path epoch 40: /ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-56556520
 # encoder smaller model epoch 19: /ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-117674391
 
-#small_heavy_encoder = "/ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-117674391"
-#small_light_decoder =  "/ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-56556520"
+# small_heavy_encoder = "/ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-117674391"
+# small_light_decoder =  "/ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-56556520"
+
+# model = EncoderDecoderModel.from_encoder_decoder_pretrained(small_heavy_encoder, small_light_decoder , add_cross_attention=True)
+# init(model)
 
 ############################################ big heavy model / big light model ############################################
 # decoder: light model big config and encoder: heavy model big config
@@ -49,8 +52,7 @@ big_light_decoder =  "/ibmm_data2/oas_database/paired_lea_tmp/light_model/src/re
 model = EncoderDecoderModel.from_encoder_decoder_pretrained(big_heavy_encoder, big_light_decoder , add_cross_attention=True)
 init(model)
 
-# model = EncoderDecoderModel.from_encoder_decoder_pretrained(small_heavy_encoder, small_light_decoder , add_cross_attention=True)
-# init(model)
+
 
 #encoder = AutoModel.from_pretrained("Exscientia/IgBert")
 #decoder = AutoModelForCausalLM.from_pretrained("Exscientia/IgBert", add_cross_attention = True, is_decoder=True)
@@ -106,10 +108,10 @@ tokenizer = AutoTokenizer.from_pretrained('/ibmm_data2/oas_database/paired_lea_t
 
 
 batch_size = 64
-num_train_epochs = 30
-learning_rate = 5e-4
-weight_decay = 0.1
-temperature = 0.1
+num_train_epochs = 10
+learning_rate = 1e-5
+weight_decay = 0.5
+temperature = 0.5
 
 
 # Set up the run name

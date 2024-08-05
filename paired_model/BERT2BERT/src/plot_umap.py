@@ -94,11 +94,11 @@ plt.figure(figsize=(8, 6))
 for label in set(labels):
     indices = [i for i, l in enumerate(labels) if l == label]
     plt.scatter(umap_result[indices, 0], umap_result[indices, 1], label=label, alpha=0.5)
-plt.title('UMAP of Last Layer Embeddings with Labels SMALL data')
+plt.title('UMAP of Last Layer Embeddings with Labels FULL data')
 plt.xlabel('UMAP Component 1')
 plt.ylabel('UMAP Component 2')
 plt.legend()
 plt.show()
-plt.savefig('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/umap_heavy2light_FULL_data_labels.png')
+plt.savefig('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/umap_heavy2light_FULL_data_labels_2.png')
 
 
