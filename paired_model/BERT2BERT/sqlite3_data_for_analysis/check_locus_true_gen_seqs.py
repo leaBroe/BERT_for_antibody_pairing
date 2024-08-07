@@ -28,6 +28,9 @@ import pandas as pd
 # Load the CSV data into a DataFrame
 data = pd.read_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/full_test_set_true_gen_seqs_relevant_cols_locus.csv')
 
+# small data to check 
+#data = pd.read_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/full_test_set_true_gen_seqs_relevant_cols_locus_small.csv')
+
 # Check if the locus values are the same for each pair
 # Assuming the pairs are in sequence in the file (Generated followed by True)
 results = []
