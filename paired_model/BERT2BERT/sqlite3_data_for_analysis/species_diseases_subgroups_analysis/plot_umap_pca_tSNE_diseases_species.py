@@ -5,6 +5,10 @@ from adapters import init
 import umap
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+
+
 
 # Initialize device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -55,7 +59,7 @@ def load_data(file_path):
 
 test_df = load_data(test_file_path)
 light_sequences = test_df["light"].tolist()
-labels = test_df_labels['Species'].tolist()
+labels = test_df_labels['Disease'].tolist()
 
 
 
@@ -75,34 +79,115 @@ def get_last_layer_embeddings(model, tokenizer, sequences, device):
 # Get embeddings from the last layer
 embeddings = get_last_layer_embeddings(model, tokenizer, light_sequences, device)
 
-# Apply UMAP
-umap_reducer = umap.UMAP(n_components=2, random_state=42)
-umap_result = umap_reducer.fit_transform(embeddings)
+# # Apply UMAP
+# umap_reducer = umap.UMAP(n_components=2, random_state=42)
+# umap_result = umap_reducer.fit_transform(embeddings)
 
-# Ensure there are enough distinct colors
+# # Ensure there are enough distinct colors
+# cmap = plt.get_cmap('tab20')
+# colors = cmap(np.linspace(0, 1, 20))
+
+# # If you need more than 20 colors, combine multiple colormaps or use ListedColormap
+# additional_cmap = plt.get_cmap('tab20b')
+# additional_colors = additional_cmap(np.linspace(0, 1, 20))
+
+# # Combine colors
+# all_colors = np.vstack((colors, additional_colors))
+
+# # Plot UMAP result with labels
+# fig, ax = plt.subplots(figsize=(10, 8))  # Create figure and axis
+# for idx, label in enumerate(set(labels)):
+#     indices = [i for i, l in enumerate(labels) if l == label]
+#     color = all_colors[idx % len(all_colors)]  # Cycle through colors if more subtypes than colors
+#     # plot u-map as scatter plot
+#     ax.scatter(umap_result[indices, 0], umap_result[indices, 1], label=label, alpha=0.5, color=color, s=10)
+#     # plot u-map as hexbin plot
+#     #ax.hexbin(umap_result[indices, 0], umap_result[indices, 1], label=label, color=color)
+    
+# ax.set_title('UMAP Visualization of BType Subgroups in Last Layer Embeddings')
+# ax.set_xlabel('UMAP Component 1')
+# ax.set_ylabel('UMAP Component 2')
+
+# # Shrink current axis's height by 10% on the bottom
+# box = ax.get_position()
+# ax.set_position([box.x0, box.y0 + box.height * 0.2,
+#                  box.width, box.height * 0.8])
+
+# # Place the legend below the plot
+# ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=5)
+# # Save the plot before showing
+# plt.savefig('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/BType_umap_heavy2light_FULL_data.png')
+# # Display the plot
+# plt.show()
+
+# # Perform PCA
+# pca = PCA(n_components=2)
+# pca_result = pca.fit_transform(embeddings)
+
+# # Define colors and markers
+# cmap = plt.get_cmap('tab20')
+# colors = cmap(np.linspace(0, 1, 20))
+# additional_cmap = plt.get_cmap('tab20b')
+# additional_colors = additional_cmap(np.linspace(0, 1, 20))
+# all_colors = np.vstack((colors, additional_colors))
+
+# markers = ['o', 'v', 's', 'P', '*', 'X', 'D']  # List of markers
+
+# # Create figure and axis
+# fig, ax = plt.subplots(figsize=(10, 8))
+
+# # Plot PCA result with labels
+# unique_labels = sorted(set(labels))  # Sort to ensure consistent color/marker assignment
+# for idx, label in enumerate(unique_labels):
+#     indices = [i for i, l in enumerate(labels) if l == label]
+#     color = all_colors[idx % len(all_colors)]
+#     marker = markers[idx % len(markers)]
+#     #ax.scatter(pca_result[indices, 0], pca_result[indices, 1], label=label, alpha=0.7, color=color, marker=marker, s=10)
+#     ax.hexbin(pca_result[indices, 0], pca_result[indices, 1], label=label, alpha=0.3, color=color, gridsize=50)
+
+
+# # Set title and labels
+# ax.set_title('Differentiation of Diseases Subtypes via PCA of Last Layer Embeddings')
+# ax.set_xlabel('PCA Component 1')
+# ax.set_ylabel('PCA Component 2')
+
+# # Shrink current axis's height by 20% on the bottom
+# box = ax.get_position()
+# ax.set_position([box.x0, box.y0 + box.height * 0.2,
+#                  box.width, box.height * 0.8])
+# # Place the legend below the plot
+# ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=5)
+# plt.show()
+# plt.savefig('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/PCA/disease_pca_heavy2light_FULL_data.png')
+
+# Perform t-SNE
+tsne = TSNE(n_components=2, random_state=42)
+tsne_result = tsne.fit_transform(embeddings)
+
+# Define colors and markers
 cmap = plt.get_cmap('tab20')
 colors = cmap(np.linspace(0, 1, 20))
-
-# If you need more than 20 colors, combine multiple colormaps or use ListedColormap
 additional_cmap = plt.get_cmap('tab20b')
 additional_colors = additional_cmap(np.linspace(0, 1, 20))
-
-# Combine colors
 all_colors = np.vstack((colors, additional_colors))
 
-# Plot UMAP result with labels
-fig, ax = plt.subplots(figsize=(10, 8))  # Create figure and axis
-for idx, label in enumerate(set(labels)):
+markers = ['o', 'v', 's', 'P', '*', 'X', 'D']  # List of markers
+
+# Create figure and axis
+fig, ax = plt.subplots(figsize=(10, 8))
+
+# Plot t-SNE result with labels
+unique_labels = sorted(set(labels))  # Sort to ensure consistent color/marker assignment
+for idx, label in enumerate(unique_labels):
     indices = [i for i, l in enumerate(labels) if l == label]
-    color = all_colors[idx % len(all_colors)]  # Cycle through colors if more subtypes than colors
-    # plot u-map as scatter plot
-    ax.scatter(umap_result[indices, 0], umap_result[indices, 1], label=label, alpha=0.5, color=color, s=10)
-    # plot u-map as hexbin plot
-    #ax.hexbin(umap_result[indices, 0], umap_result[indices, 1], label=label, color=color)
-    
-ax.set_title('UMAP Visualization of Species Subgroups in Last Layer Embeddings')
-ax.set_xlabel('UMAP Component 1')
-ax.set_ylabel('UMAP Component 2')
+    color = all_colors[idx % len(all_colors)]
+    marker = markers[idx % len(markers)]
+    ax.scatter(tsne_result[indices, 0], tsne_result[indices, 1], label=label, alpha=0.7, color=color, marker=marker, s=10)
+
+# Set title and labels
+ax.set_title('Differentiation of Disease Subtypes via t-SNE of Last Layer Embeddings')
+ax.set_xlabel('t-SNE Component 1')
+ax.set_ylabel('t-SNE Component 2')
 
 # Shrink current axis's height by 10% on the bottom
 box = ax.get_position()
@@ -111,7 +196,5 @@ ax.set_position([box.x0, box.y0 + box.height * 0.2,
 
 # Place the legend below the plot
 ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=5)
-# Save the plot before showing
-plt.savefig('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/species_umap_heavy2light_FULL_data.png')
-# Display the plot
 plt.show()
+plt.savefig('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/disease_tsne_heavy2light_FULL_data.png')
