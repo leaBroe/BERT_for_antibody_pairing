@@ -35,22 +35,22 @@ print(f"device: {device}")
 # decoder path epoch 40: /ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-56556520
 # encoder smaller model epoch 19: /ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-117674391
 
-# small_heavy_encoder = "/ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-117674391"
-# small_light_decoder =  "/ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-56556520"
+small_heavy_encoder = "/ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-117674391"
+small_light_decoder =  "/ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-56556520"
 
-# model = EncoderDecoderModel.from_encoder_decoder_pretrained(small_heavy_encoder, small_light_decoder , add_cross_attention=True)
-# init(model)
+model = EncoderDecoderModel.from_encoder_decoder_pretrained(small_heavy_encoder, small_light_decoder , add_cross_attention=True)
+init(model)
 
 ############################################ big heavy model / big light model ############################################
 # decoder: light model big config and encoder: heavy model big config
 # decoder path epoch 23: /ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_3_roberta_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-32519999
 # encoder bigger model epoch 9: /ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/redo_ch/FULL_config_3_roberta_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-55740501
 
-big_heavy_encoder = "/ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/redo_ch/FULL_config_3_roberta_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-55740501"
-big_light_decoder =  "/ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_3_roberta_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-32519999"
+# big_heavy_encoder = "/ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/redo_ch/FULL_config_3_roberta_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-55740501"
+# big_light_decoder =  "/ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_3_roberta_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-32519999"
 
-model = EncoderDecoderModel.from_encoder_decoder_pretrained(big_heavy_encoder, big_light_decoder , add_cross_attention=True)
-init(model)
+# model = EncoderDecoderModel.from_encoder_decoder_pretrained(big_heavy_encoder, big_light_decoder , add_cross_attention=True)
+# init(model)
 
 
 
@@ -108,14 +108,15 @@ tokenizer = AutoTokenizer.from_pretrained('/ibmm_data2/oas_database/paired_lea_t
 
 
 batch_size = 64
-num_train_epochs = 10
-learning_rate = 1e-5
-weight_decay = 0.5
+num_train_epochs = 50
+learning_rate = 1e-4
+weight_decay = 0.1
 temperature = 0.5
+num_beams = 5
 
 
 # Set up the run name
-run_name=f"FULL_data_big_big_temp_{temperature}_max_length_150_early_stopping_true_batch_size_{batch_size}_epochs_{num_train_epochs}_lr_{learning_rate}_wd_{weight_decay}"
+run_name=f"full_Diverse_beam_search_{num_beams}_decoding_temp_{temperature}_max_length_150_early_stopping_true_batch_size_{batch_size}_epochs_{num_train_epochs}_lr_{learning_rate}_wd_{weight_decay}"
 
 output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/{run_name}"
 logging_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/{run_name}_logging"
@@ -135,19 +136,21 @@ generation_config = GenerationConfig(
     
     #length_penalty = -2.0,
     
-    num_beams = 3,
+    num_beams = num_beams, # before: 3
+    num_beam_groups=5,
+    diversity_penalty=1.0,
 
-    # sampling
-    do_sample=True,
-    penalty_alpha=0.6,
-    top_k=4,
+    # # sampling
+    # do_sample=True,
+    # penalty_alpha=0.6,
+    # top_k=4,
     
-    no_repeat_ngram_size = 2,
+    # no_repeat_ngram_size = 2,
 
-    # distribution adjustment
-    temperature=temperature, # before: 0.001 or 0.5
-    repetition_penalty=1,
-    encoder_repetition_penalty=1.5,
+    # # distribution adjustment
+    # temperature=temperature, # before: 0.001 or 0.5
+    # repetition_penalty=1,
+    # encoder_repetition_penalty=1.5,
 
     vocab_size=model.config.encoder.vocab_size,
 
@@ -164,9 +167,10 @@ generation_config = GenerationConfig(
     return_dict_in_generate=True, )
 
 
-#generation_config.save_pretrained("generation_config", "generation_config_big_big.json")
+#generation_config.save_pretrained("generation_config", f"Diverse_beam_search_decoding_beams_{num_beams}.json")
 
-generation_config_name = "generation_config_7"
+generation_config_name = f"Diverse_beam_search_decoding"
+# before generation_config_7.json
 generation_config = GenerationConfig.from_pretrained("generation_config", f"{generation_config_name}.json")
 
 ############################################ Training Arguments ############################################
@@ -415,7 +419,7 @@ for i in range(50):
 
     generated_seq = model.generate(input_ids=input_ids, 
                                attention_mask=attention_mask, 
-                               max_length=130, # small small: 150, big big: 130
+                               max_length=150, # small small: 150, big big: 130
                                output_scores=True, 
                                return_dict_in_generate=True,
                                    generation_config=generation_config)
