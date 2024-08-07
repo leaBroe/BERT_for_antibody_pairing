@@ -59,7 +59,7 @@ def load_data(file_path):
 
 test_df = load_data(test_file_path)
 light_sequences = test_df["light"].tolist()
-labels = test_df_labels['Disease'].tolist()
+labels = test_df_labels['BType'].tolist()
 
 
 
@@ -120,49 +120,9 @@ embeddings = get_last_layer_embeddings(model, tokenizer, light_sequences, device
 # # Display the plot
 # plt.show()
 
-# # Perform PCA
-# pca = PCA(n_components=2)
-# pca_result = pca.fit_transform(embeddings)
-
-# # Define colors and markers
-# cmap = plt.get_cmap('tab20')
-# colors = cmap(np.linspace(0, 1, 20))
-# additional_cmap = plt.get_cmap('tab20b')
-# additional_colors = additional_cmap(np.linspace(0, 1, 20))
-# all_colors = np.vstack((colors, additional_colors))
-
-# markers = ['o', 'v', 's', 'P', '*', 'X', 'D']  # List of markers
-
-# # Create figure and axis
-# fig, ax = plt.subplots(figsize=(10, 8))
-
-# # Plot PCA result with labels
-# unique_labels = sorted(set(labels))  # Sort to ensure consistent color/marker assignment
-# for idx, label in enumerate(unique_labels):
-#     indices = [i for i, l in enumerate(labels) if l == label]
-#     color = all_colors[idx % len(all_colors)]
-#     marker = markers[idx % len(markers)]
-#     #ax.scatter(pca_result[indices, 0], pca_result[indices, 1], label=label, alpha=0.7, color=color, marker=marker, s=10)
-#     ax.hexbin(pca_result[indices, 0], pca_result[indices, 1], label=label, alpha=0.3, color=color, gridsize=50)
-
-
-# # Set title and labels
-# ax.set_title('Differentiation of Diseases Subtypes via PCA of Last Layer Embeddings')
-# ax.set_xlabel('PCA Component 1')
-# ax.set_ylabel('PCA Component 2')
-
-# # Shrink current axis's height by 20% on the bottom
-# box = ax.get_position()
-# ax.set_position([box.x0, box.y0 + box.height * 0.2,
-#                  box.width, box.height * 0.8])
-# # Place the legend below the plot
-# ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=5)
-# plt.show()
-# plt.savefig('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/PCA/disease_pca_heavy2light_FULL_data.png')
-
-# Perform t-SNE
-tsne = TSNE(n_components=2, random_state=42)
-tsne_result = tsne.fit_transform(embeddings)
+# Perform PCA
+pca = PCA(n_components=2)
+pca_result = pca.fit_transform(embeddings)
 
 # Define colors and markers
 cmap = plt.get_cmap('tab20')
@@ -176,25 +136,65 @@ markers = ['o', 'v', 's', 'P', '*', 'X', 'D']  # List of markers
 # Create figure and axis
 fig, ax = plt.subplots(figsize=(10, 8))
 
-# Plot t-SNE result with labels
+# Plot PCA result with labels
 unique_labels = sorted(set(labels))  # Sort to ensure consistent color/marker assignment
 for idx, label in enumerate(unique_labels):
     indices = [i for i, l in enumerate(labels) if l == label]
     color = all_colors[idx % len(all_colors)]
     marker = markers[idx % len(markers)]
-    ax.scatter(tsne_result[indices, 0], tsne_result[indices, 1], label=label, alpha=0.7, color=color, marker=marker, s=10)
+    ax.scatter(pca_result[indices, 0], pca_result[indices, 1], label=label, alpha=0.7, color=color, marker=marker, s=10)
+    #ax.hexbin(pca_result[indices, 0], pca_result[indices, 1], label=label, alpha=0.3, color=color, gridsize=50)
+
 
 # Set title and labels
-ax.set_title('Differentiation of Disease Subtypes via t-SNE of Last Layer Embeddings')
-ax.set_xlabel('t-SNE Component 1')
-ax.set_ylabel('t-SNE Component 2')
+ax.set_title('Differentiation of B-Cell Subtypes via PCA of Last Layer Embeddings')
+ax.set_xlabel('PCA Component 1')
+ax.set_ylabel('PCA Component 2')
 
-# Shrink current axis's height by 10% on the bottom
+# Shrink current axis's height by 20% on the bottom
 box = ax.get_position()
 ax.set_position([box.x0, box.y0 + box.height * 0.2,
                  box.width, box.height * 0.8])
-
 # Place the legend below the plot
 ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=5)
 plt.show()
-plt.savefig('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/disease_tsne_heavy2light_FULL_data.png')
+plt.savefig('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/PCA/btype_pca_heavy2light_FULL_data.png')
+
+# # Perform t-SNE
+# tsne = TSNE(n_components=2, random_state=42)
+# tsne_result = tsne.fit_transform(embeddings)
+
+# # Define colors and markers
+# cmap = plt.get_cmap('tab20')
+# colors = cmap(np.linspace(0, 1, 20))
+# additional_cmap = plt.get_cmap('tab20b')
+# additional_colors = additional_cmap(np.linspace(0, 1, 20))
+# all_colors = np.vstack((colors, additional_colors))
+
+# markers = ['o', 'v', 's', 'P', '*', 'X', 'D']  # List of markers
+
+# # Create figure and axis
+# fig, ax = plt.subplots(figsize=(10, 8))
+
+# # Plot t-SNE result with labels
+# unique_labels = sorted(set(labels))  # Sort to ensure consistent color/marker assignment
+# for idx, label in enumerate(unique_labels):
+#     indices = [i for i, l in enumerate(labels) if l == label]
+#     color = all_colors[idx % len(all_colors)]
+#     marker = markers[idx % len(markers)]
+#     ax.scatter(tsne_result[indices, 0], tsne_result[indices, 1], label=label, alpha=0.7, color=color, marker=marker, s=10)
+
+# # Set title and labels
+# ax.set_title('Differentiation of Disease Subtypes via t-SNE of Last Layer Embeddings')
+# ax.set_xlabel('t-SNE Component 1')
+# ax.set_ylabel('t-SNE Component 2')
+
+# # Shrink current axis's height by 10% on the bottom
+# box = ax.get_position()
+# ax.set_position([box.x0, box.y0 + box.height * 0.2,
+#                  box.width, box.height * 0.8])
+
+# # Place the legend below the plot
+# ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=5)
+# plt.show()
+# plt.savefig('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/disease_tsne_heavy2light_FULL_data.png')
