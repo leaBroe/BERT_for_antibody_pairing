@@ -1,0 +1,15 @@
+      generated_sequence_id true_sequence_id  same_locus
+0           Generated_Seq_1       True_Seq_1       False
+1           Generated_Seq_2       True_Seq_2        True
+2           Generated_Seq_3       True_Seq_3        True
+3           Generated_Seq_4       True_Seq_4       False
+4           Generated_Seq_5       True_Seq_5       False
+...                     ...              ...         ...
+67204   Generated_Seq_67205   True_Seq_67205       False
+67205   Generated_Seq_67206   True_Seq_67206       False
+67206   Generated_Seq_67207   True_Seq_67207       False
+67207   Generated_Seq_67208   True_Seq_67208        True
+67208   Generated_Seq_67209   True_Seq_67209        True
+
+[67209 rows x 3 columns]
+Average of 'True' in same_locus column: 0.6043238256781086
