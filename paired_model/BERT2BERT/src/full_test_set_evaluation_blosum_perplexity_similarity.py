@@ -68,10 +68,42 @@ def initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, gen
 # generation_config_path = model_path
 # adapter_name = "heavy2light_adapter"
 
-# heavy2light BIG/BIG
-run_name = "FULL_data_big_big_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_10_lr_1e-05_wd_0.5"
-model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/FULL_data_big_big_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_10_lr_1e-05_wd_0.5"
-tokenizer_path = f"{model_path}/checkpoint-84010"
+# # heavy2light BIG/BIG
+# run_name = "FULL_data_big_big_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_10_lr_1e-05_wd_0.5"
+# model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/FULL_data_big_big_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_10_lr_1e-05_wd_0.5"
+# tokenizer_path = f"{model_path}/checkpoint-84010"
+# adapter_path = f"{model_path}/final_adapter"
+# generation_config_path = model_path
+# adapter_name = "heavy2light_adapter"
+
+# # heavy2light 10 epochs diverse beam search beam = 5
+# run_name="full_Diverse_beam_search_5_decoding_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_10_lr_0.0001_wd_0.1"
+# model_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_Diverse_beam_search_5_decoding_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_10_lr_0.0001_wd_0.1"
+# tokenizer_path = f"{model_path}/checkpoint-84010"
+# adapter_path = f"{model_path}/final_adapter"
+# generation_config_path = model_path
+# adapter_name = "heavy2light_adapter"
+
+# # heavy2light 10 epochs diverse beam search beam = 2
+# run_name="full_diverse_beam_search_2_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_10_lr_0.0001_wd_0.1"
+# model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_diverse_beam_search_2_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_10_lr_0.0001_wd_0.1"
+# tokenizer_path = f"{model_path}/checkpoint-84010"
+# adapter_path = f"{model_path}/final_adapter"
+# generation_config_path = model_path
+# adapter_name = "heavy2light_adapter"
+
+# # # heavy2light 50 epochs diverse beam search beam = 5
+# run_name="full_Diverse_beam_search_5_decoding_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_50_lr_0.0001_wd_0.1"
+# model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_Diverse_beam_search_5_decoding_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_50_lr_0.0001_wd_0.1"
+# tokenizer_path = f"{model_path}/checkpoint-420050"
+# adapter_path = f"{model_path}/final_adapter"
+# generation_config_path = model_path
+# adapter_name = "heavy2light_adapter"
+
+# heavy2light contrastive search 40 epochs
+run_name="full_contrastive_search_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_40_lr_0.0001_wd_0.1"
+model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_contrastive_search_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_40_lr_0.0001_wd_0.1"
+tokenizer_path = f"{model_path}/checkpoint-336040"
 adapter_path = f"{model_path}/final_adapter"
 generation_config_path = model_path
 adapter_name = "heavy2light_adapter"
