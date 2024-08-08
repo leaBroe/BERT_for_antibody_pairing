@@ -24,15 +24,35 @@ def initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, gen
     generation_config = GenerationConfig.from_pretrained(generation_config_path)
     return model, tokenizer, generation_config
 
-# Define paths
-model_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/save_adapter_FULL_data_temperature_0.5"
-tokenizer_path = f"{model_path}/checkpoint-336040"
-adapter_path = f"{model_path}/final_adapter"
-generation_config_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/save_adapter_FULL_data_temperature_0.5"
-adapter_name = "heavy2light_adapter"
+# # Define paths
+# model_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/save_adapter_FULL_data_temperature_0.5"
+# tokenizer_path = f"{model_path}/checkpoint-336040"
+# adapter_path = f"{model_path}/final_adapter"
+# generation_config_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/save_adapter_FULL_data_temperature_0.5"
+# adapter_name = "heavy2light_adapter"
+
+# # # heavy2light 50 epochs diverse beam search beam = 5
+# run_name="full_Diverse_beam_search_5_decoding_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_50_lr_0.0001_wd_0.1"
+# model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_Diverse_beam_search_5_decoding_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_50_lr_0.0001_wd_0.1"
+# tokenizer_path = f"{model_path}/checkpoint-420050"
+# adapter_path = f"{model_path}/final_adapter"
+# generation_config_path = model_path
+# adapter_name = "heavy2light_adapter"
+
+# IgBERT2IgBERT 
+run_name="FULL_data_cross_attention_with_adapters_batch_size_64_epochs_20_lr_0.0005_weight_decay_0.05"
+model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/bert2bert-translation_heavy-to-light_model_checkpoints/FULL_data_cross_attention_with_adapters_batch_size_64_epochs_20_lr_0.0005_weight_decay_0.05"
+tokenizer_path = f"{model_path}/checkpoint-168020"
+adapter_path = f"{model_path}/checkpoint-168020/seq2seq_adapter"
+generation_config_path = model_path
+adapter_name = "seq2seq_adapter"
+
+print(f"making t-SNE plot for model: {run_name}")
 
 # Initialize model and tokenizer
 model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, generation_config_path, device, adapter_name)
+
+output_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/IgBERT2IgBERT/FULL_data_cross_attention_with_adapters_batch_size_64_epochs_20_lr_0.0005_weight_decay_0.05/t-SNE"
 
 # Load small test data
 #test_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated_SMALL.txt'
@@ -133,7 +153,7 @@ for idx, label in enumerate(unique_labels):
     ax.scatter(tsne_result[indices, 0], tsne_result[indices, 1], label=label, alpha=0.7, color=color, marker=marker, s=10)
 
 # Set title and labels
-ax.set_title('t-SNE of Last Layer Embeddings Kappa/Lambda Locus FULL data')
+ax.set_title('Differentiation of Kappa and Lambda Subtypes via t-SNE of Last Layer Embeddings')
 ax.set_xlabel('t-SNE Component 1')
 ax.set_ylabel('t-SNE Component 2')
 
@@ -145,6 +165,6 @@ ax.set_position([box.x0, box.y0 + box.height * 0.2,
 # Place the legend below the plot
 ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=5)
 plt.show()
-plt.savefig('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/tsne_heavy2light_FULL_data_fewer_subtypes_2.png')
+plt.savefig(f'{output_path}/tsne_igbert2igbert_FULL_data_fewer_subtypes.png')
 
 
