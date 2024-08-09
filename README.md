@@ -1,4 +1,4 @@
-# Heavy-Light Chain Pair Identification and Prediction
+# Heavy-Light Chain Pair Identification and Prediction in Antibodies
 
 Master Thesis 2024  
 Institute of Biochemistry and Molecular Medicine  
