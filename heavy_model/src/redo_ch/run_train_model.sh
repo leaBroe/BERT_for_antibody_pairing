@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#SBATCH --gres=gpu:a100:1
-#SBATCH --job-name=hea_conf3
+#SBATCH --gres=gpu:h100:1
+#SBATCH --job-name=hea_conf4
 
 #--config_name 'config3.json' \
 
@@ -42,7 +42,8 @@ conda activate lea_env
     --metric_for_best_model 'loss' \
     --line_by_line \
     --greater_is_better False \
-    --config_name 'config3.json' \
+    --config_name 'config4.json' \
     --report_to 'wandb' \
     --max_seq_length 512 \
-    --output_dir ./FULL_config_3_roberta_run_lr5e-5_500epochs_max_seq_length_512
+    --output_dir ./FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512
+
