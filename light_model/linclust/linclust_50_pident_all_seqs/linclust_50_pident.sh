@@ -40,7 +40,7 @@ mmseqs createsubdb "${DB}_${pident}_clu" "$DB" "${DB}_${pident}_clu_rep"
 mmseqs convert2fasta "${DB}_${pident}_clu_rep" "${DB}_${pident}_clu_rep.fasta"
 mmseqs createtsv "$DB" "$DB" "${DB}_${pident}_clu" "${DB}_${pident}_clu.tsv"
 mmseqs createseqfiledb "$DB" "${DB}_${pident}_clu" "${DB}_${pident}_clu_allseqs"
-mmseqs result2flat "$DB" "$DB" "${DB}_${pident}_clu_allseqs" "${DB}_${pident}_clu_allseqs.fasta"
+mmseqs result2flat "$DB" "$DB" "${DB}_${pident}_clu_allseqs" "${DB}_${pident}_clu_allseqs.fasta" --use-fasta-header
 
 awk '/^>/ { printf("\n%s,", substr($0, 2)); next; } { printf("%s", $0);} END { printf("\n"); }' "${DB}_${pident}_clu_rep.fasta" > "${DB}_${pident}_clu_rep_idseq"
 awk -F ',' '!seen[$2]++' "${DB}_${pident}_clu_rep_idseq" > "${DB}_${pident}_clu_rep_idseq_noduplicates"

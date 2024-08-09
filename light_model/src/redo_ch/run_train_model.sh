@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --gres=gpu:a100:1
-#SBATCH --job-name=light_conf_3
+#SBATCH --job-name=li_cf_3
 
 #--config_name 'config3.json' \
 
@@ -27,7 +27,7 @@ conda activate lea_env
     --do_predict \
     --evaluation_strategy 'epoch' \
     --save_strategy 'epoch' \
-    --learning_rate 5e-4 \
+    --learning_rate 5e-5 \
     --weight_decay 0.1 \
     --num_train_epochs 500 \
     --lr_scheduler_type 'linear' \
@@ -43,4 +43,5 @@ conda activate lea_env
     --config_name 'config3.json' \
     --report_to 'wandb' \
     --max_seq_length 512 \
-    --output_dir ./FULL_config_3_roberta_run_lr5e-4_500epochs_max_seq_length_512
+    --output_dir ./FULL_config_3_roberta_run_lr5e-5_500epochs_max_seq_length_512
+
