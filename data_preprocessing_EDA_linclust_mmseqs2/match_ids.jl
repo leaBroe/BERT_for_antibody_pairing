@@ -1,3 +1,5 @@
+#!/home/leab/.juliaup/bin/julia
+
 # Extract IDs from query file 
 # function get_ids(file)
 #     ## Initiate empty vector
@@ -35,12 +37,14 @@ function compare_ids(queries, db, output_file)
 end
 
 # Open output file for writing
-open("output_julia_6.txt", "w") do output_file
+open("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/data_oas/filtered_full_seqs_from_cdrh3_100_pident_paired.txt", "w") do output_file
     # Run the actual functions with output redirection
-    open("/Users/leabroennimann/Downloads/master_thesis_data/centroids_ids_cdrl3_aa_70_human_unpaired.txt") do query_file
+    open("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/data_oas/paired_rowid_cdrh3_100_clu_rep_centroid_ids.txt") do query_file
         queries = get_ids(query_file)
-        open("/Users/leabroennimann/Downloads/master_thesis_data/Bcells_subset_human_unpaired_light_cdr3_light_seq_3_rowid.txt") do db_file
+        open("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/data_oas/paired_rowid_cdrh3_full_sep.csv") do db_file
             compare_ids(queries, db_file, output_file)
         end
     end
 end
+
+#         open("/Users/leabroennimann/Downloads/master_thesis_data/Bcells_subset_human_unpaired_light_cdr3_light_seq_3_rowid.txt") do db_file
