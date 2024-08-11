@@ -108,15 +108,15 @@ tokenizer = AutoTokenizer.from_pretrained('/ibmm_data2/oas_database/paired_lea_t
 
 
 batch_size = 64
-num_train_epochs = 50
-learning_rate = 1e-4
+num_train_epochs = 30
+learning_rate = 1e-7
 weight_decay = 0.1
-temperature = 0.5
+temperature = 0.2
 num_beams = 5
 
 
 # Set up the run name
-run_name=f"full_Diverse_beam_search_{num_beams}_decoding_temp_{temperature}_max_length_150_early_stopping_true_batch_size_{batch_size}_epochs_{num_train_epochs}_lr_{learning_rate}_wd_{weight_decay}"
+run_name=f"full_diverse_beam_search_{num_beams}_temp_{temperature}_max_length_150_early_stopping_true_batch_size_{batch_size}_epochs_{num_train_epochs}_lr_{learning_rate}_wd_{weight_decay}"
 
 output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/{run_name}"
 logging_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/{run_name}_logging"
@@ -128,46 +128,46 @@ model.config.eos_token_id = tokenizer.sep_token_id
 model.config.pad_token_id = tokenizer.pad_token_id
 model.config.vocab_size = model.config.encoder.vocab_size
 
-generation_config = GenerationConfig(
-    num_return_sequences=1,
-    max_length=512,
-    min_length=50,
-    early_stopping = True,
+# generation_config = GenerationConfig(
+#     num_return_sequences=1,
+#     max_length=512,
+#     min_length=50,
+#     early_stopping = False,
     
-    #length_penalty = -2.0,
+#     #length_penalty = -2.0,
     
-    num_beams = num_beams, # before: 3
-    num_beam_groups=5,
-    diversity_penalty=1.0,
+#     num_beams = num_beams, # before: 3
+#     num_beam_groups=2,
+#     diversity_penalty=1.0,
 
-    # # sampling
-    # do_sample=True,
-    # penalty_alpha=0.6,
-    # top_k=4,
+#     # # sampling
+#     # # do_sample=True,
+#     # penalty_alpha=0.6,
+#     # top_k=4,
     
-    # no_repeat_ngram_size = 2,
+#     # no_repeat_ngram_size = 2,
 
-    # # distribution adjustment
-    # temperature=temperature, # before: 0.001 or 0.5
-    # repetition_penalty=1,
-    # encoder_repetition_penalty=1.5,
+#     # # distribution adjustment
+#     # temperature=temperature, # before: 0.001 or 0.5
+#     # repetition_penalty=1,
+#     # encoder_repetition_penalty=1.5,
 
-    vocab_size=model.config.encoder.vocab_size,
+#     vocab_size=model.config.encoder.vocab_size,
 
-    # token ids
-    pad_token_id=tokenizer.pad_token_id,
-    eos_token_id=tokenizer.sep_token_id,
-    decoder_start_token_id=tokenizer.cls_token_id,
+#     # token ids
+#     pad_token_id=tokenizer.pad_token_id,
+#     eos_token_id=tokenizer.sep_token_id,
+#     decoder_start_token_id=tokenizer.cls_token_id,
 
-    # others
-    use_cache=True,
-    output_logits=True,
-    output_scores=True,
-    output_hidden_states=True,
-    return_dict_in_generate=True, )
+#     # others
+#     use_cache=True,
+#     output_logits=True,
+#     output_scores=True,
+#     output_hidden_states=True,
+#     return_dict_in_generate=True, )
 
 
-#generation_config.save_pretrained("generation_config", f"Diverse_beam_search_decoding_beams_{num_beams}.json")
+#generation_config.save_pretrained("generation_config", f"diverse_beam_search_beams_{num_beams}.json")
 
 generation_config_name = f"Diverse_beam_search_decoding"
 # before generation_config_7.json
@@ -411,6 +411,9 @@ true_light_sequences = test_df["light"]
 
 generated_light_seqs = []
 
+# average similarity percentage
+total_similarity_percentage = []
+
 # Iterate through each sequence in the test dataset
 for i in range(50):
     inputs = tokenizer(heavy_sequences[i], padding="max_length", truncation=True, max_length=512, return_tensors="pt")
@@ -453,6 +456,13 @@ for i in range(50):
     
     print(f"similarity percentage: {similarity_percentage}")
 
+    # add similarity percentage to list
+    total_similarity_percentage.append(similarity_percentage)
+
+
+# print average similarity percentage
+similarity_percentage = sum(total_similarity_percentage) / len(total_similarity_percentage)
+print(f"average similarity percentage: {similarity_percentage}")
 
 print("generated_light_seqs:")
 # print each generated sequence on new line
