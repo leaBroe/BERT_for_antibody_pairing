@@ -1,6 +1,9 @@
-# Light Chain Regions Analysis (see IgBERT paper for reference)
+# Light Chain Framework and CDR Analysis
 
-[IgBERT paper](https://arxiv.org/abs/2403.17889)
+For further analysis of the model's performance, we want to analyze the 7 regions present in a light chain (4 framework regions and 3 CDRs):  
+FWL1, FWL2, FWL3, FWL4, CDRL1, CDRL2, CDRL3
+similar to the analysis done in the paper:  
+[Large scale paired antibody language models](https://arxiv.org/abs/2403.17889)
 
 I’m using the model with run name: full_diverse_beam_search_2_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_10_lr_0.0001_wd_0.1
 
