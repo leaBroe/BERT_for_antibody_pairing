@@ -11,7 +11,8 @@ DATABASE_PATH="/ibmm_data2/oas_database/OAS_paired.db"
 
 # Output CSV file
 #OUTPUT_FILE="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/full_paired_data_for_analysis.csv"
-OUTPUT_FILE="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/Btypes_full_paired_data_for_analysis.csv"
+#OUTPUT_FILE="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/Btypes_full_paired_data_for_analysis.csv"
+OUTPUT_FILE="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/species_subgroups_analysis/paired_oas_db_full_extraction.csv"
 
 
 # Columns to extract
@@ -24,7 +25,10 @@ OUTPUT_FILE="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqli
 # fwr4_aa_light, fwr4_end_light, fwr4_light, fwr4_start_light, \
 # sequence_alignment_aa_light, sequence_alignment_light, sequence_alignment_heavy_sep_light"
 
-COLUMNS="BType, sequence_alignment_aa_light, sequence_alignment_light, sequence_alignment_aa_heavy, sequence_alignment_heavy, sequence_alignment_heavy_sep_light"
+#COLUMNS="BType, sequence_alignment_aa_light, sequence_alignment_light, sequence_alignment_aa_heavy, sequence_alignment_heavy, sequence_alignment_heavy_sep_light"
+
+COLUMNS="Species, Disease, BType, Isotype_light, sequence_alignment_aa_light, sequence_alignment_light, sequence_alignment_aa_heavy, sequence_alignment_heavy, sequence_alignment_heavy_sep_light"
+
 
 # Run SQLite commands
 sqlite3 $DATABASE_PATH <<EOF

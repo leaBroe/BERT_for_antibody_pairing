@@ -100,13 +100,37 @@ def initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, gen
 # generation_config_path = model_path
 # adapter_name = "heavy2light_adapter"
 
-# heavy2light contrastive search 40 epochs
-run_name="full_contrastive_search_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_40_lr_0.0001_wd_0.1"
-model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_contrastive_search_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_40_lr_0.0001_wd_0.1"
-tokenizer_path = f"{model_path}/checkpoint-336040"
-adapter_path = f"{model_path}/final_adapter"
-generation_config_path = model_path
-adapter_name = "heavy2light_adapter"
+# # heavy2light contrastive search 40 epochs
+# run_name="full_contrastive_search_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_40_lr_0.0001_wd_0.1"
+# model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_contrastive_search_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_40_lr_0.0001_wd_0.1"
+# tokenizer_path = f"{model_path}/checkpoint-336040"
+# adapter_path = f"{model_path}/final_adapter"
+# generation_config_path = model_path
+# adapter_name = "heavy2light_adapter"
+
+# # IgBERT2IgBERT 
+# run_name="FULL_data_cross_attention_with_adapters_batch_size_64_epochs_20_lr_0.0005_weight_decay_0.05"
+# model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/bert2bert-translation_heavy-to-light_model_checkpoints/FULL_data_cross_attention_with_adapters_batch_size_64_epochs_20_lr_0.0005_weight_decay_0.05"
+# tokenizer_path = f"{model_path}/checkpoint-168020"
+# adapter_path = f"{model_path}/checkpoint-168020/seq2seq_adapter"
+# generation_config_path = model_path
+# adapter_name = "seq2seq_adapter"
+
+# # IgBERT2IgBERT 20 epochs weird drop in loss
+# run_name="FULL_data_cross_attention_with_adapters_batch_size_64_epochs_20_lr_0.0001_weight_decay_0.1"
+# model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/bert2bert-translation_heavy-to-light_model_checkpoints/FULL_data_cross_attention_with_adapters_batch_size_64_epochs_20_lr_0.0001_weight_decay_0.1"
+# tokenizer_path = f"{model_path}/checkpoint-168020"
+# adapter_path = f"{model_path}/checkpoint-168020/seq2seq_adapter"
+# generation_config_path = model_path
+# adapter_name = "seq2seq_adapter"
+
+# heavy2light 60 epochs diverse beam search beam = 5
+run_name="full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1"
+model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1"
+tokenizer_path=f"{model_path}/checkpoint-504060"
+adapter_path=f"{model_path}/final_adapter"
+generation_config_path=model_path
+adapter_name="heavy2light_adapter"
 
 model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, generation_config_path, device, adapter_name)
 
