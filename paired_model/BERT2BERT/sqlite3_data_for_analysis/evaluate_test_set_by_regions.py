@@ -1,9 +1,16 @@
 # env: OAS_paired_env
+# env: adap_2
 from Bio import pairwise2
 from Bio.Align import substitution_matrices
-from crowelab_pyir import PyIR
+#from crowelab_pyir import PyIR
 import pandas as pd
 import re
+from transformers import EncoderDecoderModel, AutoTokenizer, GenerationConfig
+import torch
+from adapters import init
+import numpy as np
+from tqdm import tqdm
+
 
 
 # Amino Acid Table:
@@ -29,6 +36,48 @@ import re
 # | Tryptophan                    | Trp               | W               |
 # | Tyrosine                      | Tyr               | Y               |
 # | Valine                        | Val               | V               |
+
+
+def initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, generation_config_path, device, adapter_name):
+    """
+    Initialize the model, tokenizer, and generation configuration.
+    
+    Args:
+        model_path (str): Path to the model.
+        tokenizer_path (str): Path to the tokenizer.
+        adapter_path (str): Path to the adapter.
+        generation_config_path (str): Path to the generation configuration.
+        device (torch.device): Device to run the model on.
+    
+    Returns:
+        model (EncoderDecoderModel): Initialized model.
+        tokenizer (AutoTokenizer): Initialized tokenizer.
+        generation_config (GenerationConfig): Generation configuration.
+    """
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+    model = EncoderDecoderModel.from_pretrained(model_path)
+    model.to(device)
+    init(model)
+    print(f"model is on device: {model.device}")
+    #model.to(device)
+    model.load_adapter(adapter_path)
+    model.set_active_adapters(adapter_name)
+    generation_config = GenerationConfig.from_pretrained(generation_config_path)
+    
+    return model, tokenizer, generation_config
+
+
+# heavy2light 10 epochs diverse beam search beam = 2
+run_name="full_diverse_beam_search_2_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_10_lr_0.0001_wd_0.1"
+model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_diverse_beam_search_2_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_10_lr_0.0001_wd_0.1"
+tokenizer_path = f"{model_path}/checkpoint-84010"
+adapter_path = f"{model_path}/final_adapter"
+generation_config_path = model_path
+adapter_name = "heavy2light_adapter"
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, generation_config_path, device, adapter_name)
 
 
 # Codon table for reverse translation (simplified, using common codons)
@@ -102,16 +151,16 @@ def extract_sequences(file_path):
 #     for header, sequence in fasta_entries:
 #         f.write(f"{header}\n{sequence}\n")
 
-#fasta_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/sequences.fasta"
-fasta_file="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/true_gen_sequences_in_DNA.fasta"
+# #fasta_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/sequences.fasta"
+# fasta_file="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/true_gen_sequences_in_DNA.fasta"
 
-# Step 4: Use PyIR to identify regions 
-pyirfile = PyIR(query=fasta_file, args=['--outfmt', 'tsv'])
-pyir_result = pyirfile.run()
+# # Step 4: Use PyIR to identify regions 
+# pyirfile = PyIR(query=fasta_file, args=['--outfmt', 'tsv'])
+# pyir_result = pyirfile.run()
 
-# # Step 5: Calculate similarity and BLOSUM scores
-# blosum62 = substitution_matrices.load("BLOSUM62")
-# results = []
+# Step 5: Calculate similarity and BLOSUM scores
+blosum62 = substitution_matrices.load("BLOSUM62")
+results = []
 
 
 # def calculate_blosum_score(true_seq, generated_seq, matrix):
@@ -135,53 +184,87 @@ pyir_result = pyirfile.run()
 #     return score, min_length, matches, similarity_percentage
 
 
-# # Read the CSV file into a DataFrame
-# df = pd.read_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/full_test_set_true_gen_seqs_relevant_cols.csv')
+# Read the CSV file into a DataFrame
+#df = pd.read_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/full_test_set_true_gen_seqs_relevant_cols.csv')
+df = pd.read_csv("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/full_test_set_true_gen_seqs_all_relevant_cols.csv")
 
-# # Define regions to process
-# regions = ['fwr1_aa', 'cdr1_aa', 'fwr2_aa', 'cdr2_aa', 'fwr3_aa', 'cdr3_aa', 'fwr4_aa']
 
-# # List to store results
-# results = []
+# Define regions to process
+regions = ['fwr1_aa']
+#regions = ['fwr1_aa', 'cdr1_aa', 'fwr2_aa', 'cdr2_aa', 'fwr3_aa', 'cdr3_aa', 'fwr4_aa']
 
-# # Iterate over the DataFrame in pairs (True, Generated)
-# for i in range(0, len(df), 2):
-#     true_seq_row = df.iloc[i]
-#     generated_seq_row = df.iloc[i + 1]
 
-#     result_entry = {'sequence_id': true_seq_row['sequence_id']}
+def calculate_perplexity(model, tokenizer, generated_seq, true_seq, device):
+    """
+    Calculate the perplexity of a generated sequence against the true sequence.
     
-#     for region in regions:
-#         true_seq = true_seq_row[region]
-#         generated_seq = generated_seq_row[region]
-
-#         # Handle missing values by setting them to empty strings
-#         if pd.isna(true_seq):
-#             true_seq = ""
-#         if pd.isna(generated_seq):
-#             generated_seq = ""
-        
-#         # Skip if both sequences are empty
-#         if not true_seq and not generated_seq:
-#             print(f"Both sequences are empty for region {region} in sequence pair {true_seq_row['sequence_id']}. Skipping.")
-#             continue
-        
-#         try:
-#             blosum_score, min_length, matches, similarity_percentage = calculate_blosum_score(true_seq, generated_seq, blosum62)
-#         except ValueError as e:
-#             print(f"Error processing sequences {true_seq_row['sequence_id']} in region {region}: {e}")
-#             continue
-        
-#         result_entry[f'{region}_blosum_score'] = blosum_score
-#         result_entry[f'{region}_min_length'] = min_length
-#         result_entry[f'{region}_matches'] = matches
-#         result_entry[f'{region}_similarity_percentage'] = similarity_percentage
+    Args:
+        model (torch.nn.Module): The trained model.
+        tokenizer (AutoTokenizer): The tokenizer used for encoding sequences.
+        generated_seq (str): The generated sequence.
+        true_seq (str): The true sequence.
+        device (torch.device): The device to run the calculations on.
     
-#     results.append(result_entry)
+    Returns:
+        float: The perplexity score.
+    """
+    inputs = tokenizer(generated_seq, padding=True, truncation=True, return_tensors="pt").to(device)
+    targets = tokenizer(true_seq, padding=True, truncation=True, return_tensors="pt").to(device)
+    
+    with torch.no_grad():
+        outputs = model(input_ids=inputs.input_ids, decoder_input_ids=targets.input_ids)
+    
+    logits = outputs.logits
+    shift_logits = logits[:, :-1, :].contiguous()
+    shift_labels = targets.input_ids[:, 1:].contiguous()
+    
+    loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
+    loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+    
+    target_mask = (shift_labels != tokenizer.pad_token_id).float()
+    loss = loss.view(shift_labels.size()) * target_mask
+    
+    log_likelihood = loss.sum(dim=1)
+    perplexity = torch.exp(log_likelihood / target_mask.sum(dim=1)).cpu().detach().numpy()
+    
+    return perplexity[0]
 
-# # Convert results to DataFrame for analysis or export
-# results_df = pd.DataFrame(results)
+# Assuming df is the DataFrame with your data as previously defined
+perplexity_results = []
 
-# # save the results to a CSV file
-# results_df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/region_similarity_scores.csv', index=False)
+for i in range(0, len(df), 2):
+    true_seq_row = df.iloc[i]
+    generated_seq_row = df.iloc[i + 1]
 
+    perplexity_entry = {'sequence_id': true_seq_row['sequence_id']}
+    
+    for region in regions:
+        true_seq = true_seq_row[region]
+        generated_seq = generated_seq_row[region]
+
+        # Handle missing values by setting them to empty strings
+        if pd.isna(true_seq):
+            true_seq = ""
+        if pd.isna(generated_seq):
+            generated_seq = ""
+        
+        # Skip if both sequences are empty
+        if not true_seq and not generated_seq:
+            print(f"Both sequences are empty for region {region} in sequence pair {true_seq_row['sequence_id']}. Skipping.")
+            continue
+        
+        try:
+            perplexity = calculate_perplexity(model, tokenizer, generated_seq, true_seq, device)
+        except Exception as e:
+            print(f"Error processing sequences {true_seq_row['sequence_id']} in region {region}: {e}")
+            continue
+        
+        perplexity_entry[f'{region}_perplexity'] = perplexity
+    
+    perplexity_results.append(perplexity_entry)
+
+# Convert results to DataFrame for analysis or export
+perplexity_df = pd.DataFrame(perplexity_results)
+
+# save the results to a CSV file
+perplexity_df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/perplexity_by_region.csv', index=False)
