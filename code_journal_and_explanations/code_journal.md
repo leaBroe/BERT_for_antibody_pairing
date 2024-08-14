@@ -3766,7 +3766,46 @@ model reference name: h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1
 | cdr 1 | 36.7393301524813 | 33.3333333333333 | 23.8213718770445 | -0.0265100570847904 | -2 | 15.6275317759508 | 66918 |
 | fwr 2 | 72.45185 | 70.58824 | 13.81073 | 72.50457 | 72 | 12.81756 | 67132 |
 | cdr 2 | 39.30957 | 33.33333 | 31.62589 | 3.224903 | 3 | 6.512473 | 67140 |
+| fwr 3 | 69.37579 | 66.66667 | 13.48666 | 128.4014 | 128 | 30.92481 | 67194 |
+| cdr 3 | 35.86976 | 33.33333 | 21.28005 | 2.261007 | 1 | 17.46895 | 63868 |
+| fwr 4 | 73.48998 | 77.77778 | 21.29164 | 29.40751 | 38 | 45.53655 | 63132 |
 
+# 14/08/2024
+
+## Full evaluation of heavy2light model
+
+**Best model so far!**
+
+run name: 
+
+```bash
+full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1
+```
+
+output path:
+
+```jsx
+paired_lea_tmp/paired_model/BERT2BERT/logs/experimenting/beam_search_decoding_127842.o
+```
+
+model path:
+
+```jsx
+/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1
+```
+
+full eval output file:
+
+```bash
+/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/heavy2light_60_epochs_beam_search_127845.o
+```
+
+```bash
+# full test set evaluation:
+Average BLOSUM Score: 109.48768766087875
+Average Similarity Percentage: 33.21875942607254%
+Mean Perplexity: 1.8054779767990112
+```
 
 
 
