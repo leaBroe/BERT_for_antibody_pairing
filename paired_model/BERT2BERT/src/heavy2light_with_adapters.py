@@ -108,7 +108,7 @@ tokenizer = AutoTokenizer.from_pretrained('/ibmm_data2/oas_database/paired_lea_t
 
 
 batch_size = 64
-num_train_epochs = 60
+num_train_epochs = 100
 learning_rate = 1e-3
 weight_decay = 0.1
 temperature = 0.2

@@ -3,8 +3,8 @@
 
 #SBATCH --gres=gpu:h100:1
 #SBATCH --job-name=full_eval
-#SBATCH --output=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/x_full_eval_heavy2light_with_adapters_diverse_beam_search%j.o
-#SBATCH --error=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/x_full_eval_heavy2light_with_adapters_diverse_beam_search%j.e
+#SBATCH --output=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/heavy2light_60_epochs_beam_search_%j.o
+#SBATCH --error=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/heavy2light_60_epochs_beam_search_%j.e
 
 eval "$(conda shell.bash hook)"
 conda init bash

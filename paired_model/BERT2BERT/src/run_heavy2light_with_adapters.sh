@@ -1,10 +1,10 @@
 #!/bin/bash
 
 
-#SBATCH --gres=gpu:a100:1
-#SBATCH --job-name=h2l_adaps_big_big_10_epochs
-#SBATCH --output=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/x_h2l_adaps_big_big_10_epochs_%j.o
-#SBATCH --error=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/x_h2l_adaps_big_big_10_epochs_%j.e
+#SBATCH --gres=gpu:h100:1
+#SBATCH --job-name=experimenting_beam_search
+#SBATCH --output=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/experimenting/beam_search_decoding_100_epochs%j.o
+#SBATCH --error=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/experimenting/beam_search_decoding_100_epochs%j.e
 
 eval "$(conda shell.bash hook)"
 conda init bash
