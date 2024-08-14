@@ -190,8 +190,8 @@ df = pd.read_csv("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT
 
 
 # Define regions to process
-regions = ['fwr1_aa']
-#regions = ['fwr1_aa', 'cdr1_aa', 'fwr2_aa', 'cdr2_aa', 'fwr3_aa', 'cdr3_aa', 'fwr4_aa']
+#regions = ['fwr1_aa']
+regions = ['fwr1_aa', 'cdr1_aa', 'fwr2_aa', 'cdr2_aa', 'fwr3_aa', 'cdr3_aa', 'fwr4_aa']
 
 
 def calculate_perplexity(model, tokenizer, generated_seq, true_seq, device):
@@ -262,11 +262,18 @@ for i in range(0, len(df), 2):
         perplexity_entry[f'{region}_perplexity'] = perplexity
     
     perplexity_results.append(perplexity_entry)
-    # calculate the mean perplexity for the sequence pair
-    mean_perplexity = np.mean([perplexity_entry[f'{region}_perplexity'] for region in regions if f'{region}_perplexity' in perplexity_entry])
 
 # Convert results to DataFrame for analysis or export
 perplexity_df = pd.DataFrame(perplexity_results)
 
 # save the results to a CSV file
-perplexity_df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/perplexity_by_region.csv', index=False)
+perplexity_df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/perplexity_by_region_all_regions.csv', index=False)
+
+# save the mean perplexities of each region to a CSV file
+mean_perplexity_df = pd.DataFrame([{'region': region, 'mean_perplexity': perplexity_df[f'{region}_perplexity'].mean()} for region in regions])
+mean_perplexity_df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/mean_perplexity_by_region_all_regions.csv', index=False)
+
+# save the median perplexities of each region to a CSV file
+median_perplexity_df = pd.DataFrame([{'region': region, 'median_perplexity': perplexity_df[f'{region}_perplexity'].median()} for region in regions])
+median_perplexity_df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/median_perplexity_by_region_all_regions.csv', index=False)
+
