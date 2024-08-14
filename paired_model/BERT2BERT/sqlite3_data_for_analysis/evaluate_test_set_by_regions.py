@@ -59,7 +59,7 @@ def initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, gen
     model.to(device)
     init(model)
     print(f"model is on device: {model.device}")
-    #model.to(device)
+    model.to(device)
     model.load_adapter(adapter_path)
     model.set_active_adapters(adapter_name)
     generation_config = GenerationConfig.from_pretrained(generation_config_path)
@@ -229,12 +229,13 @@ def calculate_perplexity(model, tokenizer, generated_seq, true_seq, device):
     
     return perplexity[0]
 
-# Assuming df is the DataFrame with your data as previously defined
 perplexity_results = []
 
 for i in range(0, len(df), 2):
     true_seq_row = df.iloc[i]
+    print(f"true sequence {true_seq_row['sequence_id']}")
     generated_seq_row = df.iloc[i + 1]
+    print(f"generated sequence {generated_seq_row['sequence_id']}")
 
     perplexity_entry = {'sequence_id': true_seq_row['sequence_id']}
     
@@ -242,11 +243,10 @@ for i in range(0, len(df), 2):
         true_seq = true_seq_row[region]
         generated_seq = generated_seq_row[region]
 
-        # Handle missing values by setting them to empty strings
-        if pd.isna(true_seq):
-            true_seq = ""
-        if pd.isna(generated_seq):
-            generated_seq = ""
+        # remove empty rows
+        if pd.isnull(true_seq) or pd.isnull(generated_seq):
+            print(f"Empty sequence for region {region} in sequence pair {true_seq_row['sequence_id']}. Skipping.")
+            continue
         
         # Skip if both sequences are empty
         if not true_seq and not generated_seq:
@@ -262,6 +262,8 @@ for i in range(0, len(df), 2):
         perplexity_entry[f'{region}_perplexity'] = perplexity
     
     perplexity_results.append(perplexity_entry)
+    # calculate the mean perplexity for the sequence pair
+    mean_perplexity = np.mean([perplexity_entry[f'{region}_perplexity'] for region in regions if f'{region}_perplexity' in perplexity_entry])
 
 # Convert results to DataFrame for analysis or export
 perplexity_df = pd.DataFrame(perplexity_results)
