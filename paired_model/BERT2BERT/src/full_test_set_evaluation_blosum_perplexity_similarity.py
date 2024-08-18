@@ -132,7 +132,7 @@ def initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, gen
 # generation_config_path=model_path
 # adapter_name="heavy2light_adapter"
 
-# heavy2light 1000 epochs diverse beam search beam = 5
+# heavy2light 100 epochs diverse beam search beam = 5
 run_name="full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_100_lr_0.001_wd_0.1"
 model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_100_lr_0.001_wd_0.1"
 tokenizer_path=f"{model_path}/checkpoint-840100"
