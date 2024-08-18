@@ -63,7 +63,10 @@ print(f"making PCA plot for model: {run_name}")
 # Initialize model and tokenizer
 model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, generation_config_path, device, adapter_name)
 
-output_path = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/IgBERT2IgBERT/{run_name}/PCA"
+model_type = "heavy2light"
+# model_type = "IgBERT2IgBERT"
+
+output_path = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/{model_type}/{run_name}/PCA"
 
 # make output directory
 if not os.path.exists(output_path):
@@ -120,7 +123,8 @@ def load_data(file_path):
     df = pd.DataFrame(sequences, columns=['heavy', 'light'])
     return df
 
-target = 'locus'
+#target = 'locus'
+target = 'subtype'
 
 test_df = load_data(test_file_path)
 #heavy_sequences = test_df["heavy"].tolist()
