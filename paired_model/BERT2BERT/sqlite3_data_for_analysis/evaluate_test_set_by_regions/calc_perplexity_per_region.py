@@ -168,117 +168,112 @@ df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite
 # results = []
 
 
-# # def calculate_blosum_score(true_seq, generated_seq, matrix):
-# #     if not true_seq or not generated_seq:
-# #         raise ValueError("True sequence or generated sequence is empty.")
+# def calculate_blosum_score(true_seq, generated_seq, matrix):
+#     if not true_seq or not generated_seq:
+#         raise ValueError("True sequence or generated sequence is empty.")
     
-# #     score = 0
-# #     matches = 0
-# #     min_length = min(len(true_seq), len(generated_seq))
+#     score = 0
+#     matches = 0
+#     min_length = min(len(true_seq), len(generated_seq))
 
-# #     for i in range(min_length):
-# #         pair = (true_seq[i], generated_seq[i])
-# #         if pair in matrix:
-# #             score += matrix[pair]
-# #         elif (pair[1], pair[0]) in matrix:
-# #             score += matrix[(pair[1], pair[0])]
-# #         if true_seq[i] == generated_seq[i]:
-# #             matches += 1
+#     for i in range(min_length):
+#         pair = (true_seq[i], generated_seq[i])
+#         if pair in matrix:
+#             score += matrix[pair]
+#         elif (pair[1], pair[0]) in matrix:
+#             score += matrix[(pair[1], pair[0])]
+#         if true_seq[i] == generated_seq[i]:
+#             matches += 1
 
-# #     similarity_percentage = (matches / min_length) * 100 if min_length > 0 else 0
-# #     return score, min_length, matches, similarity_percentage
-
-
-# # Read the CSV file into a DataFrame
-# #df = pd.read_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/full_test_set_true_gen_seqs_relevant_cols.csv')
-# df = pd.read_csv("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/full_test_set_true_gen_seqs_all_relevant_cols.csv")
+#     similarity_percentage = (matches / min_length) * 100 if min_length > 0 else 0
+#     return score, min_length, matches, similarity_percentage
 
 
-# # Define regions to process
-# #regions = ['fwr1_aa']
-# regions = ['fwr1_aa', 'cdr1_aa', 'fwr2_aa', 'cdr2_aa', 'fwr3_aa', 'cdr3_aa', 'fwr4_aa']
+# Read the CSV file into a DataFrame
+#df = pd.read_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/full_test_set_true_gen_seqs_relevant_cols.csv')
+df = pd.read_csv("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/full_test_set_true_gen_seqs_all_relevant_cols.csv")
 
 
-# def calculate_perplexity(model, tokenizer, generated_seq, true_seq, device):
-#     """
-#     Calculate the perplexity of a generated sequence against the true sequence.
+# Define regions to process
+regions = ['fwr1_aa']
+#regions = ['fwr1_aa', 'cdr1_aa', 'fwr2_aa', 'cdr2_aa', 'fwr3_aa', 'cdr3_aa', 'fwr4_aa']
+
+
+def calculate_perplexity(model, tokenizer, generated_seq, true_seq, device):
+    """
+    Calculate the perplexity of a generated sequence against the true sequence.
     
-#     Args:
-#         model (torch.nn.Module): The trained model.
-#         tokenizer (AutoTokenizer): The tokenizer used for encoding sequences.
-#         generated_seq (str): The generated sequence.
-#         true_seq (str): The true sequence.
-#         device (torch.device): The device to run the calculations on.
+    Args:
+        model (torch.nn.Module): The trained model.
+        tokenizer (AutoTokenizer): The tokenizer used for encoding sequences.
+        generated_seq (str): The generated sequence.
+        true_seq (str): The true sequence.
+        device (torch.device): The device to run the calculations on.
     
-#     Returns:
-#         float: The perplexity score.
-#     """
-#     inputs = tokenizer(generated_seq, padding=True, truncation=True, return_tensors="pt").to(device)
-#     targets = tokenizer(true_seq, padding=True, truncation=True, return_tensors="pt").to(device)
+    Returns:
+        float: The perplexity score.
+    """
+    inputs = tokenizer(generated_seq, padding=True, truncation=True, return_tensors="pt").to(device)
+    targets = tokenizer(true_seq, padding=True, truncation=True, return_tensors="pt").to(device)
     
-#     with torch.no_grad():
-#         outputs = model(input_ids=inputs.input_ids, decoder_input_ids=targets.input_ids)
+    with torch.no_grad():
+        outputs = model(input_ids=inputs.input_ids, decoder_input_ids=targets.input_ids)
     
-#     logits = outputs.logits
-#     shift_logits = logits[:, :-1, :].contiguous()
-#     shift_labels = targets.input_ids[:, 1:].contiguous()
+    logits = outputs.logits
+    shift_logits = logits[:, :-1, :].contiguous()
+    shift_labels = targets.input_ids[:, 1:].contiguous()
     
-#     loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
-#     loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+    loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
+    loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
     
-#     target_mask = (shift_labels != tokenizer.pad_token_id).float()
-#     loss = loss.view(shift_labels.size()) * target_mask
+    target_mask = (shift_labels != tokenizer.pad_token_id).float()
+    loss = loss.view(shift_labels.size()) * target_mask
     
-#     log_likelihood = loss.sum(dim=1)
-#     perplexity = torch.exp(log_likelihood / target_mask.sum(dim=1)).cpu().detach().numpy()
+    log_likelihood = loss.sum(dim=1)
+    perplexity = torch.exp(log_likelihood / target_mask.sum(dim=1)).cpu().detach().numpy()
     
-#     return perplexity[0]
+    return perplexity[0]
 
-# perplexity_results = []
+perplexity_results = []
 
-# for i in range(0, len(df), 2):
-#     true_seq_row = df.iloc[i]
-#     print(f"true sequence {true_seq_row['sequence_id']}")
-#     generated_seq_row = df.iloc[i + 1]
-#     print(f"generated sequence {generated_seq_row['sequence_id']}")
+for i in range(0, len(df), 2):
+    true_seq_row = df.iloc[i]
+    generated_seq_row = df.iloc[i + 1]
 
-#     perplexity_entry = {'sequence_id': true_seq_row['sequence_id']}
+    perplexity_entry = {'sequence_id': true_seq_row['sequence_id']}
     
-#     for region in regions:
-#         true_seq = true_seq_row[region]
-#         generated_seq = generated_seq_row[region]
+    for region in regions:
+        true_seq = true_seq_row[region]
+        generated_seq = generated_seq_row[region]
 
-#         # remove empty rows
-#         if pd.isnull(true_seq) or pd.isnull(generated_seq):
-#             print(f"Empty sequence for region {region} in sequence pair {true_seq_row['sequence_id']}. Skipping.")
-#             continue
+        # Remove empty rows: Skip the region if either sequence is NaN or empty
+        if pd.isnull(true_seq) or pd.isnull(generated_seq) or not true_seq.strip() or not generated_seq.strip():
+            print(f"Empty sequence for region {region} in sequence pair {true_seq_row['sequence_id']}. Skipping.")
+            continue
         
-#         # Skip if both sequences are empty
-#         if not true_seq and not generated_seq:
-#             print(f"Both sequences are empty for region {region} in sequence pair {true_seq_row['sequence_id']}. Skipping.")
-#             continue
+        try:
+            perplexity = calculate_perplexity(model, tokenizer, generated_seq, true_seq, device)
+        except Exception as e:
+            print(f"Error processing sequences {true_seq_row['sequence_id']} in region {region}: {e}")
+            continue
         
-#         try:
-#             perplexity = calculate_perplexity(model, tokenizer, generated_seq, true_seq, device)
-#         except Exception as e:
-#             print(f"Error processing sequences {true_seq_row['sequence_id']} in region {region}: {e}")
-#             continue
-        
-#         perplexity_entry[f'{region}_perplexity'] = perplexity
+        perplexity_entry[f'{region}_perplexity'] = perplexity
     
-#     perplexity_results.append(perplexity_entry)
+    if len(perplexity_entry) > 1:  # Only append if there's at least one region's perplexity calculated
+        perplexity_results.append(perplexity_entry)
 
-# # Convert results to DataFrame for analysis or export
-# perplexity_df = pd.DataFrame(perplexity_results)
 
-# # save the results to a CSV file
-# perplexity_df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/perplexity_by_region_all_regions.csv', index=False)
+# Convert results to DataFrame for analysis or export
+perplexity_df = pd.DataFrame(perplexity_results)
 
-# # save the mean perplexities of each region to a CSV file
-# mean_perplexity_df = pd.DataFrame([{'region': region, 'mean_perplexity': perplexity_df[f'{region}_perplexity'].mean()} for region in regions])
-# mean_perplexity_df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/mean_perplexity_by_region_all_regions.csv', index=False)
+# save the results to a CSV file
+perplexity_df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/perplexity_by_region_test.csv', index=False)
 
-# # save the median perplexities of each region to a CSV file
-# median_perplexity_df = pd.DataFrame([{'region': region, 'median_perplexity': perplexity_df[f'{region}_perplexity'].median()} for region in regions])
-# median_perplexity_df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/median_perplexity_by_region_all_regions.csv', index=False)
+# save the mean perplexities of each region to a CSV file
+mean_perplexity_df = pd.DataFrame([{'region': region, 'mean_perplexity': perplexity_df[f'{region}_perplexity'].mean()} for region in regions])
+mean_perplexity_df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/mean_perplexity_by_region_test.csv', index=False)
+
+# save the median perplexities of each region to a CSV file
+median_perplexity_df = pd.DataFrame([{'region': region, 'median_perplexity': perplexity_df[f'{region}_perplexity'].median()} for region in regions])
+median_perplexity_df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/median_perplexity_by_region_test.csv', index=False)
 
