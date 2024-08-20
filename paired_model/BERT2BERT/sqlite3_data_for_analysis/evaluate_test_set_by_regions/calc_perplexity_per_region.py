@@ -182,99 +182,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # results = []
 
 
-# def calculate_blosum_score(true_seq, generated_seq, matrix):
-#     if not true_seq or not generated_seq:
-#         raise ValueError("True sequence or generated sequence is empty.")
-    
-#     score = 0
-#     matches = 0
-#     min_length = min(len(true_seq), len(generated_seq))
-
-#     for i in range(min_length):
-#         pair = (true_seq[i], generated_seq[i])
-#         if pair in matrix:
-#             score += matrix[pair]
-#         elif (pair[1], pair[0]) in matrix:
-#             score += matrix[(pair[1], pair[0])]
-#         if true_seq[i] == generated_seq[i]:
-#             matches += 1
-
-#     similarity_percentage = (matches / min_length) * 100 if min_length > 0 else 0
-#     return score, min_length, matches, similarity_percentage
-
-
 # Read the CSV file into a DataFrame
 #df = pd.read_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/full_test_set_true_gen_seqs_relevant_cols.csv')
 df = pd.read_csv("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/full_test_set_true_gen_seqs_all_relevant_cols.csv")
-
-
-# # Define regions to process
-# regions = ['fwr1_aa']
-# #regions = ['fwr1_aa', 'cdr1_aa', 'fwr2_aa', 'cdr2_aa', 'fwr3_aa', 'cdr3_aa', 'fwr4_aa']
-
-
-# # Define your sequence regions
-# sequence_regions = {
-#     "fwr1": "DIQMTQSPSSLSASVGDRVTFTCRSS",
-#     "cdr1": "QNIGIY",
-#     "fwr2": "LNWYQQKPGRAPTVLIY",
-#     "cdr2": "TAS",
-#     "fwr3": "SLQSGVPSRFSGSGSGTDFTLTISSLQPEDFATYFC",
-#     "cdr3": "QQSYSLPYT",
-#     "fwr4": "FGQGARLQIK"
-# }
-
-# # Example: Calculate perplexity for FWR2
-
-# # Combine the sequence up to the region of interest
-# seq_up_to_fwr2 = sequence_regions["fwr1"] + sequence_regions["cdr1"] + sequence_regions["fwr2"]
-
-# # Assuming logits are the output of the model and are of shape (sequence_length, vocab_size)
-# # logits = model(input_sequence)
-
-# # For demonstration purposes, let's define a dummy logits tensor
-# # Here logits should be the real model outputs
-
-# # Define example logits for each character in the sequence
-# logits = torch.tensor([
-#     [0.1, 0.2, 0.3, 0.4, 0.5, -0.1, -0.2, 0.3, 0.0, 0.4, 0.2, -0.3, 0.1, 0.2, 0.1, -0.4, 0.3, 0.4, -0.5, 0.1, 0.2, 0.0, -0.1, 0.3, 0.1],  # "L"
-#     [0.2, 0.1, 0.0, 0.4, 0.3, 0.1, 0.2, 0.1, -0.3, 0.2, 0.1, -0.2, 0.4, 0.0, 0.1, 0.3, 0.4, 0.2, 0.0, -0.1, 0.3, 0.2, -0.2, 0.0, 0.2],  # "N"
-#     [0.3, 0.4, -0.1, 0.1, 0.5, 0.3, -0.2, 0.0, 0.2, -0.3, 0.1, 0.4, 0.3, -0.4, 0.2, 0.1, 0.0, 0.3, 0.4, 0.1, -0.2, 0.0, 0.1, 0.2, 0.3],  # "W"
-#     [0.2, 0.3, 0.0, -0.2, 0.1, 0.4, 0.5, -0.1, 0.2, 0.3, 0.4, -0.4, 0.1, 0.2, 0.3, 0.1, -0.2, 0.0, 0.1, 0.2, 0.3, 0.1, 0.4, 0.0, 0.2],  # "Y"
-#     [0.1, 0.2, -0.3, 0.4, 0.1, 0.3, 0.0, -0.1, 0.2, 0.1, 0.4, 0.5, 0.2, 0.0, -0.4, 0.1, 0.3, 0.4, 0.1, 0.2, 0.3, 0.1, -0.2, 0.3, 0.2],  # "Q"
-#     [0.3, 0.4, 0.1, -0.2, 0.2, 0.5, 0.0, -0.1, 0.3, 0.1, 0.2, 0.4, -0.3, 0.3, 0.4, 0.1, 0.2, -0.1, 0.3, 0.0, 0.4, 0.2, 0.1, 0.3, 0.2],  # "Q"
-#     [0.2, 0.1, 0.0, 0.4, 0.3, 0.2, -0.2, 0.1, 0.0, 0.3, 0.4, 0.5, -0.3, 0.4, 0.1, 0.3, 0.2, 0.1, -0.2, 0.3, 0.0, 0.4, 0.1, -0.1, 0.3],  # "K"
-#     [0.1, 0.3, 0.2, 0.4, 0.0, 0.1, 0.3, 0.4, 0.2, 0.0, 0.1, -0.1, 0.3, 0.4, 0.5, -0.2, 0.1, 0.0, 0.2, 0.3, 0.4, 0.1, 0.0, 0.2, 0.1],  # "P"
-#     [0.4, 0.3, 0.1, -0.2, 0.2, 0.0, 0.5, 0.4, 0.1, 0.2, 0.3, 0.1, 0.4, 0.5, -0.1, 0.0, 0.2, 0.1, 0.4, 0.3, 0.2, -0.3, 0.4, 0.1, 0.0],  # "G"
-#     [0.1, 0.4, 0.3, 0.0, 0.2, 0.1, 0.5, 0.4, 0.2, 0.0, 0.3, 0.1, 0.4, 0.2, 0.1, 0.3, 0.2, 0.1, -0.1, 0.3, 0.4, 0.0, 0.1, 0.2, 0.3],  # "R"
-#     [0.0, 0.3, 0.4, 0.2, 0.1, -0.1, 0.5, 0.3, 0.0, 0.4, 0.1, 0.2, 0.3, 0.4, 0.1, 0.2, 0.0, 0.4, 0.3, 0.1, 0.2, -0.3, 0.0, 0.4, 0.1],  # "A"
-#     [0.3, 0.2, 0.1, 0.4, 0.5, -0.1, 0.3, 0.0, 0.2, 0.1, 0.4, 0.5, 0.2, 0.3, 0.1, 0.0, 0.2, 0.4, 0.1, 0.2, 0.3, 0.1, -0.2, 0.0, 0.4],  # "P"
-#     [0.2, 0.3, 0.4, 0.1, 0.0, 0.4, 0.1, 0.3, 0.5, 0.2, 0.3, 0.4, 0.1, 0.2, 0.3, 0.4, 0.5, 0.0, 0.3, 0.4, 0.1, -0.3, 0.2, 0.3, 0.0],  # "T"
-#     [0.4, 0.1, 0.0, 0.3, 0.4, 0.2, 0.1, 0.0, 0.5, 0.2, 0.3, 0.4, 0.1, 0.2, 0.4, 0.0, 0.3, 0.1, 0.2, 0.4, 0.0, 0.3, 0.2, 0.1, -0.2],  # "V"
-#     [0.1, 0.2, 0.4, 0.0, 0.3, 0.4, 0.5, 0.2, 0.1, 0.3, 0.4, 0.1, 0.0, 0.4, 0.3, 0.1, 0.4, 0.2, 0.0, 0.3, 0.1, 0.4, 0.2, -0.1, 0.3],  # “L”
-#     [0.2, 0.4, 0.3, 0.0, 0.1, 0.3, 0.5, 0.2, 0.1, 0.3, 0.4, 0.0, 0.4, 0.3, 0.1, 0.2, 0.1, 0.4, 0.0, 0.3, 0.2, 0.1, -0.3, 0.4, 0.2],  # “I”
-#     [0.3, 0.1, 0.4, 0.2, 0.0, 0.3, 0.5, 0.4, 0.2, 0.1, 0.3, 0.0, 0.4, 0.2, 0.1, 0.4, 0.1, 0.0, 0.2, 0.3, 0.4, 0.1, -0.1, 0.4, 0.3]   # “Y”
-#     ])
-
-# # Convert logits to probabilities using softmax
-# probs = F.softmax(logits, dim=-1)
-
-# # Define the correct token indices for the FWR2 sequence
-# # Assuming your vocabulary has the characters in order, e.g., A=0, B=1, ..., Y=24
-# token_indices = [11, 13, 22, 24, 16, 16, 10, 15, 6, 0, 15, 19, 9, 8, 11, 24]  # Indices for "LNWYQQKPGRAPTVLIY"
-
-# # Get the probabilities for the correct tokens
-# correct_probs = probs[range(len(token_indices)), token_indices]
-
-# # Calculate the sum of log probabilities
-# log_prob_sum = torch.sum(torch.log(correct_probs))
-
-# # Calculate the perplexity
-# n = len(sequence_regions["fwr2"])
-# perplexity = torch.exp(-log_prob_sum / n).item()
-
-# print(f"Perplexity for FWR2: {perplexity}")
-
 
 # Initialize the model and tokenizer
 model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, generation_config_path, device, adapter_name)
@@ -334,10 +244,16 @@ region_lengths = {region: len(seq) for region, seq in sequence_regions.items()}
 # To keep track of the start index of each region
 start_idx = 0
 
+# Initialize cumulative length
+cumulative_length = 0
+
 # Iterate over each region to calculate perplexity
 perplexities = {}
 
 for region, length in region_lengths.items():
+    # Update the cumulative length including the current region
+    cumulative_length += length
+    
     # Calculate the start and end indices for the current region
     end_idx = start_idx + length
     
@@ -350,8 +266,8 @@ for region, length in region_lengths.items():
     # Extract the correct probabilities
     correct_probs = region_probs[range(length), correct_indices]
     
-    # Calculate the perplexity for the current region
-    n = length
+    # Calculate the perplexity for the current region using cumulative length
+    n = cumulative_length  # Include the lengths of all preceding regions
     perplexity = torch.prod(correct_probs ** (-1 / n)).item()
     
     # Store the perplexity for the current region
@@ -364,4 +280,4 @@ for region, length in region_lengths.items():
 for region, perplexity in perplexities.items():
     print(f"Perplexity for {region}: {perplexity}")
 
-    
+
