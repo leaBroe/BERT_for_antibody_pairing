@@ -12,7 +12,7 @@ import numpy as np
 from tqdm import tqdm
 import torch.nn.functional as F
 from math import exp
-
+from crowelab_pyir import PyIR
 
 
 
@@ -94,7 +94,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, generation_config_path, device, adapter_name)
 
 
-# # Codon table for reverse translation (simplified, using common codons)
+# Codon table for reverse translation (simplified, using common codons)
 # codon_table = {
 #     'A': 'GCT', 'C': 'TGT', 'D': 'GAT', 'E': 'GAA', 'F': 'TTT', 'G': 'GGT', 'H': 'CAT', 'I': 'ATT',
 #     'K': 'AAA', 'L': 'TTA', 'M': 'ATG', 'N': 'AAT', 'P': 'CCT', 'Q': 'CAA', 'R': 'CGT', 'S': 'TCT',
@@ -208,6 +208,61 @@ generated_seq = model.generate(
 # Decode the generated sequence to get the text
 sequence = generated_seq["sequences"][0]
 generated_text = tokenizer.decode(sequence, skip_special_tokens=True)
+
+# Remove spaces
+generated_text = generated_text.replace(" ", "")
+print(f"Generated Sequence without spaces: {generated_text}")
+
+# Function to convert amino acid sequence to DNA
+def amino_acid_to_dna(aa_sequence):
+    codon_table = {
+        'A': 'GCT', 'C': 'TGT', 'D': 'GAT', 'E': 'GAA', 'F': 'TTT', 'G': 'GGT', 'H': 'CAT', 'I': 'ATT',
+        'K': 'AAA', 'L': 'TTA', 'M': 'ATG', 'N': 'AAT', 'P': 'CCT', 'Q': 'CAA', 'R': 'CGT', 'S': 'TCT',
+        'T': 'ACT', 'V': 'GTT', 'W': 'TGG', 'Y': 'TAT', '*': 'TAA'
+    }
+    dna_sequence = ''.join(codon_table[aa] for aa in aa_sequence)
+    return dna_sequence
+
+# Convert the generated sequence to DNA
+dna_sequence = amino_acid_to_dna(generated_text)
+print(f"Converted DNA Sequence: {dna_sequence}")
+
+# Write the DNA sequence to a FASTA file
+fasta_filename = 'example.fasta'
+
+with open(fasta_filename, 'w') as fasta_file:
+    fasta_file.write(f">Generated_Sequence\n{dna_sequence}\n")
+
+
+# Use the FASTA file as the query for PyIR
+pyirfile = PyIR(query=fasta_filename, args=['--outfmt', 'dict'])
+pyir_result = pyirfile.run()
+
+print(f"PyIR Result: {pyir_result}")
+print(f"PyIR Result Type: {type(pyir_result)}")
+
+# Extract the regions from PyIR
+sequence_regions = pyir_result.get('regions', {})
+print(f"Sequence Regions from PyIR: {sequence_regions}")
+
+
+# Example: Assuming PyIR returns a dictionary of sequence regions
+sequence_regions = {
+    "fwr1": pyir_result['Generated_Sequence']['fwr1_aa'],
+    "cdr1": pyir_result['Generated_Sequence']['cdr1_aa'],
+    "fwr2": pyir_result['Generated_Sequence']['fwr2_aa'],
+    "cdr2": pyir_result['Generated_Sequence']['cdr2_aa'],
+    "fwr3": pyir_result['Generated_Sequence']['fwr3_aa'],
+    "cdr3": pyir_result['Generated_Sequence']['cdr3_aa'],
+    "fwr4": pyir_result['Generated_Sequence']['fwr4_aa']
+}
+
+# Calculate the lengths of each region
+region_lengths = {region: len(seq) for region, seq in sequence_regions.items()}
+
+# Decode the generated sequence to get the text
+sequence = generated_seq["sequences"][0]
+generated_text = tokenizer.decode(sequence, skip_special_tokens=True)
 print(f"Generated Text: {generated_text}")
 
 # Extract logits
@@ -227,19 +282,19 @@ print(f"Probabilities shape: {probs.shape}")
 # Example: Print probabilities for the first token in the sequence
 print(f"Probabilities for the first token: {probs[0]}")
 
-# Define the sequence regions
-sequence_regions = {
-    "fwr1": "DIQMTQSPSSLSASVGDRVTFTCRSS",
-    "cdr1": "QNIGIY",
-    "fwr2": "LNWYQQKPGRAPTVLIY",
-    "cdr2": "TAS",
-    "fwr3": "SLQSGVPSRFSGSGSGTDFTLTISSLQPEDFATYFC",
-    "cdr3": "QQSYSLPYT",
-    "fwr4": "FGQGARLQIK"
-}
+# # Define the sequence regions
+# sequence_regions = {
+#     "fwr1": "DIQMTQSPSSLSASVGDRVTFTCRSS",
+#     "cdr1": "QNIGIY",
+#     "fwr2": "LNWYQQKPGRAPTVLIY",
+#     "cdr2": "TAS",
+#     "fwr3": "SLQSGVPSRFSGSGSGTDFTLTISSLQPEDFATYFC",
+#     "cdr3": "QQSYSLPYT",
+#     "fwr4": "FGQGARLQIK"
+# }
 
 # Calculate the lengths of each region
-region_lengths = {region: len(seq) for region, seq in sequence_regions.items()}
+#region_lengths = {region: len(seq) for region, seq in sequence_regions.items()}
 
 # To keep track of the start index of each region
 start_idx = 0
