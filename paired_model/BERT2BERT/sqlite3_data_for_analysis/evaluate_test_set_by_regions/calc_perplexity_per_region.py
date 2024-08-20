@@ -10,6 +10,9 @@ import torch
 from adapters import init
 import numpy as np
 from tqdm import tqdm
+import torch.nn.functional as F
+from math import exp
+
 
 
 
@@ -75,68 +78,79 @@ adapter_path = f"{model_path}/final_adapter"
 generation_config_path = model_path
 adapter_name = "heavy2light_adapter"
 
+# # Paths and device configuration
+# run_name = "full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1"
+# model_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1"
+# tokenizer_path = f"{model_path}/checkpoint-504060"
+# adapter_path = f"{model_path}/final_adapter"
+# generation_config_path = model_path
+# adapter_name = "heavy2light_adapter"
+
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, generation_config_path, device, adapter_name)
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, generation_config_path, device, adapter_name)
 
 
-# Codon table for reverse translation (simplified, using common codons)
-codon_table = {
-    'A': 'GCT', 'C': 'TGT', 'D': 'GAT', 'E': 'GAA', 'F': 'TTT', 'G': 'GGT', 'H': 'CAT', 'I': 'ATT',
-    'K': 'AAA', 'L': 'TTA', 'M': 'ATG', 'N': 'AAT', 'P': 'CCT', 'Q': 'CAA', 'R': 'CGT', 'S': 'TCT',
-    'T': 'ACT', 'V': 'GTT', 'W': 'TGG', 'Y': 'TAT', '*': 'TAA'
-}
+# # Codon table for reverse translation (simplified, using common codons)
+# codon_table = {
+#     'A': 'GCT', 'C': 'TGT', 'D': 'GAT', 'E': 'GAA', 'F': 'TTT', 'G': 'GGT', 'H': 'CAT', 'I': 'ATT',
+#     'K': 'AAA', 'L': 'TTA', 'M': 'ATG', 'N': 'AAT', 'P': 'CCT', 'Q': 'CAA', 'R': 'CGT', 'S': 'TCT',
+#     'T': 'ACT', 'V': 'GTT', 'W': 'TGG', 'Y': 'TAT', '*': 'TAA'
+# }
 
-# 1. Extract sequences from the log file and convert them to DNA because PyIR requires DNA sequences and cannot handle protein sequences.
-# Here I am using a simplified codon table to reverse translate the protein sequences to DNA sequences, because there are multiple possible codons for some amino acids.
-# This is not ideal, but there is no direct way to convert protein sequences to DNA sequences without ambiguity.
+# # 1. Extract sequences from the log file and convert them to DNA because PyIR requires DNA sequences and cannot handle protein sequences.
+# # Here I am using a simplified codon table to reverse translate the protein sequences to DNA sequences, because there are multiple possible codons for some amino acids.
+# # This is not ideal, but there is no direct way to convert protein sequences to DNA sequences without ambiguity.
 
-# Function to reverse translate protein sequence to DNA
-def protein_to_dna(protein_seq):
-    return "".join([codon_table[aa] for aa in protein_seq])
+# # Function to reverse translate protein sequence to DNA
+# def protein_to_dna(protein_seq):
+#     return "".join([codon_table[aa] for aa in protein_seq])
 
 
-def extract_sequences(file_path):
-    data = []
-    with open(file_path, 'r') as file:
-        content = file.read()
+# def extract_sequences(file_path):
+#     data = []
+#     with open(file_path, 'r') as file:
+#         content = file.read()
 
-    # Regular expression pattern to match the sequence pairs
-    pattern = re.compile(
-        r"Sequence pair \d+:\s*True Sequence: ([A-Z ]+)\s*Generated Sequence: ([A-Z ]+)",
-        re.MULTILINE
-    )
+#     # Regular expression pattern to match the sequence pairs
+#     pattern = re.compile(
+#         r"Sequence pair \d+:\s*True Sequence: ([A-Z ]+)\s*Generated Sequence: ([A-Z ]+)",
+#         re.MULTILINE
+#     )
 
-    # Find all matches in the file content
-    matches = pattern.findall(content)
+#     # Find all matches in the file content
+#     matches = pattern.findall(content)
 
-    # Extract the true and generated sequences, remove spaces
-    for match in matches:
-        true_sequence = match[0].replace(" ", "")
-        generated_sequence = match[1].replace(" ", "")
-        data.append({
-            "true_sequence": true_sequence,
-            "generated_sequence": generated_sequence
-        })
+#     # Extract the true and generated sequences, remove spaces
+#     for match in matches:
+#         true_sequence = match[0].replace(" ", "")
+#         generated_sequence = match[1].replace(" ", "")
+#         data.append({
+#             "true_sequence": true_sequence,
+#             "generated_sequence": generated_sequence
+#         })
 
-    return data
+#     return data
 
-# input: log file of the form:
-#
-# Sequence pair 67209:
-# True Sequence: D I Q V T Q S P S S L S A S I G D R V T I T C Q A S Q D I S D N L N W Y Q Q K P G K V P K L L I Y D A S N L Q T G V P S R F S G S G S G T Y F S V T I S S L Q P E D I A T Y Y C Q S Y G K F R P R T F G Q G T K L E I K
-# Generated Sequence: D I Q M T Q S P S S L S A S V G D R V T I T C R A S Q S I S S Y L N W Y Q Q K P G K A P K L L I Y A A S S L Q S G V P S R F S G S G S G T D F T L T I S S L Q P E D F A T Y Y C Q Q S Y S T P R T F G Q G T K V E I K
-# BLOSUM Score: 355.0
-# Similarity Percentage: 70.09345794392523%
-# Perplexity: 2.4618451595306396
+# # input: log file of the form:
+# #
+# # Sequence pair 67209:
+# # True Sequence: D I Q V T Q S P S S L S A S I G D R V T I T C Q A S Q D I S D N L N W Y Q Q K P G K V P K L L I Y D A S N L Q T G V P S R F S G S G S G T Y F S V T I S S L Q P E D I A T Y Y C Q S Y G K F R P R T F G Q G T K L E I K
+# # Generated Sequence: D I Q M T Q S P S S L S A S V G D R V T I T C R A S Q S I S S Y L N W Y Q Q K P G K A P K L L I Y A A S S L Q S G V P S R F S G S G S G T D F T L T I S S L Q P E D F A T Y Y C Q Q S Y S T P R T F G Q G T K V E I K
+# # BLOSUM Score: 355.0
+# # Similarity Percentage: 70.09345794392523%
+# # Perplexity: 2.4618451595306396
 
-#file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/full_eval_heavy2light_with_adapters125463.o' 
-file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/full_eval_full_diverse_beam_search_2_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_10_lr_0.0001_wd_0.1_127798.o"
-data = extract_sequences(file_path)
+# #file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/full_eval_heavy2light_with_adapters125463.o' 
+# file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/full_eval_full_diverse_beam_search_2_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_10_lr_0.0001_wd_0.1_127798.o"
+# data = extract_sequences(file_path)
 
-# save the extracted sequences to a CSV file
-df = pd.DataFrame(data)
-df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/full_test_set_true_gen_aa_seqs.csv', index=False)
+# # save the extracted sequences to a CSV file
+# df = pd.DataFrame(data)
+# df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/full_test_set_true_gen_aa_seqs.csv', index=False)
 
 
 # # Step 1 & 2: Extract sequences and convert to DNA
@@ -199,81 +213,106 @@ regions = ['fwr1_aa']
 #regions = ['fwr1_aa', 'cdr1_aa', 'fwr2_aa', 'cdr2_aa', 'fwr3_aa', 'cdr3_aa', 'fwr4_aa']
 
 
-def calculate_perplexity(model, tokenizer, generated_seq, true_seq, device):
-    """
-    Calculate the perplexity of a generated sequence against the true sequence.
-    
-    Args:
-        model (torch.nn.Module): The trained model.
-        tokenizer (AutoTokenizer): The tokenizer used for encoding sequences.
-        generated_seq (str): The generated sequence.
-        true_seq (str): The true sequence.
-        device (torch.device): The device to run the calculations on.
-    
-    Returns:
-        float: The perplexity score.
-    """
-    inputs = tokenizer(generated_seq, padding=True, truncation=True, return_tensors="pt").to(device)
-    targets = tokenizer(true_seq, padding=True, truncation=True, return_tensors="pt").to(device)
-    
-    with torch.no_grad():
-        outputs = model(input_ids=inputs.input_ids, decoder_input_ids=targets.input_ids)
-    
-    logits = outputs.logits
-    shift_logits = logits[:, :-1, :].contiguous()
-    shift_labels = targets.input_ids[:, 1:].contiguous()
-    
-    loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
-    loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
-    
-    target_mask = (shift_labels != tokenizer.pad_token_id).float()
-    loss = loss.view(shift_labels.size()) * target_mask
-    
-    log_likelihood = loss.sum(dim=1)
-    perplexity = torch.exp(log_likelihood / target_mask.sum(dim=1)).cpu().detach().numpy()
-    
-    return perplexity[0]
+# Define your sequence regions
+sequence_regions = {
+    "fwr1": "DIQMTQSPSSLSASVGDRVTFTCRSS",
+    "cdr1": "QNIGIY",
+    "fwr2": "LNWYQQKPGRAPTVLIY",
+    "cdr2": "TAS",
+    "fwr3": "SLQSGVPSRFSGSGSGTDFTLTISSLQPEDFATYFC",
+    "cdr3": "QQSYSLPYT",
+    "fwr4": "FGQGARLQIK"
+}
 
-perplexity_results = []
+# Example: Calculate perplexity for FWR2
 
-for i in range(0, len(df), 2):
-    true_seq_row = df.iloc[i]
-    generated_seq_row = df.iloc[i + 1]
+# Combine the sequence up to the region of interest
+seq_up_to_fwr2 = sequence_regions["fwr1"] + sequence_regions["cdr1"] + sequence_regions["fwr2"]
 
-    perplexity_entry = {'sequence_id': true_seq_row['sequence_id']}
-    
-    for region in regions:
-        true_seq = true_seq_row[region]
-        generated_seq = generated_seq_row[region]
+# Assuming logits are the output of the model and are of shape (sequence_length, vocab_size)
+# logits = model(input_sequence)
 
-        # Remove empty rows: Skip the region if either sequence is NaN or empty
-        if pd.isnull(true_seq) or pd.isnull(generated_seq) or not true_seq.strip() or not generated_seq.strip():
-            print(f"Empty sequence for region {region} in sequence pair {true_seq_row['sequence_id']}. Skipping.")
-            continue
-        
-        try:
-            perplexity = calculate_perplexity(model, tokenizer, generated_seq, true_seq, device)
-        except Exception as e:
-            print(f"Error processing sequences {true_seq_row['sequence_id']} in region {region}: {e}")
-            continue
-        
-        perplexity_entry[f'{region}_perplexity'] = perplexity
-    
-    if len(perplexity_entry) > 1:  # Only append if there's at least one region's perplexity calculated
-        perplexity_results.append(perplexity_entry)
+# For demonstration purposes, let's define a dummy logits tensor
+# Here logits should be the real model outputs
+
+# Define example logits for each character in the sequence
+logits = torch.tensor([
+    [0.1, 0.2, 0.3, 0.4, 0.5, -0.1, -0.2, 0.3, 0.0, 0.4, 0.2, -0.3, 0.1, 0.2, 0.1, -0.4, 0.3, 0.4, -0.5, 0.1, 0.2, 0.0, -0.1, 0.3, 0.1],  # "L"
+    [0.2, 0.1, 0.0, 0.4, 0.3, 0.1, 0.2, 0.1, -0.3, 0.2, 0.1, -0.2, 0.4, 0.0, 0.1, 0.3, 0.4, 0.2, 0.0, -0.1, 0.3, 0.2, -0.2, 0.0, 0.2],  # "N"
+    [0.3, 0.4, -0.1, 0.1, 0.5, 0.3, -0.2, 0.0, 0.2, -0.3, 0.1, 0.4, 0.3, -0.4, 0.2, 0.1, 0.0, 0.3, 0.4, 0.1, -0.2, 0.0, 0.1, 0.2, 0.3],  # "W"
+    [0.2, 0.3, 0.0, -0.2, 0.1, 0.4, 0.5, -0.1, 0.2, 0.3, 0.4, -0.4, 0.1, 0.2, 0.3, 0.1, -0.2, 0.0, 0.1, 0.2, 0.3, 0.1, 0.4, 0.0, 0.2],  # "Y"
+    [0.1, 0.2, -0.3, 0.4, 0.1, 0.3, 0.0, -0.1, 0.2, 0.1, 0.4, 0.5, 0.2, 0.0, -0.4, 0.1, 0.3, 0.4, 0.1, 0.2, 0.3, 0.1, -0.2, 0.3, 0.2],  # "Q"
+    [0.3, 0.4, 0.1, -0.2, 0.2, 0.5, 0.0, -0.1, 0.3, 0.1, 0.2, 0.4, -0.3, 0.3, 0.4, 0.1, 0.2, -0.1, 0.3, 0.0, 0.4, 0.2, 0.1, 0.3, 0.2],  # "Q"
+    [0.2, 0.1, 0.0, 0.4, 0.3, 0.2, -0.2, 0.1, 0.0, 0.3, 0.4, 0.5, -0.3, 0.4, 0.1, 0.3, 0.2, 0.1, -0.2, 0.3, 0.0, 0.4, 0.1, -0.1, 0.3],  # "K"
+    [0.1, 0.3, 0.2, 0.4, 0.0, 0.1, 0.3, 0.4, 0.2, 0.0, 0.1, -0.1, 0.3, 0.4, 0.5, -0.2, 0.1, 0.0, 0.2, 0.3, 0.4, 0.1, 0.0, 0.2, 0.1],  # "P"
+    [0.4, 0.3, 0.1, -0.2, 0.2, 0.0, 0.5, 0.4, 0.1, 0.2, 0.3, 0.1, 0.4, 0.5, -0.1, 0.0, 0.2, 0.1, 0.4, 0.3, 0.2, -0.3, 0.4, 0.1, 0.0],  # "G"
+    [0.1, 0.4, 0.3, 0.0, 0.2, 0.1, 0.5, 0.4, 0.2, 0.0, 0.3, 0.1, 0.4, 0.2, 0.1, 0.3, 0.2, 0.1, -0.1, 0.3, 0.4, 0.0, 0.1, 0.2, 0.3],  # "R"
+    [0.0, 0.3, 0.4, 0.2, 0.1, -0.1, 0.5, 0.3, 0.0, 0.4, 0.1, 0.2, 0.3, 0.4, 0.1, 0.2, 0.0, 0.4, 0.3, 0.1, 0.2, -0.3, 0.0, 0.4, 0.1],  # "A"
+    [0.3, 0.2, 0.1, 0.4, 0.5, -0.1, 0.3, 0.0, 0.2, 0.1, 0.4, 0.5, 0.2, 0.3, 0.1, 0.0, 0.2, 0.4, 0.1, 0.2, 0.3, 0.1, -0.2, 0.0, 0.4],  # "P"
+    [0.2, 0.3, 0.4, 0.1, 0.0, 0.4, 0.1, 0.3, 0.5, 0.2, 0.3, 0.4, 0.1, 0.2, 0.3, 0.4, 0.5, 0.0, 0.3, 0.4, 0.1, -0.3, 0.2, 0.3, 0.0],  # "T"
+    [0.4, 0.1, 0.0, 0.3, 0.4, 0.2, 0.1, 0.0, 0.5, 0.2, 0.3, 0.4, 0.1, 0.2, 0.4, 0.0, 0.3, 0.1, 0.2, 0.4, 0.0, 0.3, 0.2, 0.1, -0.2],  # "V"
+    [0.1, 0.2, 0.4, 0.0, 0.3, 0.4, 0.5, 0.2, 0.1, 0.3, 0.4, 0.1, 0.0, 0.4, 0.3, 0.1, 0.4, 0.2, 0.0, 0.3, 0.1, 0.4, 0.2, -0.1, 0.3],  # “L”
+    [0.2, 0.4, 0.3, 0.0, 0.1, 0.3, 0.5, 0.2, 0.1, 0.3, 0.4, 0.0, 0.4, 0.3, 0.1, 0.2, 0.1, 0.4, 0.0, 0.3, 0.2, 0.1, -0.3, 0.4, 0.2],  # “I”
+    [0.3, 0.1, 0.4, 0.2, 0.0, 0.3, 0.5, 0.4, 0.2, 0.1, 0.3, 0.0, 0.4, 0.2, 0.1, 0.4, 0.1, 0.0, 0.2, 0.3, 0.4, 0.1, -0.1, 0.4, 0.3]   # “Y”
+    ])
+
+# Convert logits to probabilities using softmax
+probs = F.softmax(logits, dim=-1)
+
+# Define the correct token indices for the FWR2 sequence
+# Assuming your vocabulary has the characters in order, e.g., A=0, B=1, ..., Y=24
+token_indices = [11, 13, 22, 24, 16, 16, 10, 15, 6, 0, 15, 19, 9, 8, 11, 24]  # Indices for "LNWYQQKPGRAPTVLIY"
+
+# Get the probabilities for the correct tokens
+correct_probs = probs[range(len(token_indices)), token_indices]
+
+# Calculate the sum of log probabilities
+log_prob_sum = torch.sum(torch.log(correct_probs))
+
+# Calculate the perplexity
+n = len(sequence_regions["fwr2"])
+perplexity = torch.exp(-log_prob_sum / n).item()
+
+print(f"Perplexity for FWR2: {perplexity}")
 
 
-# Convert results to DataFrame for analysis or export
-perplexity_df = pd.DataFrame(perplexity_results)
+# Initialize the model and tokenizer
+model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, generation_config_path, device, adapter_name)
 
-# save the results to a CSV file
-perplexity_df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/perplexity_by_region_test.csv', index=False)
+# Input sequence (light chain)
+input_sequence = "DIQMTQSPSSLSASVGDRVTFTCRSSQNIGIYLNWYQQKPGRAPTVLIYTASSLQSGVPSRFSGSGSGTDFTLTISSLQPEDFATYFCQQSYSLPYTFGQGARLQIK"
 
-# save the mean perplexities of each region to a CSV file
-mean_perplexity_df = pd.DataFrame([{'region': region, 'mean_perplexity': perplexity_df[f'{region}_perplexity'].mean()} for region in regions])
-mean_perplexity_df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/mean_perplexity_by_region_test.csv', index=False)
+# Tokenize the input sequence
+inputs = tokenizer(input_sequence, padding="max_length", truncation=True, max_length=512, return_tensors="pt").to(device)
 
-# save the median perplexities of each region to a CSV file
-median_perplexity_df = pd.DataFrame([{'region': region, 'median_perplexity': perplexity_df[f'{region}_perplexity'].median()} for region in regions])
-median_perplexity_df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/median_perplexity_by_region_test.csv', index=False)
+# Generate the sequence using the model
+generated_seq = model.generate(
+    input_ids=inputs.input_ids, 
+    attention_mask=inputs.attention_mask, 
+    max_length=150, 
+    output_scores=True, 
+    return_dict_in_generate=True, 
+    generation_config=generation_config
+)
+
+# Decode the generated sequence to get the text
+sequence = generated_seq["sequences"][0]
+generated_text = tokenizer.decode(sequence, skip_special_tokens=True)
+print(f"Generated Text: {generated_text}")
+
+# Extract logits
+logits = generated_seq.scores  # This is a list of logits for each step of the generation process
+
+# Logits shape should be (sequence_length, vocab_size) after concatenation
+logits_tensor = torch.stack(logits, dim=1).squeeze(0)
+print(f"Logits shape: {logits_tensor.shape}")
+
+# logits_tensor now contains the logits for each position in the generated sequence
+
+probs = F.softmax(logits_tensor, dim=-1)
+
+print(f"Probabilities shape: {probs.shape}")
+
+# Example: Print probabilities for the first token in the sequence
+print(f"Probabilities for the first token: {probs[0]}")
 
