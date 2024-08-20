@@ -208,72 +208,72 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 df = pd.read_csv("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/full_test_set_true_gen_seqs_all_relevant_cols.csv")
 
 
-# Define regions to process
-regions = ['fwr1_aa']
-#regions = ['fwr1_aa', 'cdr1_aa', 'fwr2_aa', 'cdr2_aa', 'fwr3_aa', 'cdr3_aa', 'fwr4_aa']
+# # Define regions to process
+# regions = ['fwr1_aa']
+# #regions = ['fwr1_aa', 'cdr1_aa', 'fwr2_aa', 'cdr2_aa', 'fwr3_aa', 'cdr3_aa', 'fwr4_aa']
 
 
-# Define your sequence regions
-sequence_regions = {
-    "fwr1": "DIQMTQSPSSLSASVGDRVTFTCRSS",
-    "cdr1": "QNIGIY",
-    "fwr2": "LNWYQQKPGRAPTVLIY",
-    "cdr2": "TAS",
-    "fwr3": "SLQSGVPSRFSGSGSGTDFTLTISSLQPEDFATYFC",
-    "cdr3": "QQSYSLPYT",
-    "fwr4": "FGQGARLQIK"
-}
+# # Define your sequence regions
+# sequence_regions = {
+#     "fwr1": "DIQMTQSPSSLSASVGDRVTFTCRSS",
+#     "cdr1": "QNIGIY",
+#     "fwr2": "LNWYQQKPGRAPTVLIY",
+#     "cdr2": "TAS",
+#     "fwr3": "SLQSGVPSRFSGSGSGTDFTLTISSLQPEDFATYFC",
+#     "cdr3": "QQSYSLPYT",
+#     "fwr4": "FGQGARLQIK"
+# }
 
-# Example: Calculate perplexity for FWR2
+# # Example: Calculate perplexity for FWR2
 
-# Combine the sequence up to the region of interest
-seq_up_to_fwr2 = sequence_regions["fwr1"] + sequence_regions["cdr1"] + sequence_regions["fwr2"]
+# # Combine the sequence up to the region of interest
+# seq_up_to_fwr2 = sequence_regions["fwr1"] + sequence_regions["cdr1"] + sequence_regions["fwr2"]
 
-# Assuming logits are the output of the model and are of shape (sequence_length, vocab_size)
-# logits = model(input_sequence)
+# # Assuming logits are the output of the model and are of shape (sequence_length, vocab_size)
+# # logits = model(input_sequence)
 
-# For demonstration purposes, let's define a dummy logits tensor
-# Here logits should be the real model outputs
+# # For demonstration purposes, let's define a dummy logits tensor
+# # Here logits should be the real model outputs
 
-# Define example logits for each character in the sequence
-logits = torch.tensor([
-    [0.1, 0.2, 0.3, 0.4, 0.5, -0.1, -0.2, 0.3, 0.0, 0.4, 0.2, -0.3, 0.1, 0.2, 0.1, -0.4, 0.3, 0.4, -0.5, 0.1, 0.2, 0.0, -0.1, 0.3, 0.1],  # "L"
-    [0.2, 0.1, 0.0, 0.4, 0.3, 0.1, 0.2, 0.1, -0.3, 0.2, 0.1, -0.2, 0.4, 0.0, 0.1, 0.3, 0.4, 0.2, 0.0, -0.1, 0.3, 0.2, -0.2, 0.0, 0.2],  # "N"
-    [0.3, 0.4, -0.1, 0.1, 0.5, 0.3, -0.2, 0.0, 0.2, -0.3, 0.1, 0.4, 0.3, -0.4, 0.2, 0.1, 0.0, 0.3, 0.4, 0.1, -0.2, 0.0, 0.1, 0.2, 0.3],  # "W"
-    [0.2, 0.3, 0.0, -0.2, 0.1, 0.4, 0.5, -0.1, 0.2, 0.3, 0.4, -0.4, 0.1, 0.2, 0.3, 0.1, -0.2, 0.0, 0.1, 0.2, 0.3, 0.1, 0.4, 0.0, 0.2],  # "Y"
-    [0.1, 0.2, -0.3, 0.4, 0.1, 0.3, 0.0, -0.1, 0.2, 0.1, 0.4, 0.5, 0.2, 0.0, -0.4, 0.1, 0.3, 0.4, 0.1, 0.2, 0.3, 0.1, -0.2, 0.3, 0.2],  # "Q"
-    [0.3, 0.4, 0.1, -0.2, 0.2, 0.5, 0.0, -0.1, 0.3, 0.1, 0.2, 0.4, -0.3, 0.3, 0.4, 0.1, 0.2, -0.1, 0.3, 0.0, 0.4, 0.2, 0.1, 0.3, 0.2],  # "Q"
-    [0.2, 0.1, 0.0, 0.4, 0.3, 0.2, -0.2, 0.1, 0.0, 0.3, 0.4, 0.5, -0.3, 0.4, 0.1, 0.3, 0.2, 0.1, -0.2, 0.3, 0.0, 0.4, 0.1, -0.1, 0.3],  # "K"
-    [0.1, 0.3, 0.2, 0.4, 0.0, 0.1, 0.3, 0.4, 0.2, 0.0, 0.1, -0.1, 0.3, 0.4, 0.5, -0.2, 0.1, 0.0, 0.2, 0.3, 0.4, 0.1, 0.0, 0.2, 0.1],  # "P"
-    [0.4, 0.3, 0.1, -0.2, 0.2, 0.0, 0.5, 0.4, 0.1, 0.2, 0.3, 0.1, 0.4, 0.5, -0.1, 0.0, 0.2, 0.1, 0.4, 0.3, 0.2, -0.3, 0.4, 0.1, 0.0],  # "G"
-    [0.1, 0.4, 0.3, 0.0, 0.2, 0.1, 0.5, 0.4, 0.2, 0.0, 0.3, 0.1, 0.4, 0.2, 0.1, 0.3, 0.2, 0.1, -0.1, 0.3, 0.4, 0.0, 0.1, 0.2, 0.3],  # "R"
-    [0.0, 0.3, 0.4, 0.2, 0.1, -0.1, 0.5, 0.3, 0.0, 0.4, 0.1, 0.2, 0.3, 0.4, 0.1, 0.2, 0.0, 0.4, 0.3, 0.1, 0.2, -0.3, 0.0, 0.4, 0.1],  # "A"
-    [0.3, 0.2, 0.1, 0.4, 0.5, -0.1, 0.3, 0.0, 0.2, 0.1, 0.4, 0.5, 0.2, 0.3, 0.1, 0.0, 0.2, 0.4, 0.1, 0.2, 0.3, 0.1, -0.2, 0.0, 0.4],  # "P"
-    [0.2, 0.3, 0.4, 0.1, 0.0, 0.4, 0.1, 0.3, 0.5, 0.2, 0.3, 0.4, 0.1, 0.2, 0.3, 0.4, 0.5, 0.0, 0.3, 0.4, 0.1, -0.3, 0.2, 0.3, 0.0],  # "T"
-    [0.4, 0.1, 0.0, 0.3, 0.4, 0.2, 0.1, 0.0, 0.5, 0.2, 0.3, 0.4, 0.1, 0.2, 0.4, 0.0, 0.3, 0.1, 0.2, 0.4, 0.0, 0.3, 0.2, 0.1, -0.2],  # "V"
-    [0.1, 0.2, 0.4, 0.0, 0.3, 0.4, 0.5, 0.2, 0.1, 0.3, 0.4, 0.1, 0.0, 0.4, 0.3, 0.1, 0.4, 0.2, 0.0, 0.3, 0.1, 0.4, 0.2, -0.1, 0.3],  # “L”
-    [0.2, 0.4, 0.3, 0.0, 0.1, 0.3, 0.5, 0.2, 0.1, 0.3, 0.4, 0.0, 0.4, 0.3, 0.1, 0.2, 0.1, 0.4, 0.0, 0.3, 0.2, 0.1, -0.3, 0.4, 0.2],  # “I”
-    [0.3, 0.1, 0.4, 0.2, 0.0, 0.3, 0.5, 0.4, 0.2, 0.1, 0.3, 0.0, 0.4, 0.2, 0.1, 0.4, 0.1, 0.0, 0.2, 0.3, 0.4, 0.1, -0.1, 0.4, 0.3]   # “Y”
-    ])
+# # Define example logits for each character in the sequence
+# logits = torch.tensor([
+#     [0.1, 0.2, 0.3, 0.4, 0.5, -0.1, -0.2, 0.3, 0.0, 0.4, 0.2, -0.3, 0.1, 0.2, 0.1, -0.4, 0.3, 0.4, -0.5, 0.1, 0.2, 0.0, -0.1, 0.3, 0.1],  # "L"
+#     [0.2, 0.1, 0.0, 0.4, 0.3, 0.1, 0.2, 0.1, -0.3, 0.2, 0.1, -0.2, 0.4, 0.0, 0.1, 0.3, 0.4, 0.2, 0.0, -0.1, 0.3, 0.2, -0.2, 0.0, 0.2],  # "N"
+#     [0.3, 0.4, -0.1, 0.1, 0.5, 0.3, -0.2, 0.0, 0.2, -0.3, 0.1, 0.4, 0.3, -0.4, 0.2, 0.1, 0.0, 0.3, 0.4, 0.1, -0.2, 0.0, 0.1, 0.2, 0.3],  # "W"
+#     [0.2, 0.3, 0.0, -0.2, 0.1, 0.4, 0.5, -0.1, 0.2, 0.3, 0.4, -0.4, 0.1, 0.2, 0.3, 0.1, -0.2, 0.0, 0.1, 0.2, 0.3, 0.1, 0.4, 0.0, 0.2],  # "Y"
+#     [0.1, 0.2, -0.3, 0.4, 0.1, 0.3, 0.0, -0.1, 0.2, 0.1, 0.4, 0.5, 0.2, 0.0, -0.4, 0.1, 0.3, 0.4, 0.1, 0.2, 0.3, 0.1, -0.2, 0.3, 0.2],  # "Q"
+#     [0.3, 0.4, 0.1, -0.2, 0.2, 0.5, 0.0, -0.1, 0.3, 0.1, 0.2, 0.4, -0.3, 0.3, 0.4, 0.1, 0.2, -0.1, 0.3, 0.0, 0.4, 0.2, 0.1, 0.3, 0.2],  # "Q"
+#     [0.2, 0.1, 0.0, 0.4, 0.3, 0.2, -0.2, 0.1, 0.0, 0.3, 0.4, 0.5, -0.3, 0.4, 0.1, 0.3, 0.2, 0.1, -0.2, 0.3, 0.0, 0.4, 0.1, -0.1, 0.3],  # "K"
+#     [0.1, 0.3, 0.2, 0.4, 0.0, 0.1, 0.3, 0.4, 0.2, 0.0, 0.1, -0.1, 0.3, 0.4, 0.5, -0.2, 0.1, 0.0, 0.2, 0.3, 0.4, 0.1, 0.0, 0.2, 0.1],  # "P"
+#     [0.4, 0.3, 0.1, -0.2, 0.2, 0.0, 0.5, 0.4, 0.1, 0.2, 0.3, 0.1, 0.4, 0.5, -0.1, 0.0, 0.2, 0.1, 0.4, 0.3, 0.2, -0.3, 0.4, 0.1, 0.0],  # "G"
+#     [0.1, 0.4, 0.3, 0.0, 0.2, 0.1, 0.5, 0.4, 0.2, 0.0, 0.3, 0.1, 0.4, 0.2, 0.1, 0.3, 0.2, 0.1, -0.1, 0.3, 0.4, 0.0, 0.1, 0.2, 0.3],  # "R"
+#     [0.0, 0.3, 0.4, 0.2, 0.1, -0.1, 0.5, 0.3, 0.0, 0.4, 0.1, 0.2, 0.3, 0.4, 0.1, 0.2, 0.0, 0.4, 0.3, 0.1, 0.2, -0.3, 0.0, 0.4, 0.1],  # "A"
+#     [0.3, 0.2, 0.1, 0.4, 0.5, -0.1, 0.3, 0.0, 0.2, 0.1, 0.4, 0.5, 0.2, 0.3, 0.1, 0.0, 0.2, 0.4, 0.1, 0.2, 0.3, 0.1, -0.2, 0.0, 0.4],  # "P"
+#     [0.2, 0.3, 0.4, 0.1, 0.0, 0.4, 0.1, 0.3, 0.5, 0.2, 0.3, 0.4, 0.1, 0.2, 0.3, 0.4, 0.5, 0.0, 0.3, 0.4, 0.1, -0.3, 0.2, 0.3, 0.0],  # "T"
+#     [0.4, 0.1, 0.0, 0.3, 0.4, 0.2, 0.1, 0.0, 0.5, 0.2, 0.3, 0.4, 0.1, 0.2, 0.4, 0.0, 0.3, 0.1, 0.2, 0.4, 0.0, 0.3, 0.2, 0.1, -0.2],  # "V"
+#     [0.1, 0.2, 0.4, 0.0, 0.3, 0.4, 0.5, 0.2, 0.1, 0.3, 0.4, 0.1, 0.0, 0.4, 0.3, 0.1, 0.4, 0.2, 0.0, 0.3, 0.1, 0.4, 0.2, -0.1, 0.3],  # “L”
+#     [0.2, 0.4, 0.3, 0.0, 0.1, 0.3, 0.5, 0.2, 0.1, 0.3, 0.4, 0.0, 0.4, 0.3, 0.1, 0.2, 0.1, 0.4, 0.0, 0.3, 0.2, 0.1, -0.3, 0.4, 0.2],  # “I”
+#     [0.3, 0.1, 0.4, 0.2, 0.0, 0.3, 0.5, 0.4, 0.2, 0.1, 0.3, 0.0, 0.4, 0.2, 0.1, 0.4, 0.1, 0.0, 0.2, 0.3, 0.4, 0.1, -0.1, 0.4, 0.3]   # “Y”
+#     ])
 
-# Convert logits to probabilities using softmax
-probs = F.softmax(logits, dim=-1)
+# # Convert logits to probabilities using softmax
+# probs = F.softmax(logits, dim=-1)
 
-# Define the correct token indices for the FWR2 sequence
-# Assuming your vocabulary has the characters in order, e.g., A=0, B=1, ..., Y=24
-token_indices = [11, 13, 22, 24, 16, 16, 10, 15, 6, 0, 15, 19, 9, 8, 11, 24]  # Indices for "LNWYQQKPGRAPTVLIY"
+# # Define the correct token indices for the FWR2 sequence
+# # Assuming your vocabulary has the characters in order, e.g., A=0, B=1, ..., Y=24
+# token_indices = [11, 13, 22, 24, 16, 16, 10, 15, 6, 0, 15, 19, 9, 8, 11, 24]  # Indices for "LNWYQQKPGRAPTVLIY"
 
-# Get the probabilities for the correct tokens
-correct_probs = probs[range(len(token_indices)), token_indices]
+# # Get the probabilities for the correct tokens
+# correct_probs = probs[range(len(token_indices)), token_indices]
 
-# Calculate the sum of log probabilities
-log_prob_sum = torch.sum(torch.log(correct_probs))
+# # Calculate the sum of log probabilities
+# log_prob_sum = torch.sum(torch.log(correct_probs))
 
-# Calculate the perplexity
-n = len(sequence_regions["fwr2"])
-perplexity = torch.exp(-log_prob_sum / n).item()
+# # Calculate the perplexity
+# n = len(sequence_regions["fwr2"])
+# perplexity = torch.exp(-log_prob_sum / n).item()
 
-print(f"Perplexity for FWR2: {perplexity}")
+# print(f"Perplexity for FWR2: {perplexity}")
 
 
 # Initialize the model and tokenizer
@@ -304,15 +304,61 @@ print(f"Generated Text: {generated_text}")
 logits = generated_seq.scores  # This is a list of logits for each step of the generation process
 
 # Logits shape should be (sequence_length, vocab_size) after concatenation
-logits_tensor = torch.stack(logits, dim=1).squeeze(0)
-print(f"Logits shape: {logits_tensor.shape}")
+logits_tensor = torch.stack(logits, dim=1)
+print(f"Logits shape: {logits_tensor.shape}") # Shape: [2, sequence_length, vocab_size] -> 2 sequences are generated becasue num beams = 2 in the generation config
+# Access the logits for the best sequence (usually the first one in the beam search results)
+best_logits = logits_tensor[0]  # Shape: [sequence_length, vocab_size]
 
-# logits_tensor now contains the logits for each position in the generated sequence
-
-probs = F.softmax(logits_tensor, dim=-1)
+# Convert the logits for the best sequence to probabilities
+probs = F.softmax(best_logits, dim=-1)
 
 print(f"Probabilities shape: {probs.shape}")
 
 # Example: Print probabilities for the first token in the sequence
 print(f"Probabilities for the first token: {probs[0]}")
 
+# Define the sequence regions
+sequence_regions = {
+    "fwr1": "DIQMTQSPSSLSASVGDRVTFTCRSS",
+    "cdr1": "QNIGIY",
+    "fwr2": "LNWYQQKPGRAPTVLIY",
+    "cdr2": "TAS",
+    "fwr3": "SLQSGVPSRFSGSGSGTDFTLTISSLQPEDFATYFC",
+    "cdr3": "QQSYSLPYT",
+    "fwr4": "FGQGARLQIK"
+}
+
+# Concatenate the regions to get the full sequence
+full_sequence = "".join(sequence_regions.values())
+
+# Calculate the lengths of each region
+len_fwr1 = len(sequence_regions["fwr1"])
+len_cdr1 = len(sequence_regions["cdr1"])
+len_fwr2 = len(sequence_regions["fwr2"])
+
+# # Set all probabilities for the preceding regions (fwr1 + cdr1) to 1
+# for i in range(len_fwr1 + len_cdr1):
+#     probs[i] = torch.ones_like(probs[i])  # Set all probabilities to 1
+
+# Calculate perplexity for the fwr2 region
+# Get the probabilities for the fwr2 region
+fwr2_start = len_fwr1 + len_cdr1
+fwr2_end = fwr2_start + len_fwr2
+
+fwr2_probs = probs[fwr2_start:fwr2_end]  # Extract the probabilities for fwr2
+
+# Assume you have ground truth token indices for fwr2 (if not, you'll need to determine them)
+# For simplicity, let's assume correct_indices contains the indices of the correct tokens for fwr2
+# correct_indices = [index1, index2, ..., indexn]  # Replace with actual indices
+
+# If you want to use the model's most likely predictions instead of ground truth:
+correct_indices = fwr2_probs.argmax(dim=-1)  # Get the indices of the highest probabilities
+
+# Extract the correct probabilities
+correct_probs = fwr2_probs[range(len_fwr2), correct_indices]
+
+# Apply the formula: \prod_G^E (P(x_i | x_{<i})^{-1/n})
+n = len_fwr2
+perplexity = torch.prod(correct_probs ** (-1 / n)).item()
+
+print(f"Perplexity for FWR2: {perplexity}")
