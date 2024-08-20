@@ -328,37 +328,40 @@ sequence_regions = {
     "fwr4": "FGQGARLQIK"
 }
 
-# Concatenate the regions to get the full sequence
-full_sequence = "".join(sequence_regions.values())
-
 # Calculate the lengths of each region
-len_fwr1 = len(sequence_regions["fwr1"])
-len_cdr1 = len(sequence_regions["cdr1"])
-len_fwr2 = len(sequence_regions["fwr2"])
+region_lengths = {region: len(seq) for region, seq in sequence_regions.items()}
 
-# # Set all probabilities for the preceding regions (fwr1 + cdr1) to 1
-# for i in range(len_fwr1 + len_cdr1):
-#     probs[i] = torch.ones_like(probs[i])  # Set all probabilities to 1
+# To keep track of the start index of each region
+start_idx = 0
 
-# Calculate perplexity for the fwr2 region
-# Get the probabilities for the fwr2 region
-fwr2_start = len_fwr1 + len_cdr1
-fwr2_end = fwr2_start + len_fwr2
+# Iterate over each region to calculate perplexity
+perplexities = {}
 
-fwr2_probs = probs[fwr2_start:fwr2_end]  # Extract the probabilities for fwr2
+for region, length in region_lengths.items():
+    # Calculate the start and end indices for the current region
+    end_idx = start_idx + length
+    
+    # Extract the probabilities for the current region
+    region_probs = probs[start_idx:end_idx]
+    
+    # Get the indices of the most likely predictions for the current region
+    correct_indices = region_probs.argmax(dim=-1)
+    
+    # Extract the correct probabilities
+    correct_probs = region_probs[range(length), correct_indices]
+    
+    # Calculate the perplexity for the current region
+    n = length
+    perplexity = torch.prod(correct_probs ** (-1 / n)).item()
+    
+    # Store the perplexity for the current region
+    perplexities[region] = perplexity
+    
+    # Update the start index for the next region
+    start_idx = end_idx
 
-# Assume you have ground truth token indices for fwr2 (if not, you'll need to determine them)
-# For simplicity, let's assume correct_indices contains the indices of the correct tokens for fwr2
-# correct_indices = [index1, index2, ..., indexn]  # Replace with actual indices
+# Print perplexities for each region
+for region, perplexity in perplexities.items():
+    print(f"Perplexity for {region}: {perplexity}")
 
-# If you want to use the model's most likely predictions instead of ground truth:
-correct_indices = fwr2_probs.argmax(dim=-1)  # Get the indices of the highest probabilities
-
-# Extract the correct probabilities
-correct_probs = fwr2_probs[range(len_fwr2), correct_indices]
-
-# Apply the formula: \prod_G^E (P(x_i | x_{<i})^{-1/n})
-n = len_fwr2
-perplexity = torch.prod(correct_probs ** (-1 / n)).item()
-
-print(f"Perplexity for FWR2: {perplexity}")
+    
