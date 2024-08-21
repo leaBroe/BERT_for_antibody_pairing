@@ -1,8 +1,5 @@
 # env: OAS_paired_env
 # env: adap_2
-from Bio import pairwise2
-from Bio.Align import substitution_matrices
-#from crowelab_pyir import PyIR
 import pandas as pd
 import re
 from transformers import EncoderDecoderModel, AutoTokenizer, GenerationConfig
@@ -13,8 +10,6 @@ from tqdm import tqdm
 import torch.nn.functional as F
 from math import exp
 from crowelab_pyir import PyIR
-
-
 
 # Amino Acid Table:
 # | Amino Acid                    | Three Letter Code | One Letter Code |
@@ -70,21 +65,21 @@ def initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, gen
     return model, tokenizer, generation_config
 
 
-# # heavy2light 10 epochs diverse beam search beam = 2
-# run_name="full_diverse_beam_search_2_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_10_lr_0.0001_wd_0.1"
-# model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_diverse_beam_search_2_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_10_lr_0.0001_wd_0.1"
-# tokenizer_path = f"{model_path}/checkpoint-84010"
-# adapter_path = f"{model_path}/final_adapter"
-# generation_config_path = model_path
-# adapter_name = "heavy2light_adapter"
-
-# Paths and device configuration
-run_name = "full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1"
-model_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1"
-tokenizer_path = f"{model_path}/checkpoint-504060"
+# heavy2light 10 epochs diverse beam search beam = 2
+run_name="full_diverse_beam_search_2_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_10_lr_0.0001_wd_0.1"
+model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_diverse_beam_search_2_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_10_lr_0.0001_wd_0.1"
+tokenizer_path = f"{model_path}/checkpoint-84010"
 adapter_path = f"{model_path}/final_adapter"
 generation_config_path = model_path
 adapter_name = "heavy2light_adapter"
+
+# # Paths and device configuration
+# run_name = "full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1"
+# model_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1"
+# tokenizer_path = f"{model_path}/checkpoint-504060"
+# adapter_path = f"{model_path}/final_adapter"
+# generation_config_path = model_path
+# adapter_name = "heavy2light_adapter"
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -273,7 +268,6 @@ probs = F.softmax(best_logits, dim=-1)
 
 print(f"Probabilities shape: {probs.shape}")
 
-# Example: Print probabilities for the first token in the sequence
 print(f"Probabilities for the first token: {probs[0]}")
 
 # # Define the sequence regions
@@ -310,7 +304,6 @@ for region, length in region_lengths.items():
         end_idx = start_idx + length
         region_length = length
         
-    
     # Extract the probabilities for the current region
     region_probs = probs[start_idx:end_idx]
     
@@ -333,3 +326,147 @@ for region, length in region_lengths.items():
 # Print perplexities for each region
 for region, perplexity in perplexities.items():
     print(f"Perplexity for {region}: {perplexity}")
+
+
+# Initialize the model and tokenizer
+model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, generation_config_path, device, adapter_name)
+
+# File containing the heavy[SEP]light sequences
+# input data has to be of the form: heavy_sequence[SEP]light_sequence (e.g., "DIQMTQSPSSLSASVGDRVTFTCRSS[SEP]QVQLVESGGGVVQPGRSLRLSCAASGF") -> for each line
+sequence_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_small.txt"
+
+# Function to convert amino acid sequence to DNA
+def amino_acid_to_dna(aa_sequence):
+    codon_table = {
+        'A': 'GCT', 'C': 'TGT', 'D': 'GAT', 'E': 'GAA', 'F': 'TTT', 'G': 'GGT', 'H': 'CAT', 'I': 'ATT',
+        'K': 'AAA', 'L': 'TTA', 'M': 'ATG', 'N': 'AAT', 'P': 'CCT', 'Q': 'CAA', 'R': 'CGT', 'S': 'TCT',
+        'T': 'ACT', 'V': 'GTT', 'W': 'TGG', 'Y': 'TAT', '*': 'TAA'
+    }
+    dna_sequence = ''.join(codon_table.get(aa, 'NNN') for aa in aa_sequence)  # Use 'NNN' for unknowns
+    return dna_sequence
+
+# Initialize the FASTA file to store all sequences
+fasta_filename = 'all_sequences.fasta'
+with open(fasta_filename, 'w') as fasta_file:
+    # Read the input file and process each line
+    with open(sequence_file, 'r') as file:
+        for line_num, line in enumerate(file):
+            if '[SEP]' not in line:
+                continue  # Skip lines without a valid separator
+
+            # Extract the heavy sequence (before the [SEP] token)
+            heavy_sequence = line.split('[SEP]')[0].strip()
+
+            # Tokenize the input sequence
+            inputs = tokenizer(heavy_sequence, padding="max_length", truncation=True, max_length=512, return_tensors="pt").to(device)
+
+            # Generate the light chain sequence using the model
+            generated_seq = model.generate(
+                input_ids=inputs.input_ids,
+                attention_mask=inputs.attention_mask,
+                max_length=150,
+                output_scores=True,
+                return_dict_in_generate=True,
+                generation_config=generation_config
+            )
+
+            # Decode the generated sequence to get the text and remove spaces
+            sequence = generated_seq["sequences"][0]
+            generated_text = tokenizer.decode(sequence, skip_special_tokens=True).replace(" ", "")
+            print(f"Generated Sequence for line {line_num + 1} without spaces: {generated_text}")
+
+            # Convert the generated sequence to DNA
+            dna_sequence = amino_acid_to_dna(generated_text)
+            print(f"Converted DNA Sequence: {dna_sequence}")
+
+            # Write the DNA sequence to the FASTA file
+            fasta_file.write(f">Generated_Sequence_{line_num + 1}\n{dna_sequence}\n")
+
+# Dictionary to store perplexities for each sequence
+all_perplexities = {}
+
+# Now retrieve each sequence from the FASTA file for perplexity calculation
+with open(fasta_filename, 'r') as fasta_file:
+    lines = fasta_file.readlines()
+
+# Process each sequence in the FASTA file
+for i in range(0, len(lines), 2):
+    sequence_id = lines[i].strip()  # The sequence identifier (e.g., ">Generated_Sequence_1")
+    # extract number of sequence
+    seq_num = int(sequence_id.split('_')[-1])
+    dna_sequence = lines[i+1].strip()  # The corresponding DNA sequence
+
+    # Use the FASTA sequence as the query for PyIR
+    query_fasta_filename = f'query_{i//2 + 1}.fasta'
+    with open(query_fasta_filename, 'w') as query_fasta_file:
+        query_fasta_file.write(f"{sequence_id}\n{dna_sequence}\n")
+
+    pyirfile = PyIR(query=query_fasta_filename, args=['--outfmt', 'dict'])
+    pyir_result = pyirfile.run()
+
+    # Extract sequence regions from PyIR results
+    sequence_regions = {
+        "fwr1": pyir_result[f'Generated_Sequence_{seq_num}']['fwr1_aa'],
+        "cdr1": pyir_result[f'Generated_Sequence_{seq_num}']['cdr1_aa'],
+        "fwr2": pyir_result[f'Generated_Sequence_{seq_num}']['fwr2_aa'],
+        "cdr2": pyir_result[f'Generated_Sequence_{seq_num}']['cdr2_aa'],
+        "fwr3": pyir_result[f'Generated_Sequence_{seq_num}']['fwr3_aa'],
+        "cdr3": pyir_result[f'Generated_Sequence_{seq_num}']['cdr3_aa'],
+        "fwr4": pyir_result[f'Generated_Sequence_{seq_num}']['fwr4_aa']
+    }
+
+    # Calculate the lengths of each region
+    region_lengths = {region: len(seq) for region, seq in sequence_regions.items()}
+
+    # Initialize variables to calculate perplexity
+    start_idx = 1  # 1 because of the CLS token (not 0)
+    cumulative_length = 0
+
+    # Store the perplexities for the current sequence
+    perplexities = {}
+
+    # Extract logits and probabilities
+    logits = generated_seq.scores
+    logits_tensor = torch.stack(logits, dim=1)
+    best_logits = logits_tensor[0]
+    probs = F.softmax(best_logits, dim=-1)
+
+    # Calculate perplexity for each region
+    for region, length in region_lengths.items():
+        cumulative_length += length
+        if region == "fwr4":
+            end_idx = len(probs) - 1  # Exclude the last token (SEP token)
+            region_length = end_idx - start_idx
+        else:
+            end_idx = start_idx + length
+            region_length = length
+
+        region_probs = probs[start_idx:end_idx]
+        correct_indices = region_probs.argmax(dim=-1)
+        correct_probs = region_probs[range(region_length), correct_indices]
+        n = cumulative_length
+        perplexity = torch.prod(correct_probs ** (-1 / n)).item()
+        perplexities[region] = perplexity
+        start_idx = end_idx
+
+    # Store the perplexities for the current sequence in the global dictionary
+    all_perplexities[f"Sequence_{i//2 + 1}"] = perplexities
+
+# Print all perplexities
+for seq_name, perplexities in all_perplexities.items():
+    print(f"Perplexities for {seq_name}:")
+    for region, perplexity in perplexities.items():
+        print(f"  {region}: {perplexity}")
+
+
+# Convert the perplexities to a DataFrame
+perplexity_df = pd.DataFrame(all_perplexities).T
+# save the perplexities to a CSV file
+perplexity_df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/perplexities.csv', index=True)
+
+# calculate the mean perplexity for each region
+mean_perplexities = perplexity_df.mean()
+print(mean_perplexities)
+
+
+
