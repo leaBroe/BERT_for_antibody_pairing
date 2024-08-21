@@ -189,8 +189,8 @@ df = pd.read_csv("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT
 # Initialize the model and tokenizer
 model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, generation_config_path, device, adapter_name)
 
-# Input sequence (light chain)
-input_sequence = "DIQMTQSPSSLSASVGDRVTFTCRSSQNIGIYLNWYQQKPGRAPTVLIYTASSLQSGVPSRFSGSGSGTDFTLTISSLQPEDFATYFCQQSYSLPYTFGQGARLQIK"
+# Input sequence (heavy chain)
+input_sequence = "QVQLVESGGGVVQPGRSLRLSCAASGFTFSSYGMHWVRQAPGKGLEWVGVIWYDGSKKYYSDSVKGRFTISRDSPNNMLYLQMNSLRAEDTAVYFCARDDDGSNQYGIFEYWGQGTVVTVSS"
 
 # Tokenize the input sequence
 inputs = tokenizer(input_sequence, padding="max_length", truncation=True, max_length=512, return_tensors="pt").to(device)
@@ -241,12 +241,6 @@ pyir_result = pyirfile.run()
 print(f"PyIR Result: {pyir_result}")
 print(f"PyIR Result Type: {type(pyir_result)}")
 
-# Extract the regions from PyIR
-sequence_regions = pyir_result.get('regions', {})
-print(f"Sequence Regions from PyIR: {sequence_regions}")
-
-
-# Example: Assuming PyIR returns a dictionary of sequence regions
 sequence_regions = {
     "fwr1": pyir_result['Generated_Sequence']['fwr1_aa'],
     "cdr1": pyir_result['Generated_Sequence']['cdr1_aa'],
@@ -266,7 +260,7 @@ generated_text = tokenizer.decode(sequence, skip_special_tokens=True)
 print(f"Generated Text: {generated_text}")
 
 # Extract logits
-logits = generated_seq.scores  # This is a list of logits for each step of the generation process
+logits = generated_seq.scores  
 
 # Logits shape should be (sequence_length, vocab_size) after concatenation
 logits_tensor = torch.stack(logits, dim=1)
@@ -297,10 +291,10 @@ print(f"Probabilities for the first token: {probs[0]}")
 #region_lengths = {region: len(seq) for region, seq in sequence_regions.items()}
 
 # To keep track of the start index of each region
-start_idx = 0
+start_idx = 1 # 1 bc of cls token (not 0)
 
 # Initialize cumulative length
-cumulative_length = 0
+cumulative_length = 0 # 1 bc of cls token (not 0)
 
 # Iterate over each region to calculate perplexity
 perplexities = {}
@@ -309,8 +303,13 @@ for region, length in region_lengths.items():
     # Update the cumulative length including the current region
     cumulative_length += length
     
-    # Calculate the start and end indices for the current region
-    end_idx = start_idx + length
+    if region == "fwr4": # since PyIr is not fully recognizing the fwr4 region, we have to manually set the end index to the end of the sequence
+        end_idx = len(probs) - 1  # Exclude the last token (sep token)
+        region_length = end_idx - start_idx
+    else:
+        end_idx = start_idx + length
+        region_length = length
+        
     
     # Extract the probabilities for the current region
     region_probs = probs[start_idx:end_idx]
@@ -319,7 +318,7 @@ for region, length in region_lengths.items():
     correct_indices = region_probs.argmax(dim=-1)
     
     # Extract the correct probabilities
-    correct_probs = region_probs[range(length), correct_indices]
+    correct_probs = region_probs[range(region_length), correct_indices]
     
     # Calculate the perplexity for the current region using cumulative length
     n = cumulative_length  # Include the lengths of all preceding regions
@@ -334,5 +333,3 @@ for region, length in region_lengths.items():
 # Print perplexities for each region
 for region, perplexity in perplexities.items():
     print(f"Perplexity for {region}: {perplexity}")
-
-
