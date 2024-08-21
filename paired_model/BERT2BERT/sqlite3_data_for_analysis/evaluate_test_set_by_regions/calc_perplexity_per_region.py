@@ -333,7 +333,7 @@ model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path,
 
 # File containing the heavy[SEP]light sequences
 # input data has to be of the form: heavy_sequence[SEP]light_sequence (e.g., "DIQMTQSPSSLSASVGDRVTFTCRSS[SEP]QVQLVESGGGVVQPGRSLRLSCAASGF") -> for each line
-sequence_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_small.txt"
+sequence_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_smaller.txt"
 
 # Function to convert amino acid sequence to DNA
 def amino_acid_to_dna(aa_sequence):
@@ -345,9 +345,11 @@ def amino_acid_to_dna(aa_sequence):
     dna_sequence = ''.join(codon_table.get(aa, 'NNN') for aa in aa_sequence)  # Use 'NNN' for unknowns
     return dna_sequence
 
-# Initialize the FASTA file to store all sequences
+# Initialize the FASTA file to store all sequences and the query FASTA file
 fasta_filename = 'all_sequences.fasta'
-with open(fasta_filename, 'w') as fasta_file:
+query_fasta_filename = 'query_sequences.fasta'
+
+with open(fasta_filename, 'w') as fasta_file, open(query_fasta_filename, 'w') as query_fasta_file:
     # Read the input file and process each line
     with open(sequence_file, 'r') as file:
         for line_num, line in enumerate(file):
@@ -382,37 +384,27 @@ with open(fasta_filename, 'w') as fasta_file:
             # Write the DNA sequence to the FASTA file
             fasta_file.write(f">Generated_Sequence_{line_num + 1}\n{dna_sequence}\n")
 
+            # Append the DNA sequence to the query FASTA file
+            query_fasta_file.write(f">Generated_Sequence_{line_num + 1}\n{dna_sequence}\n")
+
+# Use the consolidated query FASTA file as input for PyIR
+pyirfile = PyIR(query=query_fasta_filename, args=['--outfmt', 'dict'])
+pyir_result = pyirfile.run()
+
 # Dictionary to store perplexities for each sequence
 all_perplexities = {}
 
-# Now retrieve each sequence from the FASTA file for perplexity calculation
-with open(fasta_filename, 'r') as fasta_file:
-    lines = fasta_file.readlines()
-
-# Process each sequence in the FASTA file
-for i in range(0, len(lines), 2):
-    sequence_id = lines[i].strip()  # The sequence identifier (e.g., ">Generated_Sequence_1")
-    # extract number of sequence
-    seq_num = int(sequence_id.split('_')[-1])
-    dna_sequence = lines[i+1].strip()  # The corresponding DNA sequence
-
-    # Use the FASTA sequence as the query for PyIR
-    query_fasta_filename = f'query_{i//2 + 1}.fasta'
-    with open(query_fasta_filename, 'w') as query_fasta_file:
-        query_fasta_file.write(f"{sequence_id}\n{dna_sequence}\n")
-
-    pyirfile = PyIR(query=query_fasta_filename, args=['--outfmt', 'dict'])
-    pyir_result = pyirfile.run()
-
+# Process each sequence in the PyIR result
+for sequence_id, result in pyir_result.items():
     # Extract sequence regions from PyIR results
     sequence_regions = {
-        "fwr1": pyir_result[f'Generated_Sequence_{seq_num}']['fwr1_aa'],
-        "cdr1": pyir_result[f'Generated_Sequence_{seq_num}']['cdr1_aa'],
-        "fwr2": pyir_result[f'Generated_Sequence_{seq_num}']['fwr2_aa'],
-        "cdr2": pyir_result[f'Generated_Sequence_{seq_num}']['cdr2_aa'],
-        "fwr3": pyir_result[f'Generated_Sequence_{seq_num}']['fwr3_aa'],
-        "cdr3": pyir_result[f'Generated_Sequence_{seq_num}']['cdr3_aa'],
-        "fwr4": pyir_result[f'Generated_Sequence_{seq_num}']['fwr4_aa']
+        "fwr1": result.get('fwr1_aa', ''),
+        "cdr1": result.get('cdr1_aa', ''),
+        "fwr2": result.get('fwr2_aa', ''),
+        "cdr2": result.get('cdr2_aa', ''),
+        "fwr3": result.get('fwr3_aa', ''),
+        "cdr3": result.get('cdr3_aa', ''),
+        "fwr4": result.get('fwr4_aa', '')
     }
 
     # Calculate the lengths of each region
@@ -450,7 +442,7 @@ for i in range(0, len(lines), 2):
         start_idx = end_idx
 
     # Store the perplexities for the current sequence in the global dictionary
-    all_perplexities[f"Sequence_{i//2 + 1}"] = perplexities
+    all_perplexities[sequence_id] = perplexities
 
 # Print all perplexities
 for seq_name, perplexities in all_perplexities.items():
