@@ -11,6 +11,12 @@ import torch.nn.functional as F
 from math import exp
 from crowelab_pyir import PyIR
 
+# this script can be used to 
+# 1. generate DNA sequence from a given AA sequence and subsequently use PyIR to identifiy regions within the genertaed and true light chain (the conversiom from AA to DNA bases is needed because PyIR can only handle DNA sequences) 
+# 2. Calculate similarity and BLOSUM scores for the generated and true light chain sequences -> in this script we do NOT use global alignmment to calculate the similarity and BLOSUM scores (for global alignment and BLOSUM calculation with global alignment see the file calc_blosum_similarity_per_region.R)
+# 3. Calculate perplexity for each region of the generated light chain sequence (FWR1, CDR1, FWR2, CDR2, FWR3, CDR3, FWR4)
+
+
 # Amino Acid Table:
 # | Amino Acid                    | Three Letter Code | One Letter Code |
 # |-------------------------------|-------------------|-----------------|
@@ -88,7 +94,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, generation_config_path, device, adapter_name)
 
-
+############################################################################ CREATE FASTA FILES AND USE PYIR FROM OUTPUT FILE ################################################################################################
 # Codon table for reverse translation (simplified, using common codons)
 # codon_table = {
 #     'A': 'GCT', 'C': 'TGT', 'D': 'GAT', 'E': 'GAA', 'F': 'TTT', 'G': 'GGT', 'H': 'CAT', 'I': 'ATT',
@@ -103,7 +109,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # # Function to reverse translate protein sequence to DNA
 # def protein_to_dna(protein_seq):
 #     return "".join([codon_table[aa] for aa in protein_seq])
-
 
 # def extract_sequences(file_path):
 #     data = []
@@ -130,6 +135,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 #     return data
 
+# # Example usage
 # # input: log file of the form:
 # #
 # # Sequence pair 67209:
@@ -179,7 +185,11 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Read the CSV file into a DataFrame
 #df = pd.read_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/full_test_set_true_gen_seqs_relevant_cols.csv')
-df = pd.read_csv("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/full_test_set_true_gen_seqs_all_relevant_cols.csv")
+#df = pd.read_csv("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/full_test_set_true_gen_seqs_all_relevant_cols.csv")
+
+
+############################################################################ CALCULATE PERPLEXITY FOR EACH REGION FOR 1 SEQUENCE ONLY (to understand how it is done) ################################################################################################
+
 
 # Initialize the model and tokenizer
 model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, generation_config_path, device, adapter_name)
@@ -328,22 +338,11 @@ for region, perplexity in perplexities.items():
     print(f"Perplexity for {region}: {perplexity}")
 
 
-# Initialize the model and tokenizer
-model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, generation_config_path, device, adapter_name)
+############################################################################ CALCULATE PERPLEXITY FOR EACH REGION FOR SEVERAL SEQUENCES (from a txt file) ################################################################################################
 
-# File containing the heavy[SEP]light sequences
+# Input file is a file containing the heavy[SEP]light sequences
 # input data has to be of the form: heavy_sequence[SEP]light_sequence (e.g., "DIQMTQSPSSLSASVGDRVTFTCRSS[SEP]QVQLVESGGGVVQPGRSLRLSCAASGF") -> for each line
 sequence_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids.txt"
-
-# Function to convert amino acid sequence to DNA
-def amino_acid_to_dna(aa_sequence):
-    codon_table = {
-        'A': 'GCT', 'C': 'TGT', 'D': 'GAT', 'E': 'GAA', 'F': 'TTT', 'G': 'GGT', 'H': 'CAT', 'I': 'ATT',
-        'K': 'AAA', 'L': 'TTA', 'M': 'ATG', 'N': 'AAT', 'P': 'CCT', 'Q': 'CAA', 'R': 'CGT', 'S': 'TCT',
-        'T': 'ACT', 'V': 'GTT', 'W': 'TGG', 'Y': 'TAT', '*': 'TAA'
-    }
-    dna_sequence = ''.join(codon_table.get(aa, 'NNN') for aa in aa_sequence)  # Use 'NNN' for unknowns
-    return dna_sequence
 
 # Initialize the FASTA file to store all sequences and the query FASTA file
 fasta_filename = 'all_sequences_full_data.fasta'
@@ -411,7 +410,7 @@ for sequence_id, result in pyir_result.items():
     region_lengths = {region: len(seq) for region, seq in sequence_regions.items()}
 
     # Initialize variables to calculate perplexity
-    start_idx = 1  # 1 because of the CLS token (not 0)
+    start_idx = 1  # 1 because we want to skip the CLS token (not 0)
     cumulative_length = 0
 
     # Store the perplexities for the current sequence
