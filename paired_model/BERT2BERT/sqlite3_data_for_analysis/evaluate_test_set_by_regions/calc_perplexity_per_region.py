@@ -333,7 +333,7 @@ model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path,
 
 # File containing the heavy[SEP]light sequences
 # input data has to be of the form: heavy_sequence[SEP]light_sequence (e.g., "DIQMTQSPSSLSASVGDRVTFTCRSS[SEP]QVQLVESGGGVVQPGRSLRLSCAASGF") -> for each line
-sequence_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_smaller.txt"
+sequence_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids.txt"
 
 # Function to convert amino acid sequence to DNA
 def amino_acid_to_dna(aa_sequence):
@@ -346,8 +346,8 @@ def amino_acid_to_dna(aa_sequence):
     return dna_sequence
 
 # Initialize the FASTA file to store all sequences and the query FASTA file
-fasta_filename = 'all_sequences.fasta'
-query_fasta_filename = 'query_sequences.fasta'
+fasta_filename = 'all_sequences_full_data.fasta'
+query_fasta_filename = 'query_sequences_full_data.fasta'
 
 with open(fasta_filename, 'w') as fasta_file, open(query_fasta_filename, 'w') as query_fasta_file:
     # Read the input file and process each line
@@ -426,7 +426,7 @@ for sequence_id, result in pyir_result.items():
     # Calculate perplexity for each region
     for region, length in region_lengths.items():
         cumulative_length += length
-        if region == "fwr4":
+        if region == "fwr4": # since PyIr is not fully recognizing the fwr4 region, we have to manually set the end index to the end of the sequence
             end_idx = len(probs) - 1  # Exclude the last token (SEP token)
             region_length = end_idx - start_idx
         else:
@@ -454,7 +454,7 @@ for seq_name, perplexities in all_perplexities.items():
 # Convert the perplexities to a DataFrame
 perplexity_df = pd.DataFrame(all_perplexities).T
 # save the perplexities to a CSV file
-perplexity_df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/perplexities.csv', index=True)
+perplexity_df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/evaluate_test_set_by_regions/h2l_div_beam_search_2_epoch_10_lr_1e-4_wd_0.1/perplexities_full_data.csv', index=True)
 
 # calculate the mean perplexity for each region
 mean_perplexities = perplexity_df.mean()
