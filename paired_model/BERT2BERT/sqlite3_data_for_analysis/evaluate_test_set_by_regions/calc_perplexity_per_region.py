@@ -70,21 +70,21 @@ def initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, gen
     return model, tokenizer, generation_config
 
 
-# heavy2light 10 epochs diverse beam search beam = 2
-run_name="full_diverse_beam_search_2_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_10_lr_0.0001_wd_0.1"
-model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_diverse_beam_search_2_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_10_lr_0.0001_wd_0.1"
-tokenizer_path = f"{model_path}/checkpoint-84010"
-adapter_path = f"{model_path}/final_adapter"
-generation_config_path = model_path
-adapter_name = "heavy2light_adapter"
-
-# # Paths and device configuration
-# run_name = "full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1"
-# model_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1"
-# tokenizer_path = f"{model_path}/checkpoint-504060"
+# # heavy2light 10 epochs diverse beam search beam = 2
+# run_name="full_diverse_beam_search_2_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_10_lr_0.0001_wd_0.1"
+# model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_diverse_beam_search_2_temp_0.5_max_length_150_early_stopping_true_batch_size_64_epochs_10_lr_0.0001_wd_0.1"
+# tokenizer_path = f"{model_path}/checkpoint-84010"
 # adapter_path = f"{model_path}/final_adapter"
 # generation_config_path = model_path
 # adapter_name = "heavy2light_adapter"
+
+# Paths and device configuration
+run_name = "full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1"
+model_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1"
+tokenizer_path = f"{model_path}/checkpoint-504060"
+adapter_path = f"{model_path}/final_adapter"
+generation_config_path = model_path
+adapter_name = "heavy2light_adapter"
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -264,7 +264,7 @@ logits = generated_seq.scores
 
 # Logits shape should be (sequence_length, vocab_size) after concatenation
 logits_tensor = torch.stack(logits, dim=1)
-print(f"Logits shape: {logits_tensor.shape}") # Shape: [2, sequence_length, vocab_size] -> 2 sequences are generated becasue num beams = 2 in the generation config
+print(f"Logits shape: {logits_tensor.shape}") # Shape: [2, sequence_length, vocab_size] -> 2 sequences are generated because num beams = 2 in the generation config
 # Access the logits for the best sequence (usually the first one in the beam search results)
 best_logits = logits_tensor[0]  # Shape: [sequence_length, vocab_size]
 
