@@ -8,7 +8,7 @@ from pymol import cmd
 output_image_base = "aligned_structure"
 
 
-def align_and_plot(true_pdb, generated_pdb, output_image):
+def align_and_plot(true_pdb, generated_pdb, output_image, view_output_dir):
     # Load the true and generated PDB files
     true_name = "true_structure"
     generated_name = "generated_structure"
@@ -39,13 +39,14 @@ def align_and_plot(true_pdb, generated_pdb, output_image):
     # Get the current view matrix (camera position)
     current_view = cmd.get_view()
 
-    # Print the current view matrix
-    print(f"View matrix for {output_image}:")
-    for row in current_view:
-        print(row)
+    # Set the view file path in the specified output directory
+    view_file_name = os.path.basename(output_image).replace(".png", "_view.txt")
+    view_file = os.path.join(view_output_dir, view_file_name)
 
-    # Optionally, save the view matrix to a file
-    view_file = output_image.replace(".png", "_view.txt")
+    # Ensure the view output directory exists
+    os.makedirs(view_output_dir, exist_ok=True)
+
+    # Save the view matrix to a file in the specified directory
     with open(view_file, "w") as vf:
         vf.write(f"View matrix for {output_image}:\n")
         for row in current_view:
@@ -59,7 +60,7 @@ def align_and_plot(true_pdb, generated_pdb, output_image):
 
 
 # Function to process each category
-def process_category(csv_file, output_dir):
+def process_category(csv_file, output_dir, view_output_dir):
     # Ensure the output directory exists
     os.makedirs(output_dir, exist_ok=True)
 
@@ -73,22 +74,27 @@ def process_category(csv_file, output_dir):
             generated_pdb = row['generated_sequence_path']
 
             output_image = f"{output_dir}/{output_image_base}_{i}.png"
-            align_and_plot(true_pdb, generated_pdb, output_image)
+            align_and_plot(true_pdb, generated_pdb, output_image, view_output_dir)
             print(f"Generated image: {output_image}")
 
 
 # Define the base directory for the output
 output_base_dir = "/Users/leabroennimann/Downloads/pythonProject"
 
-# Process the worst sequences
-process_category("/Users/leabroennimann/Desktop/pdb_files_output_categories/pdb_files_worst.csv",
-                 os.path.join(output_base_dir, "pymol_plots_worst"))
+# Define the base directory for view matrices
+view_output_base_dir = "/Users/leabroennimann/Downloads/pythonProject/view_matrices"
 
-#Process the middle sequences
-process_category("/Users/leabroennimann/Desktop/pdb_files_output_categories/pdb_files_middle.csv",
-                 os.path.join(output_base_dir, "pymol_plots_middle"))
+# Process the worst sequences
+process_category("/Users/leabroennimann/Desktop/output_pdb_files/pdb_files_worst.csv",
+                 os.path.join(output_base_dir, "pymol_plots_worst"),
+                 os.path.join(view_output_base_dir, "view_matrices_worst"))
+
+# Process the middle sequences
+process_category("/Users/leabroennimann/Desktop/output_pdb_files/pdb_files_middle.csv",
+                 os.path.join(output_base_dir, "pymol_plots_middle"),
+                 os.path.join(view_output_base_dir, "view_matrices_middle"))
 
 # Process the best sequences
-process_category("/Users/leabroennimann/Desktop/pdb_files_output_categories/pdb_files_best.csv",
-                 os.path.join(output_base_dir, "pymol_plots_best"))
-
+process_category("/Users/leabroennimann/Desktop/output_pdb_files/pdb_files_best.csv",
+                 os.path.join(output_base_dir, "pymol_plots_best"),
+                 os.path.join(view_output_base_dir, "view_matrices_best"))
