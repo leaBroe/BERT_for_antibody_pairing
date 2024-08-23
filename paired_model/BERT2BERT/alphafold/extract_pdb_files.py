@@ -1,4 +1,5 @@
 import os
+import csv
 
 # alphafold_structure_predictions structure:
 # ├── 10_best
@@ -14,7 +15,11 @@ import os
 #     └── ...
 
 def collect_pdb_files(base_dir):
-    pdb_pairs = []
+    pdb_pairs = {
+        "b": [],
+        "m": [],
+        "w": []
+    }
 
     # Define the categories and corresponding directory suffixes
     categories = {
@@ -47,28 +52,47 @@ def collect_pdb_files(base_dir):
                                     gen_pdb_file = os.path.join(sub_folder_path, file_name)
 
                         # Look for true sequence PDB file
-                        elif sub_folder.startswith(f"true_seq_{id_folder}_{suffix}"):
+                        if sub_folder.startswith(f"true_seq_{id_folder}_{suffix}"):
                             for file_name in os.listdir(sub_folder_path):
                                 if "rank_001" in file_name and file_name.endswith(".pdb"):
                                     true_pdb_file = os.path.join(sub_folder_path, file_name)
 
                 # Ensure both files are found before adding to the list
                 if gen_pdb_file and true_pdb_file:
-                    pdb_pairs.append((true_pdb_file, gen_pdb_file))
+                    pdb_pairs[suffix].append((true_pdb_file, gen_pdb_file))
                 else:
                     print(f"Warning: Could not find matching 'rank_001' PDB files for ID {id_folder} in {category_dir}")
 
     return pdb_pairs
 
+def write_pdb_files_to_csv(pdb_pairs, output_dir):
+    # Loop over each category in pdb_pairs dictionary
+    for suffix, pairs in pdb_pairs.items():
+        category_map = {"b": "best", "m": "middle", "w": "worst"}
+        output_file = os.path.join(output_dir, f"pdb_files_{category_map[suffix]}.csv")
+
+        # Write each pair to the corresponding category CSV file
+        with open(output_file, 'w', newline='') as csvfile:
+            csvwriter = csv.writer(csvfile)
+            # Write the header
+            csvwriter.writerow(['true_sequence_path', 'generated_sequence_path'])
+
+            # Write the data rows
+            for true_pdb, gen_pdb in pairs:
+                # Strip any surrounding single quotes (just in case)
+                true_pdb = true_pdb.strip("'")
+                gen_pdb = gen_pdb.strip("'")
+                csvwriter.writerow([true_pdb, gen_pdb])
+
 # Example usage
 base_directory = "/Users/leabroennimann/Desktop/alphafold_structure_predictions"
-output_image_base = "aligned_structure"
+output_directory = "/Users/leabroennimann/Desktop/pdb_files_output_categories"
+
+# Ensure output directory exists
+os.makedirs(output_directory, exist_ok=True)
 
 # Collect the PDB file pairs
 pdb_files = collect_pdb_files(base_directory)
 
-with open('pdb_files.txt', 'w') as f:
-    for line in pdb_files:
-        f.write(f"{line}\n")
-
-
+# Write the PDB file pairs to separate CSV files for each category
+write_pdb_files_to_csv(pdb_files, output_directory)
