@@ -80,9 +80,9 @@ def process_category(csv_file, output_dir):
 # Define the base directory for the output
 output_base_dir = "/Users/leabroennimann/Downloads/pythonProject"
 
-# # Process the worst sequences
-# process_category("/Users/leabroennimann/Desktop/pdb_files_output_categories/pdb_files_worst.csv",
-#                  os.path.join(output_base_dir, "pymol_plots_worst"))
+# Process the worst sequences
+process_category("/Users/leabroennimann/Desktop/pdb_files_output_categories/pdb_files_worst.csv",
+                 os.path.join(output_base_dir, "pymol_plots_worst"))
 
 #Process the middle sequences
 process_category("/Users/leabroennimann/Desktop/pdb_files_output_categories/pdb_files_middle.csv",
