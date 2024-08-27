@@ -118,33 +118,61 @@ def load_data(file_path):
     df = pd.DataFrame(sequences, columns=['heavy', 'light'])
     return df
 
-#target = 'locus'
-target = 'subtype'
+target = 'locus'
+#target = 'subtype'
 
 test_df = load_data(test_file_path)
-#heavy_sequences = test_df["heavy"].tolist()
-light_sequences = test_df["light"].tolist()
+heavy_sequences = test_df["heavy"].tolist()
+#light_sequences = test_df["light"].tolist()
 #labels = test_df_labels['v_family'].tolist()
 #labels = test_df_labels['subtype'].tolist()
 labels = test_df_labels[f'{target}'].tolist()
 
 
 
-# Function to extract embeddings from the last layer
-def get_last_layer_embeddings(model, tokenizer, sequences, device):
+# # Function to extract embeddings from the last layer
+# def get_last_layer_embeddings(model, tokenizer, sequences, device):
+#     embeddings = []
+#     model.to(device)
+#     model.eval()
+#     with torch.no_grad():
+#         for seq in sequences:
+#             inputs = tokenizer(seq, return_tensors="pt", padding="max_length", truncation=True, max_length=512).to(device)
+#             outputs = model.encoder(**inputs)
+#             last_hidden_states = outputs.last_hidden_state
+#             embeddings.append(last_hidden_states.mean(dim=1).cpu().numpy())  # Mean pooling
+#     return np.vstack(embeddings)  # Stack into a numpy array
+
+
+
+def get_decoder_last_layer_embeddings(model, tokenizer, sequences, device):
     embeddings = []
     model.to(device)
     model.eval()
     with torch.no_grad():
         for seq in sequences:
+            # Tokenize the input sequence for the encoder
             inputs = tokenizer(seq, return_tensors="pt", padding="max_length", truncation=True, max_length=512).to(device)
-            outputs = model.encoder(**inputs)
-            last_hidden_states = outputs.last_hidden_state
-            embeddings.append(last_hidden_states.mean(dim=1).cpu().numpy())  # Mean pooling
+            
+            outputs = model(**inputs, decoder_input_ids=inputs['input_ids'])
+
+            # For models returning CausalLMOutputWithCrossAttentions, the hidden states are usually found under 'last_hidden_states' attribute.
+            if hasattr(outputs, 'hidden_states'):
+                last_hidden_states = outputs.hidden_states[-1]  # Access the last layer's hidden states
+            else:
+                last_hidden_states = outputs[0]  # outputs[0]: the last_hidden_state
+
+            # Mean pooling across the sequence length dimension
+            mean_pooled_output = last_hidden_states.mean(dim=1).cpu().numpy()
+            embeddings.append(mean_pooled_output)
+    
     return np.vstack(embeddings)  # Stack into a numpy array
 
+
 # Get embeddings from the last layer
-embeddings = get_last_layer_embeddings(model, tokenizer, light_sequences, device)
+#embeddings = get_last_layer_embeddings(model, tokenizer, light_sequences, device)
+#embeddings = get_decoder_last_layer_embeddings(model, tokenizer, light_sequences, device)
+embeddings = get_decoder_last_layer_embeddings(model, tokenizer, heavy_sequences, device)
 
 # Apply UMAP
 umap_reducer = umap.UMAP(n_components=2, random_state=42)
@@ -183,6 +211,6 @@ ax.set_position([box.x0, box.y0 + box.height * 0.2,
 # Place the legend below the plot
 ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=5)
 # Save the plot before showing
-plt.savefig(f'{output_path}/umap_heavy2light_FULL_data_{target}.png')
+plt.savefig(f'{output_path}/decoder_heavy_umap_heavy2light_FULL_data_{target}.png')
 # Display the plot
 plt.show()
