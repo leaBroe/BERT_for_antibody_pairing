@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-#SBATCH --gres=gpu:a100:1
+#SBATCH --gres=gpu:alphafold:1
 #SBATCH --job-name=tsne_subtypes
 #SBATCH --output=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/tsne_subtypes_%j.o
 #SBATCH --error=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/tsne_subtypes_%j.e
