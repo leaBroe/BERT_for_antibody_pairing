@@ -134,6 +134,14 @@ input_file = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_va
 with open(input_file, "r") as file:
     lines = file.readlines()
 
+# Initialize accumulators for averaging metrics
+total_perplexity = 0.0
+total_global_similarity = 0.0
+total_global_blosum_score = 0.0
+total_hard_similarity = 0.0
+total_hard_blosum_score = 0.0
+num_sequences = 0
+
 # Process and evaluate each sequence
 for line in lines:
     # Strip any surrounding whitespace and split the heavy and light sequences
@@ -142,50 +150,76 @@ for line in lines:
         print(f"Skipping invalid line: {line}")
         continue
 
-    # Tokenize the line
-    tokens = tokenizer.batch_encode_plus([line], add_special_tokens=True, return_tensors="pt")
-
-    # Generate predictions for masked tokens
-    outputs = model(input_ids=tokens['input_ids'], attention_mask=tokens['attention_mask'])
+    # Split heavy and light sequences
+    heavy_seq, light_seq = line.split("[SEP]")
+    
+    # Tokenize the sequences
+    heavy_tokens = tokenizer(heavy_seq, add_special_tokens=False, return_tensors="pt")
+    light_tokens = tokenizer(light_seq, add_special_tokens=False, return_tensors="pt")
+    
+    # Create masked input where the entire light chain is masked
+    masked_light_tokens = torch.full_like(light_tokens['input_ids'], tokenizer.mask_token_id)
+    masked_input = torch.cat([heavy_tokens['input_ids'], torch.tensor([[tokenizer.sep_token_id]]), masked_light_tokens], dim=1)
+    
+    # Create attention mask
+    attention_mask = torch.cat([heavy_tokens['attention_mask'], torch.tensor([[1]]), light_tokens['attention_mask']], dim=1)
+    
+    # Pass the masked input to the model
+    outputs = model(input_ids=masked_input, attention_mask=attention_mask)
+    
+    # Get the predictions for the masked positions
     predicted_ids = torch.argmax(outputs.logits, dim=-1)
+    
+    # Extract the predicted light chain
+    predicted_light_ids = predicted_ids[0, len(heavy_tokens['input_ids'][0]) + 1:].tolist()
+    predicted_light_tokens = tokenizer.convert_ids_to_tokens(predicted_light_ids)
+    predicted_light_sequence = ''.join(predicted_light_tokens).replace('##', '').replace(' ', '')
+    
+    # Remove spaces from true light sequence
+    true_light_sequence = light_seq.replace(' ', '')
+    
+    # Calculate perplexity using only the logits and labels for the light chain
+    light_chain_logits = outputs.logits[0, len(heavy_tokens['input_ids'][0]) + 1:, :]
+    mask = (masked_light_tokens[0] == tokenizer.mask_token_id)
+    perplexity = calculate_perplexity(light_chain_logits, light_tokens['input_ids'][0], mask)
+    total_perplexity += perplexity
 
-    # Extract the token IDs after the [SEP] token and decode them
-    sep_token_id = tokenizer.convert_tokens_to_ids('[SEP]')
-    sep_indices = (tokens['input_ids'][0] == sep_token_id).nonzero(as_tuple=True)[0]
-    if sep_indices.numel() > 0:
-        sep_index = sep_indices[0].item()  # Take the first occurrence of [SEP]
+    # Calculate global alignment similarity
+    global_similarity = calculate_global_similarity(predicted_light_sequence, true_light_sequence)
+    total_global_similarity += global_similarity
 
-        # Extract the light chain part
-        predicted_light_ids = predicted_ids[0, sep_index + 1:].tolist()
-        predicted_light_tokens = tokenizer.convert_ids_to_tokens(predicted_light_ids)
+    # Calculate global alignment BLOSUM score
+    global_blosum_score = calculate_global_blosum_score(predicted_light_sequence, true_light_sequence)
+    total_global_blosum_score += global_blosum_score
 
-        # Join the tokens to form the light sequence
-        predicted_light_sequence = ''.join(predicted_light_tokens).replace('##', '').replace(' ', '')
+    # Calculate hard BLOSUM score and hard similarity
+    hard_blosum_score, hard_similarity = calculate_hard_blosum_and_similarity(true_light_sequence, predicted_light_sequence, substitution_matrix)
+    total_hard_blosum_score += hard_blosum_score
+    total_hard_similarity += hard_similarity
 
-        # Extract the true light sequence from the line
-        true_light_sequence = line.split("[SEP]")[1].replace(' ', '')
+    num_sequences += 1
 
-        # Calculate perplexity
-        mask = (tokens['input_ids'][0] != tokenizer.pad_token_id)
-        perplexity = calculate_perplexity(outputs.logits[0], tokens['input_ids'][0], mask)
+    # Output the results for the current sequence
+    print("\n")
+    print(f"True light sequence: {true_light_sequence}")
+    print(f"Predicted light sequence: {predicted_light_sequence}")
+    print(f"  Perplexity: {perplexity}")
+    print(f"  Global Alignment Similarity: {global_similarity:.4f}")
+    print(f"  Global Alignment BLOSUM score: {global_blosum_score}")
+    print(f"  'Hard' Similarity: {hard_similarity:.2f}%")
+    print(f"  'Hard' BLOSUM score: {hard_blosum_score}")
 
-        # Calculate global alignment similarity
-        global_similarity = calculate_global_similarity(predicted_light_sequence, true_light_sequence)
+# Calculate and print average metrics if there are valid sequences
+if num_sequences > 0:
+    avg_perplexity = total_perplexity / num_sequences
+    avg_global_similarity = total_global_similarity / num_sequences
+    avg_global_blosum_score = total_global_blosum_score / num_sequences
+    avg_hard_similarity = total_hard_similarity / num_sequences
+    avg_hard_blosum_score = total_hard_blosum_score / num_sequences
 
-        # Calculate global alignment BLOSUM score
-        global_blosum_score = calculate_global_blosum_score(predicted_light_sequence, true_light_sequence)
-
-        # Calculate hard BLOSUM score and hard similarity
-        hard_blosum_score, hard_similarity = calculate_hard_blosum_and_similarity(true_light_sequence, predicted_light_sequence, substitution_matrix)
-
-        # Output the results
-        print(f"Predicted light sequence: {predicted_light_sequence}")
-        print(f"  Perplexity: {perplexity}")
-        print(f"  Global Alignment Similarity: {global_similarity:.4f}")
-        print(f"  Global Alignment BLOSUM score: {global_blosum_score}")
-        print(f"  Hard Similarity: {hard_similarity:.2f}%")
-        print(f"  Hard BLOSUM score: {hard_blosum_score}")
-    else:
-        print(f"Skipping line due to missing [SEP]: {line}")
-
-
+    print("\n--- Averages Across All Sequences ---")
+    print(f"Average Perplexity: {avg_perplexity}")
+    print(f"Average Global Alignment Similarity: {avg_global_similarity:.4f}")
+    print(f"Average Global Alignment BLOSUM Score: {avg_global_blosum_score}")
+    print(f"Average 'Hard' Similarity: {avg_hard_similarity:.2f}%")
+    print(f"Average 'Hard' BLOSUM Score: {avg_hard_blosum_score}")
