@@ -147,8 +147,9 @@ for line in lines:
         # Extract the true light sequence from the line
         true_light_sequence = line.split("[SEP]")[1].replace(' ', '')
 
-        # Calculate pseudo-perplexity
-        pseudo_perplexity = calculate_pseudo_perplexity(model, tokenizer, predicted_light_sequence)
+        # Calculate perplexity
+        mask = (tokens['input_ids'][0] != tokenizer.pad_token_id)
+        perplexity = calculate_perplexity(outputs.logits[0], tokens['input_ids'][0], mask)
 
         # Calculate global alignment similarity
         global_similarity = calculate_global_similarity(predicted_light_sequence, true_light_sequence)
@@ -161,7 +162,7 @@ for line in lines:
 
         # Output the results
         print(f"Predicted light sequence: {predicted_light_sequence}")
-        print(f"  Pseudo-Perplexity: {pseudo_perplexity}")
+        print(f"  Perplexity: {perplexity}")
         print(f"  Global Alignment Similarity: {global_similarity:.4f}")
         print(f"  Global Alignment BLOSUM score: {global_blosum_score}")
         print(f"  Hard Similarity: {hard_similarity:.2f}%")
@@ -170,3 +171,4 @@ for line in lines:
         print(f"Skipping line due to missing [SEP]: {line}")
 
 
+        
