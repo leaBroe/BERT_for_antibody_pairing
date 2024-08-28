@@ -106,70 +106,67 @@ def calculate_global_blosum_score(seq1, seq2):
     alignment = pairwise2.align.globalds(seq1, seq2, substitution_matrix, -10, -0.5)[0]
     return alignment[2]
 
-# Function to calculate hard BLOSUM score and hard similarity
-def calculate_hard_blosum_and_similarity(true_seq, generated_seq, matrix):
-    score = 0
-    matches = 0
-    generated_seq = generated_seq.replace(" ", "")
-    true_seq = true_seq.replace(" ", "")
-    min_length = min(len(true_seq), len(generated_seq))
-    for i in range(min_length):
-        pair = (true_seq[i], generated_seq[i])
-        if pair in matrix:
-            score += matrix[pair]
-        elif (pair[1], pair[0]) in matrix:
-            score += matrix[(pair[1], pair[0])]
-        if true_seq[i] == generated_seq[i]:
-            matches += 1
-    similarity_percentage = (matches / min_length) * 100
-    return score, similarity_percentage
+# Load sequences from the input text file
+# Load small test data
+input_file = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated_SMALL.txt'
 
-# Calculate metrics for each sequence
-sep_token_id = tokenizer.convert_tokens_to_ids('[SEP]')
-for i in range(predicted_ids.size(0)):
-    sep_indices = (tokens['input_ids'][i] == sep_token_id).nonzero(as_tuple=True)[0]
+# load FULL test data
+#input_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated.txt"
+
+with open(input_file, "r") as file:
+    lines = file.readlines()
+
+# Process and evaluate each sequence
+for line in lines:
+    # Strip any surrounding whitespace and split the heavy and light sequences
+    line = line.strip()
+    if "[SEP]" not in line:
+        print(f"Skipping invalid line: {line}")
+        continue
+
+    # Tokenize the line
+    tokens = tokenizer.batch_encode_plus([line], add_special_tokens=True, return_tensors="pt")
+
+    # Generate predictions for masked tokens
+    outputs = model(input_ids=tokens['input_ids'], attention_mask=tokens['attention_mask'])
+    predicted_ids = torch.argmax(outputs.logits, dim=-1)
+
+    # Extract the token IDs after the [SEP] token and decode them
+    sep_token_id = tokenizer.convert_tokens_to_ids('[SEP]')
+    sep_indices = (tokens['input_ids'][0] == sep_token_id).nonzero(as_tuple=True)[0]
     if sep_indices.numel() > 0:
         sep_index = sep_indices[0].item()  # Take the first occurrence of [SEP]
 
-        # Extract the token IDs after the [SEP] token and decode them
-        predicted_light_ids = predicted_ids[i, sep_index + 1:].tolist()
+        # Extract the light chain part
+        predicted_light_ids = predicted_ids[0, sep_index + 1:].tolist()
         predicted_light_tokens = tokenizer.convert_ids_to_tokens(predicted_light_ids)
 
         # Join the tokens to form the light sequence
         predicted_light_sequence = ''.join(predicted_light_tokens).replace('##', '').replace(' ', '')
-        predicted_light_sequences.append(predicted_light_sequence)
 
-        # Calculate perplexity
-        mask = (tokens['input_ids'][i] == tokenizer.convert_tokens_to_ids('[MASK]')).nonzero(as_tuple=True)[0]
-        perplexity = calculate_perplexity(outputs.logits[i], tokens['input_ids'][i], mask)
-        perplexities.append(perplexity)
+        # Extract the true light sequence from the line
+        true_light_sequence = line.split("[SEP]")[1].replace(' ', '')
+
+        # Calculate pseudo-perplexity
+        pseudo_perplexity = calculate_pseudo_perplexity(model, tokenizer, predicted_light_sequence)
 
         # Calculate global alignment similarity
-        global_similarity = calculate_global_similarity(predicted_light_sequence, sequences_light[i])
-        global_similarities.append(global_similarity)
+        global_similarity = calculate_global_similarity(predicted_light_sequence, true_light_sequence)
 
         # Calculate global alignment BLOSUM score
-        global_blosum_score = calculate_global_blosum_score(predicted_light_sequence, sequences_light[i])
-        global_blosum_scores.append(global_blosum_score)
+        global_blosum_score = calculate_global_blosum_score(predicted_light_sequence, true_light_sequence)
 
         # Calculate hard BLOSUM score and hard similarity
-        hard_blosum_score, hard_similarity = calculate_hard_blosum_and_similarity(sequences_light[i], predicted_light_sequence, substitution_matrix)
-        hard_blosum_scores.append(hard_blosum_score)
-        hard_similarities.append(hard_similarity)
-    else:
-        predicted_light_sequences.append("")
-        perplexities.append(None)
-        global_similarities.append(None)
-        global_blosum_scores.append(None)
-        hard_similarities.append(None)
-        hard_blosum_scores.append(None)
+        hard_blosum_score, hard_similarity = calculate_hard_blosum_and_similarity(true_light_sequence, predicted_light_sequence, substitution_matrix)
 
-# Output the predicted light sequences and metrics
-for i, (pred_seq, pp, global_sim, global_blosum, hard_sim, hard_blosum) in enumerate(zip(predicted_light_sequences, perplexities, global_similarities, global_blosum_scores, hard_similarities, hard_blosum_scores)):
-    print(f"Predicted light sequence {i + 1}: {pred_seq}")
-    print(f"  Perplexity: {pp}")
-    print(f"  Global Alignment Similarity: {global_sim:.4f} %")
-    print(f"  Global Alignment BLOSUM score: {global_blosum}")
-    print(f"  Hard Similarity: {hard_sim:.2f}%")
-    print(f"  Hard BLOSUM score: {hard_blosum}")
+        # Output the results
+        print(f"Predicted light sequence: {predicted_light_sequence}")
+        print(f"  Pseudo-Perplexity: {pseudo_perplexity}")
+        print(f"  Global Alignment Similarity: {global_similarity:.4f}")
+        print(f"  Global Alignment BLOSUM score: {global_blosum_score}")
+        print(f"  Hard Similarity: {hard_similarity:.2f}%")
+        print(f"  Hard BLOSUM score: {hard_blosum_score}")
+    else:
+        print(f"Skipping line due to missing [SEP]: {line}")
+
 
