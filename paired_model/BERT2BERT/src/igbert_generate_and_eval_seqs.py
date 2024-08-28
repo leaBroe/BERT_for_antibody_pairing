@@ -106,6 +106,24 @@ def calculate_global_blosum_score(seq1, seq2):
     alignment = pairwise2.align.globalds(seq1, seq2, substitution_matrix, -10, -0.5)[0]
     return alignment[2]
 
+# Function to calculate hard BLOSUM score and hard similarity
+def calculate_hard_blosum_and_similarity(true_seq, generated_seq, matrix):
+    score = 0
+    matches = 0
+    generated_seq = generated_seq.replace(" ", "")
+    true_seq = true_seq.replace(" ", "")
+    min_length = min(len(true_seq), len(generated_seq))
+    for i in range(min_length):
+        pair = (true_seq[i], generated_seq[i])
+        if pair in matrix:
+            score += matrix[pair]
+        elif (pair[1], pair[0]) in matrix:
+            score += matrix[(pair[1], pair[0])]
+        if true_seq[i] == generated_seq[i]:
+            matches += 1
+    similarity_percentage = (matches / min_length) * 100
+    return score, similarity_percentage
+
 # Load sequences from the input text file
 # Load small test data
 input_file = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated_SMALL.txt'
@@ -171,4 +189,3 @@ for line in lines:
         print(f"Skipping line due to missing [SEP]: {line}")
 
 
-        
