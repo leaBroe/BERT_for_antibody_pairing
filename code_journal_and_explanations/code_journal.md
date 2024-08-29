@@ -3805,6 +3805,267 @@ full eval output file:
 Average BLOSUM Score: 109.48768766087875
 Average Similarity Percentage: 33.21875942607254%
 Mean Perplexity: 1.8054779767990112
+
+# global alignment
+> print(mean_blosum)
+[1] 324.8816
+> print(mean_similarity)
+[1] 62.9108
+> print(median_blosum)
+[1] 322
+> print(median_similarity)
+[1] 61.11111
+```
+
+|  | Mean BLOSUM | Mean BLOSUM with alignment | Median BLOSUM with alignment | Mean similarity with global alignment | Median similarity with global alignment | Mean similarity | Mean perplexity |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| diverse beam search, beam size = 5 | 109.5 | 325 | 322 | 63% | 61.1% | 33.2% | 1.8 |
+|  |  |  |  |  |  |  |  |
+
+# 16/08/2024
+
+## Full evaluation of heavy2light model
+
+run name: 
+
+```bash
+full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_100_lr_0.001_wd_0.1
+```
+
+model path:
+
+```bash
+/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_100_lr_0.001_wd_0.1
+```
+
+Full eval output:
+
+```bash
+/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/heavy2light_60_epochs_beam_search_127858.o
+
+# full test set evaluation:
+Average BLOSUM Score: 109.67296046660418
+Average Similarity Percentage: 33.24877984628893%
+Mean Perplexity: 1.8666492700576782
+```
+
+# Alphafold Structure prediction
+
+model with run name:
+
+```bash
+full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1
+```
+
+
+### example light chain (52319):
+
+```bash
+DIQMTQSPSSLSASVGDRVTITCQASQDISNYLNWYQQKPGKAPKLLIYDASNLETGVPSRFSGSGSGTDFTFTISSLQPEDIATYYCQQYDNLPLTFGGGTKVEIK
+```
+
+DIQMTQSPSSLSASVGDRVTITCQAS → FWR1
+
+QDISNY → CDR1
+
+LNWYQQKPGKAPKLLIY → FWR2
+
+DAS → CDR2
+
+NLETGVPSRFSGSGSGTDFTFTISSLQPEDIATYYC → FWR3
+
+QQYDNLPLT → CDR3
+
+FGGGTKVEIK → FWR4
+
+
+# questions:
+
+test set evaluation of classification task
+
+test set evaluation of heavy and light model
+
+aphafold structure prediction superimposing
+
+perplexity different regions
+
+Similarity quantitative measure gen / true seq?
+
+How to tell whether the input heavy seq actually matters? We know it generates meaningful light sequences, but do we know whether the heavy sequence as input actually has an influence on the generation?
+
+include negative / neutral results in thesis (appendix)?
+
+# To-Do
+
+- [x]  Perplexity calculations per region
+- [x]  alphafold: superimposition for each sequence
+- [x]  New similarity measurement using proper alignment
+
+```bash
+185000 ^ -3 = 1.5793734e-16
+(185000 ^ -3)^(-1/203) = 1.19629965167
+```
+
+
+# Perplexity calculation for each region
+
+**implementing perplexity for a bert2bert encoder-decoder model for each region of the light sequence**
+
+We have 7 regions
+
+fwr1
+
+cdr1
+
+fwr2
+
+cdr2
+
+fwr3
+
+cdr3
+
+fwr4
+
+in the light chain and we want to calculate the perplexity for each region.
+
+e.g. if we want to calculate perplexity for fwr2 we consider the sequence up to fwr2
+
+- > fwr1 cdr1 fwr2 and put the logits of fwr1 cdr1 to 1
+1. generate the sequence -> take the logits (sum to 1= -> 1 position vector -> n
+2. No argmax due to beam search -> probability for each residue in the generated seq -> len(seq) = n
+3. Extract parts from PyIR
+4. i.e. you know where cdr1 is stopped
+
+example:
+
+[FWR1] [CDR1]
+
+ABCD    EFG
+
+logits: 0.1 0.2 0.3 0.1 0.4 0.3 0.1
+
+but since we are interested in CDR+ in this example, we set ABCD logits to 1
+
+n = len(FWR1 + CDR1)
+
+1. Apply they formula
+
+(\prod_E^G P(x_i | x_{<i}))^(1/n)
+
+= (0.4 * 0.9 * 0.1)^{-1/7}
+
+first only make 1 example with the generated sequence:
+
+DIQMTQSPSSLSASVGDRVTFTCRSSQNIGIYLNWYQQKPGRAPTVLIYTASSLQSGVPSRFSGSGSGTDFTLTISSLQPEDFATYFCQQSYSLPYTFGQGARLQIK
+
+where
+
+DIQMTQSPSSLSASVGDRVTFTCRSS -> fwr1
+
+QNIGIY -> cdr1
+
+LNWYQQKPGRAPTVLIY -> fwr2
+
+TAS -> cdr2
+
+SLQSGVPSRFSGSGSGTDFTLTISSLQPEDFATYFC -> fwr3
+
+QQSYSLPYT -> cdr3
+
+FGQGARLQIK -> fwr4
+
+```bash
+# on full test data
+fwr1    1.122398
+cdr1    1.091885
+fwr2    1.032957
+cdr2    1.010399
+fwr3    1.020283
+cdr3    1.028448
+fwr4    1.011886
+```
+
+
+Fully evaluating model with run name: full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1
+
+# MEETING WITH THOMAS - NEXT STEPS:
+
+- check if the alignment has gaps in the cdr loops (ideally we should see the fwr should be more conserved; if we have a lot of gaps in the fwr it can be problematic. It is ok to have more gaps in the cdrs)
+- perplexity is lower than a standsrd protein model because the complexity is lower
+- https://www.nature.com/articles/s41586-022-05371-z --> check what dataset they used and how they extracted ligh coherence, check what they did. How they measure the difference? i.e. what k or lambda was the subpairs. Check if we can make sense from their dataset. Check if their data are available and if they are nice.
+- in our project: plot the distribution (median,sd) of the data already collected (memory cell, b cell etc) for the light coherence
+
+To compare to igbert:
+
+- use igbert mask the entire light chain and ask the model to generate (to compare to out translation task)
+- do the recovery on the light chains with the light_lm, do the recovery on the heavy chains with the heavy_lm
+- do single analysys light chain in light_chain_lm, heavy chain in the heavy_chain_lm, and heavy through the encoder-decoder model
+
+Analysis: 
+If diseases analysis are not working we can put them as negative results (in the thesis not in the paper), the reason can be that there is always a pair of heavy and light preferred.
+Do the reconstruction/recovery for each subtypes.
+Do a non-human one as an out of distribution analysis --> did it learn something specific about humans?
+
+For the aa --> codons translation you can do codon optimization, but not sure if it is worthed. Maybe checked the predicted parts by the PyIr, plot them with pymol and check that everything is ok.  Check what IgBERT did to find the different parts. Maybe in the sabdab database have a pipeline to do it since they did not do it manually.
+
+For the thesis report classification model in the main thesis as previous step for the encoder decoder (translation tasks) model, NSP model goes in the appendix.
+
+# Meeting 27/08/2024
+
+- Do the embeddings for the memory and naive only
+- Do also the non human species analysis (as negative result) --> Do a non-human one as an out of distribution analysis --> did it learn something specific about humans?
+- Do embeddings for the heavy chain model (only the heavy chain model) and check if you can identify different genes
+- check if one specific heavy chain gene has a prefered light chain gene (confusion matrix heavy genes vs light genes) --> from the zurich group they saw that there is always a pair that is preferred for i.e. HIV
+- use broad v gene categories (and then if needed you can go with the smaller ones )
+- check if the alignment has gaps in the cdr loops (ideally we should see the fwr should be more conserved; if we have a lot of gaps in the fwr it can be problematic. It is ok to have more gaps in the cdrs while framework should be conserved) --> check the error rate in the frameworks compared to the cdrs (framework should have a lower error rate compare to cdrs)
+- we can also try to give the starting point of the framework during the translation
+- the embeddings analysis we did (light chain through the encoder decoder model) are 'wrong', we have to re-do them like this:
+- heavy chain into encoder-decoder model (extract the embedding before the beam-search-decoding part)
+- heavy chain into the heavy model
+- light model into the light model
+- Do the recovery on the light chains with the light_lm, do the recovery on the heavy chains with the heavy_lm
+
+To compare to igbert:
+
+- use igbert, with him mask the entire light chain and ask the model to generate (to compare to our translation task)
+
+# Number of Gaps in global alignment
+
+|  | avg_total_insertion_length | avg_total_insertion_widthsum | avg_insertion_length | avg_total_deletion_length | avg_total_deletion_widthsum | avg_deletion_length | avg_total_indel | avg_total_indel_widthsum | avg_score |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| fwr1 | 0.2191358 | 0.2722323 | 0.2191358 | 0.2233505 | 0.2816967 | 0.2233505 | 0.4424862 | 0.553929 | 57.25344 |
+| cdr1 | 0.2333901 | 0.5489554 | 0.2333901 | 0.2475418 | 0.551197 | 0.2475418 | 0.4809319 | 1.100152 | 36.73933 |
+| fwr2 | 0.001430018 | 0.004662456 | 0.001430018 | 0.00138533 | 0.00595841 | 0.00138533 | 0.002815349 | 0.01062087 | 72.45185 |
+| cdr2 | 0.002144772 | 0.008385463 | 0.002144772 | 0.000893655 | 0.003321418 | 0.000893655 | 0.003038427 | 0.01170688 | 39.30957 |
+
+# full evaluation IgBERT2IgBERT
+
+```bash
+Average BLOSUM Score: -51.87956970048654
+Average Similarity Percentage: 10.5584562033619%
+Mean Perplexity: 16.85335922241211
+```
+
+# full evaluation IgBERT MLM with 100% masking of light sequence
+
+on 2000 sequences
+
+```bash
+--- Averages Across All Sequences ---
+Average Perplexity: 136.04740077114104
+Average Global Alignment Similarity: 26.6641
+Average Global Alignment BLOSUM Score: -24.77275
+Average 'Hard' Similarity: 7.02%
+Average 'Hard' BLOSUM Score: -73.1935
+```
+
+do umap only with the memory and naive cells
+
+use h100 with tmux → CUDA_VISIBLE_DEVICES=0
+
+```bash
+CUDA_VISIBLE_DEVICES=0, python ....
 ```
 
 
