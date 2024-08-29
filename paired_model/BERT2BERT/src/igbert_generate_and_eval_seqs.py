@@ -8,46 +8,46 @@ from Bio.Align import substitution_matrices
 tokenizer = BertTokenizer.from_pretrained("Exscientia/IgBert", do_lower_case=False)
 model = BertForMaskedLM.from_pretrained("Exscientia/IgBert")
 
-# Heavy and light chain sequences
-sequences_heavy = [
-    "VQLAQSGSELRKPGASVKVSCDTSGHSFTSNAIHWVRQAPGQGLEWMGWINTDTGTPTYAQGFTGRFVFSLDTSARTAYLQISSLKADDTAVFYCARERDYSDYFFDYWGQGTLVTVSS",
-    "QVQLVESGGGVVQPGRSLRLSCAASGFTFSNYAMYWVRQAPGKGLEWVAVISYDGSNKYYADSVKGRFTISRDNSKNTLYLQMNSLRTEDTAVYYCASGSDYGDYLLVYWGQGTLVTVSS"
-]
+# # Heavy and light chain sequences
+# sequences_heavy = [
+#     "VQLAQSGSELRKPGASVKVSCDTSGHSFTSNAIHWVRQAPGQGLEWMGWINTDTGTPTYAQGFTGRFVFSLDTSARTAYLQISSLKADDTAVFYCARERDYSDYFFDYWGQGTLVTVSS",
+#     "QVQLVESGGGVVQPGRSLRLSCAASGFTFSNYAMYWVRQAPGKGLEWVAVISYDGSNKYYADSVKGRFTISRDNSKNTLYLQMNSLRTEDTAVYYCASGSDYGDYLLVYWGQGTLVTVSS"
+# ]
 
-sequences_light = [
-    "EVVMTQSPASLSVSPGERATLSCRARASLGISTDLAWYQQRPGQAPRLLIYGASTRATGIPARFSGSGSGTEFTLTISSLQSEDSAVYYCQQYSNWPLTFGGGTKVEIK",
-    "ALTQPASVSGSPGQSITISCTGTSSDVGGYNYVSWYQQHPGKAPKLMIYDVSKRPSGVSNRFSGSKSGNTASLTISGLQSEDEADYYCNSLTSISTWVFGGGTKLTVL"
-]
+# sequences_light = [
+#     "EVVMTQSPASLSVSPGERATLSCRARASLGISTDLAWYQQRPGQAPRLLIYGASTRATGIPARFSGSGSGTEFTLTISSLQSEDSAVYYCQQYSNWPLTFGGGTKVEIK",
+#     "ALTQPASVSGSPGQSITISCTGTSSDVGGYNYVSWYQQHPGKAPKLMIYDVSKRPSGVSNRFSGSKSGNTASLTISGLQSEDEADYYCNSLTSISTWVFGGGTKLTVL"
+# ]
 
-# Format the sequences with spaces between each amino acid
-def format_sequence_with_spaces(sequence):
-    return ' '.join(sequence)
+# # Format the sequences with spaces between each amino acid
+# def format_sequence_with_spaces(sequence):
+#     return ' '.join(sequence)
 
-formatted_sequences_heavy = [format_sequence_with_spaces(seq) for seq in sequences_heavy]
-formatted_sequences_light = [format_sequence_with_spaces(seq) for seq in sequences_light]
+# formatted_sequences_heavy = [format_sequence_with_spaces(seq) for seq in sequences_heavy]
+# formatted_sequences_light = [format_sequence_with_spaces(seq) for seq in sequences_light]
 
-# Prepare masked sequences: mask the entire light chain
-paired_sequences = []
-for sequence_heavy, sequence_light in zip(formatted_sequences_heavy, formatted_sequences_light):
-    masked_light = ' '.join(['[MASK]'] * len(sequence_light.split()))
-    paired_sequences.append(sequence_heavy + ' [SEP] ' + masked_light)
+# # Prepare masked sequences: mask the entire light chain
+# paired_sequences = []
+# for sequence_heavy, sequence_light in zip(formatted_sequences_heavy, formatted_sequences_light):
+#     masked_light = ' '.join(['[MASK]'] * len(sequence_light.split()))
+#     paired_sequences.append(sequence_heavy + ' [SEP] ' + masked_light)
 
-# Tokenize the sequences
-tokens = tokenizer.batch_encode_plus(
-    paired_sequences,
-    add_special_tokens=True,
-    pad_to_max_length=True,
-    return_tensors="pt"
-)
+# # Tokenize the sequences
+# tokens = tokenizer.batch_encode_plus(
+#     paired_sequences,
+#     add_special_tokens=True,
+#     pad_to_max_length=True,
+#     return_tensors="pt"
+# )
 
-# Generate predictions for masked tokens
-outputs = model(
-    input_ids=tokens['input_ids'],
-    attention_mask=tokens['attention_mask']
-)
+# # Generate predictions for masked tokens
+# outputs = model(
+#     input_ids=tokens['input_ids'],
+#     attention_mask=tokens['attention_mask']
+# )
 
-# Get the predictions for the masked positions
-predicted_ids = torch.argmax(outputs.logits, dim=-1)
+# # Get the predictions for the masked positions
+# predicted_ids = torch.argmax(outputs.logits, dim=-1)
 
 # Initialize variables for storing metrics
 predicted_light_sequences = []
@@ -68,6 +68,44 @@ def calculate_perplexity(logits, labels, mask):
     perplexity = torch.exp(log_likelihood / mask.sum())
     return perplexity.item()
 
+
+# Function to filter out invalid characters (non-amino acids) from sequences
+def filter_sequence(sequence):
+    valid_amino_acids = set("LAGVESIKRDTPNQFYMHCWXUBZO")  # vocab of IgBERT
+    return ''.join([char for char in sequence if char in valid_amino_acids])
+
+# Function to calculate global alignment similarity
+def calculate_global_similarity(seq1, seq2):
+    seq1 = filter_sequence(seq1)
+    seq2 = filter_sequence(seq2)
+    alignments = pairwise2.align.globalxx(seq1, seq2)
+    top_alignment = alignments[0]
+    return top_alignment[2] / len(seq2) * 100  # Similarity score as a fraction of the true sequence length
+
+# Function to calculate global alignment BLOSUM score
+def calculate_global_blosum_score(seq1, seq2):
+    seq1 = filter_sequence(seq1)
+    seq2 = filter_sequence(seq2)
+    alignment = pairwise2.align.globalds(seq1, seq2, substitution_matrix, -10, -0.5)[0]
+    return alignment[2]
+
+# Function to calculate hard BLOSUM score and hard similarity
+def calculate_hard_blosum_and_similarity(true_seq, generated_seq, matrix):
+    true_seq = filter_sequence(true_seq)
+    generated_seq = filter_sequence(generated_seq)
+    score = 0
+    matches = 0
+    min_length = min(len(true_seq), len(generated_seq))
+    for i in range(min_length):
+        pair = (true_seq[i], generated_seq[i])
+        if pair in matrix:
+            score += matrix[pair]
+        elif (pair[1], pair[0]) in matrix:
+            score += matrix[(pair[1], pair[0])]
+        if true_seq[i] == generated_seq[i]:
+            matches += 1
+    similarity_percentage = (matches / min_length) * 100
+    return score, similarity_percentage
 
 # # Function to calculate pseudo-perplexity
 # def calculate_pseudo_perplexity(model, tokenizer, sequence):
@@ -95,34 +133,6 @@ def calculate_perplexity(logits, labels, mask):
 #     pseudo_perplexity = torch.exp(-avg_log_likelihood)
 #     return pseudo_perplexity.item()
 
-# Function to calculate global alignment similarity
-def calculate_global_similarity(seq1, seq2):
-    alignments = pairwise2.align.globalxx(seq1, seq2)
-    top_alignment = alignments[0]
-    return top_alignment[2] / len(seq2) * 100  # Similarity score as a fraction of the true sequence length
-
-# Function to calculate global alignment BLOSUM score
-def calculate_global_blosum_score(seq1, seq2):
-    alignment = pairwise2.align.globalds(seq1, seq2, substitution_matrix, -10, -0.5)[0]
-    return alignment[2]
-
-# Function to calculate hard BLOSUM score and hard similarity
-def calculate_hard_blosum_and_similarity(true_seq, generated_seq, matrix):
-    score = 0
-    matches = 0
-    generated_seq = generated_seq.replace(" ", "")
-    true_seq = true_seq.replace(" ", "")
-    min_length = min(len(true_seq), len(generated_seq))
-    for i in range(min_length):
-        pair = (true_seq[i], generated_seq[i])
-        if pair in matrix:
-            score += matrix[pair]
-        elif (pair[1], pair[0]) in matrix:
-            score += matrix[(pair[1], pair[0])]
-        if true_seq[i] == generated_seq[i]:
-            matches += 1
-    similarity_percentage = (matches / min_length) * 100
-    return score, similarity_percentage
 
 # Load sequences from the input text file
 # Load small test data
@@ -130,6 +140,8 @@ input_file = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_va
 
 # load FULL test data
 #input_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated.txt"
+
+#input_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated_2000_lines.txt"
 
 with open(input_file, "r") as file:
     lines = file.readlines()
