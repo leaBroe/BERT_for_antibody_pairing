@@ -26,58 +26,109 @@ def initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, gen
     generation_config = GenerationConfig.from_pretrained(generation_config_path)
     return model, tokenizer, generation_config
 
-# Define paths
-model_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/save_adapter_FULL_data_temperature_0.5"
-tokenizer_path = f"{model_path}/checkpoint-336040"
-adapter_path = f"{model_path}/final_adapter"
-generation_config_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/save_adapter_FULL_data_temperature_0.5"
-adapter_name = "heavy2light_adapter"
+# # Define paths
+# model_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/save_adapter_FULL_data_temperature_0.5"
+# tokenizer_path = f"{model_path}/checkpoint-336040"
+# adapter_path = f"{model_path}/final_adapter"
+# generation_config_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/save_adapter_FULL_data_temperature_0.5"
+# adapter_name = "heavy2light_adapter"
+
+# heavy2light 60 epochs diverse beam search beam = 5
+# best model so far
+run_name="full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1"
+model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1"
+tokenizer_path=f"{model_path}/checkpoint-504060"
+adapter_path=f"{model_path}/final_adapter"
+generation_config_path=model_path
+adapter_name="heavy2light_adapter"
 
 # Initialize model and tokenizer
 model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, generation_config_path, device, adapter_name)
 
+
 # FULL test path with disease and species
-test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/species_diseases_subgroups_analysis/spaces_full_test_data_extraction_species_diseases_no_dupl.txt"
+#test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/species_diseases_subgroups_analysis/spaces_full_test_data_extraction_species_diseases_no_dupl.txt"
+
+# FULL test path only with BType memory and naive
+test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/species_diseases_subgroups_analysis/filtered_mem_naive_full_test_data_extraction_species_diseases_no_dupl.csv"
+
+# small test path
+#test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/species_diseases_subgroups_analysis/filtered_mem_naive_full_test_data_extraction_species_diseases_no_dupl_small.csv"
 
 # load test file as csv
 test_df_labels = pd.read_csv(test_file_path)
 
-def load_data(file_path):
-    data = []
-    with open(file_path, 'r') as file:
-        for line in file:
-            data.append(line.strip())
-    sequences = []
-    for entry in data:
-        split_entry = entry.split(' [SEP] ')
-        if len(split_entry) == 2:
-            sequences.append(split_entry)
-        else:
-            print(f"Skipping invalid entry: {entry}")
-    df = pd.DataFrame(sequences, columns=['heavy', 'light'])
-    return df
+# def load_data(file_path):
+#     data = []
+#     with open(file_path, 'r') as file:
+#         for line in file:
+#             data.append(line.strip())
+#     sequences = []
+#     for entry in data:
+#         split_entry = entry.split(' [SEP] ')
+#         if len(split_entry) == 2:
+#             sequences.append(split_entry)
+#         else:
+#             print(f"Skipping invalid entry: {entry}")
+#     df = pd.DataFrame(sequences, columns=['heavy', 'light'])
+#     return df
 
-test_df = load_data(test_file_path)
-light_sequences = test_df["light"].tolist()
-labels = test_df_labels['Disease'].tolist()
+filtered_df = pd.read_csv(test_file_path)
+
+# Extract sequences into lists
+light_sequences = filtered_df['sequence_alignment_aa_light'].tolist()
+heavy_sequences = filtered_df['sequence_alignment_aa_heavy'].tolist()
+
+
+#test_df = load_data(test_file_path)
+#light_sequences = test_df["light"].tolist()
+#heavy_sequences = test_df["heavy"].tolist()
+#labels = test_df_labels['Disease'].tolist()
+labels = test_df_labels['BType'].tolist()
 
 
 
-# Function to extract embeddings from the last layer
-def get_last_layer_embeddings(model, tokenizer, sequences, device):
+# # Function to extract embeddings from the last layer
+# def get_last_layer_embeddings(model, tokenizer, sequences, device):
+#     embeddings = []
+#     model.to(device)
+#     model.eval()
+#     with torch.no_grad():
+#         for seq in sequences:
+#             inputs = tokenizer(seq, return_tensors="pt", padding="max_length", truncation=True, max_length=512).to(device)
+#             outputs = model.encoder(**inputs)
+#             last_hidden_states = outputs.last_hidden_state
+#             embeddings.append(last_hidden_states.mean(dim=1).cpu().numpy())  # Mean pooling
+#     return np.vstack(embeddings)  # Stack into a numpy array
+
+
+def get_decoder_last_layer_embeddings(model, tokenizer, sequences, device):
     embeddings = []
     model.to(device)
     model.eval()
     with torch.no_grad():
         for seq in sequences:
+            # Tokenize the input sequence for the encoder
             inputs = tokenizer(seq, return_tensors="pt", padding="max_length", truncation=True, max_length=512).to(device)
-            outputs = model.encoder(**inputs)
-            last_hidden_states = outputs.last_hidden_state
-            embeddings.append(last_hidden_states.mean(dim=1).cpu().numpy())  # Mean pooling
+            
+            outputs = model(**inputs, decoder_input_ids=inputs['input_ids'])
+
+            # For models returning CausalLMOutputWithCrossAttentions, the hidden states are usually found under 'last_hidden_states' attribute.
+            if hasattr(outputs, 'hidden_states'):
+                last_hidden_states = outputs.hidden_states[-1]  # Access the last layer's hidden states
+            else:
+                last_hidden_states = outputs[0]  # outputs[0]: the last_hidden_state
+
+            # Mean pooling across the sequence length dimension
+            mean_pooled_output = last_hidden_states.mean(dim=1).cpu().numpy()
+            embeddings.append(mean_pooled_output)
+    
     return np.vstack(embeddings)  # Stack into a numpy array
 
+
 # Get embeddings from the last layer
-embeddings = get_last_layer_embeddings(model, tokenizer, light_sequences, device)
+#embeddings = get_last_layer_embeddings(model, tokenizer, light_sequences, device)
+embeddings = get_decoder_last_layer_embeddings(model, tokenizer, heavy_sequences, device)
 
 # # Apply UMAP
 # umap_reducer = umap.UMAP(n_components=2, random_state=42)
@@ -185,7 +236,7 @@ for idx, label in enumerate(unique_labels):
     ax.scatter(tsne_result[indices, 0], tsne_result[indices, 1], label=label, alpha=0.7, color=color, marker=marker, s=10)
 
 # Set title and labels
-ax.set_title('Differentiation of Disease Subtypes via t-SNE of Last Layer Embeddings')
+ax.set_title('Differentiation of B-Cell Types via t-SNE of Last Layer Embeddings')
 ax.set_xlabel('t-SNE Component 1')
 ax.set_ylabel('t-SNE Component 2')
 
@@ -197,4 +248,5 @@ ax.set_position([box.x0, box.y0 + box.height * 0.2,
 # Place the legend below the plot
 ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=3)
 plt.show()
-plt.savefig('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/t-SNE/disease_tsne_heavy2light_FULL_data.png')
+plt.savefig(f'/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/heavy2light/{run_name}/t-SNE/btype_mem_naive_only_tsne_heavy2light_FULL_data.png')
+
