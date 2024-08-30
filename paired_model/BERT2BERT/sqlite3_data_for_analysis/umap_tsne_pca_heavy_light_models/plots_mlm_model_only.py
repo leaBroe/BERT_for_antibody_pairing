@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from transformers import BertModel, BertTokenizer
+from transformers import BertModel, BertTokenizer, RobertaModel, RobertaTokenizer, RobertaForMaskedLM
 import pandas as pd
 from adapters import init
 import umap
@@ -9,22 +9,44 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 
 
+# def get_mlm_last_layer_embeddings(model, tokenizer, sequences, device):
+#     embeddings = []
+#     model.to(device)
+#     model.eval()
+#     with torch.no_grad():
+#         for seq in sequences:
+#             # Tokenize the input sequence
+#             inputs = tokenizer(seq, return_tensors="pt", padding="max_length", truncation=True, max_length=512).to(device)
+            
+#             # Execute the model
+#             outputs = model(**inputs)
+            
+#             # Extract the last hidden states
+#             last_hidden_states = outputs.last_hidden_state  # Accessing last hidden states directly
+#             #last_hidden_states = outputs.hidden_states[-1]
+            
+#             # Mean pooling across the sequence length dimension to get a single vector representation
+#             mean_pooled_output = last_hidden_states.mean(dim=1).cpu().numpy()
+#             embeddings.append(mean_pooled_output)
+    
+#     return np.vstack(embeddings)  # Stack into a numpy array
+
+
 def get_mlm_last_layer_embeddings(model, tokenizer, sequences, device):
     embeddings = []
     model.to(device)
     model.eval()
     with torch.no_grad():
         for seq in sequences:
-            # Tokenize the input sequence
             inputs = tokenizer(seq, return_tensors="pt", padding="max_length", truncation=True, max_length=512).to(device)
             
-            # Execute the model
-            outputs = model(**inputs)
+            # Ensure to request hidden states
+            outputs = model(**inputs, output_hidden_states=True)
             
-            # Extract the last hidden states
-            last_hidden_states = outputs.last_hidden_state  # Accessing last hidden states directly
+            # Access the last hidden states from the hidden_states tuple
+            last_hidden_states = outputs.hidden_states[-1]  # Get the last layer's hidden states
             
-            # Mean pooling across the sequence length dimension to get a single vector representation
+            # Mean pooling across the sequence length dimension
             mean_pooled_output = last_hidden_states.mean(dim=1).cpu().numpy()
             embeddings.append(mean_pooled_output)
     
@@ -35,11 +57,14 @@ def get_mlm_last_layer_embeddings(model, tokenizer, sequences, device):
 small_heavy_encoder = "/ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-117674391"
 small_light_decoder =  "/ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-56556520"
 
-model_name = "heavy_model"
+model_name = "light_model"
 
 # Load a pre-trained BERT model and tokenizer
-tokenizer = BertTokenizer.from_pretrained(small_heavy_encoder)
-model = BertModel.from_pretrained(small_heavy_encoder)
+#tokenizer = BertTokenizer.from_pretrained(small_heavy_encoder)
+#model = BertModel.from_pretrained(small_heavy_encoder)
+
+tokenizer = BertTokenizer.from_pretrained(small_light_decoder)
+model = RobertaForMaskedLM.from_pretrained(small_light_decoder)
 
 
 # Device configuration
@@ -87,50 +112,51 @@ labels = test_df_labels['BType'].tolist()
 
 
 # Get embeddings
-embeddings = get_mlm_last_layer_embeddings(model, tokenizer, heavy_sequences, device)
+#embeddings = get_mlm_last_layer_embeddings(model, tokenizer, heavy_sequences, device)
+embeddings = get_mlm_last_layer_embeddings(model, tokenizer, light_sequences, device)
 print(embeddings)  # This will print the array of embeddings
 
 
-# Apply UMAP
-umap_reducer = umap.UMAP(n_components=2, random_state=42)
-umap_result = umap_reducer.fit_transform(embeddings)
+# # Apply UMAP
+# umap_reducer = umap.UMAP(n_components=2, random_state=42)
+# umap_result = umap_reducer.fit_transform(embeddings)
 
-# Ensure there are enough distinct colors
-cmap = plt.get_cmap('tab20')
-colors = cmap(np.linspace(0, 1, 20))
+# # Ensure there are enough distinct colors
+# cmap = plt.get_cmap('tab20')
+# colors = cmap(np.linspace(0, 1, 20))
 
-# If you need more than 20 colors, combine multiple colormaps or use ListedColormap
-additional_cmap = plt.get_cmap('tab20b')
-additional_colors = additional_cmap(np.linspace(0, 1, 20))
+# # If you need more than 20 colors, combine multiple colormaps or use ListedColormap
+# additional_cmap = plt.get_cmap('tab20b')
+# additional_colors = additional_cmap(np.linspace(0, 1, 20))
 
-# Combine colors
-all_colors = np.vstack((colors, additional_colors))
+# # Combine colors
+# all_colors = np.vstack((colors, additional_colors))
 
-# Plot UMAP result with labels
-fig, ax = plt.subplots(figsize=(10, 8))  # Create figure and axis
-for idx, label in enumerate(set(labels)):
-    indices = [i for i, l in enumerate(labels) if l == label]
-    color = all_colors[idx % len(all_colors)]  # Cycle through colors if more subtypes than colors
-    # plot u-map as scatter plot
-    ax.scatter(umap_result[indices, 0], umap_result[indices, 1], label=label, alpha=0.5, color=color, s=10)
-    # plot u-map as hexbin plot
-    #ax.hexbin(umap_result[indices, 0], umap_result[indices, 1], label=label, color=color)
+# # Plot UMAP result with labels
+# fig, ax = plt.subplots(figsize=(10, 8))  # Create figure and axis
+# for idx, label in enumerate(set(labels)):
+#     indices = [i for i, l in enumerate(labels) if l == label]
+#     color = all_colors[idx % len(all_colors)]  # Cycle through colors if more subtypes than colors
+#     # plot u-map as scatter plot
+#     ax.scatter(umap_result[indices, 0], umap_result[indices, 1], label=label, alpha=0.5, color=color, s=10)
+#     # plot u-map as hexbin plot
+#     #ax.hexbin(umap_result[indices, 0], umap_result[indices, 1], label=label, color=color)
     
-ax.set_title('UMAP Visualization of B-Type Types in Last Layer Embeddings')
-ax.set_xlabel('UMAP Component 1')
-ax.set_ylabel('UMAP Component 2')
+# ax.set_title('UMAP Visualization of B-Type Types in Last Layer Embeddings')
+# ax.set_xlabel('UMAP Component 1')
+# ax.set_ylabel('UMAP Component 2')
 
-# Shrink current axis's height by 10% on the bottom
-box = ax.get_position()
-ax.set_position([box.x0, box.y0 + box.height * 0.2,
-                 box.width, box.height * 0.8])
+# # Shrink current axis's height by 10% on the bottom
+# box = ax.get_position()
+# ax.set_position([box.x0, box.y0 + box.height * 0.2,
+#                  box.width, box.height * 0.8])
 
-# Place the legend below the plot
-ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=5)
-# Save the plot before showing
-plt.savefig(f'/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/heavy2light/{model_name}/UMAP/Btypes_heavy_mlm_heavy2light_FULL_data.png')
-# Display the plot
-plt.show()
+# # Place the legend below the plot
+# ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=5)
+# # Save the plot before showing
+# plt.savefig(f'/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/{model_name}/UMAP/Btypes_light_mlm_heavy2light_FULL_data_robertaformaskedlm.png')
+# # Display the plot
+# plt.show()
 
 # Perform PCA
 pca = PCA(n_components=2)
@@ -170,7 +196,7 @@ ax.set_position([box.x0, box.y0 + box.height * 0.2,
 # Place the legend below the plot
 ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=5)
 plt.show()
-plt.savefig(f'/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/heavy2light/{model_name}/PCA/Btypes_heavy_mlm_heavy2light_FULL_data.png')
+plt.savefig(f'/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/{model_name}/PCA/Btypes_light_mlm_heavy2light_FULL_data.png')
 
 # Perform t-SNE
 tsne = TSNE(n_components=2, random_state=42)
@@ -209,5 +235,5 @@ ax.set_position([box.x0, box.y0 + box.height * 0.2,
 # Place the legend below the plot
 ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=3)
 plt.show()
-plt.savefig(f'/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/heavy2light/{model_name}/t-SNE/Btypes_heavy_mlm_heavy2light_FULL_data.png')
+plt.savefig(f'/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/{model_name}/t-SNE/Btypes_light_mlm_heavy2light_FULL_data.png')
 
