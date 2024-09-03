@@ -118,8 +118,8 @@ def load_data(file_path):
     df = pd.DataFrame(sequences, columns=['heavy', 'light'])
     return df
 
-target = 'locus'
-#target = 'subtype'
+#target = 'locus'
+target = 'subtype'
 
 test_df = load_data(test_file_path)
 heavy_sequences = test_df["heavy"].tolist()
