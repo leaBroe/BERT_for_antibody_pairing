@@ -4068,6 +4068,76 @@ use h100 with tmux → CUDA_VISIBLE_DEVICES=0
 CUDA_VISIBLE_DEVICES=0, python ....
 ```
 
+# 04/09/2024
 
+Data Processing for UMAP/t-SNE and PCA plots for heavy sequences (heavy MLM model)
 
+/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/heavy_model_vdj_gene_analysis
+
+used /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/src/extract_columns_from_sqlite_db.sh
+
+output:
+
+```bash
+/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/heavy_vdj_genes_paired_oas_db_full_extraction.csv
+```
+
+used 
+
+```bash
+/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/match_sequences.jl
+```
+
+to extract the test set sequences
+
+add header
+
+```bash
+"Species,Disease,BType,Isotype_light,locus_heavy,locus_light,v_call_heavy,d_call_heavy,j_call_heavy,sequence_alignment_aa_light,sequence_alignment_light,sequence_alignment_aa_heavy,sequence_alignment_heavy,sequence_alignment_heavy_sep_light"
+
+```
+
+remove duplicates from heavy[SEP]light column (last column → $NF)
+
+```bash
+awk -F ',' '!seen[$NF]++' /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/heavy_vdj_genes_paired_oas_db_test_set_extraction.txt > /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/heavy_vdj_genes_paired_oas_db_test_set_extraction_no_dupl.txt
+```
+
+use 
+
+```bash
+/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/species_diseases_subgroups_analysis/add_spaces_between_AAs.py
+```
+
+to add spaces between the amino acids
+
+Create a file of the format: sequence_alignment_heavy_sep_light, v_call_heavy,d_call_heavy,j_call_heavy
+
+```bash
+awk -F, 'BEGIN {OFS=","} {print $7, $8, $9, $14}' /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/heavy_model_vdj_gene_analysis/spaces_heavy_vdj_genes_paired_oas_db_test_set_extraction_no_dupl.txt > /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/heavy_model_vdj_gene_analysis/relevant_cols_spaces_heavy_vdj_genes_paired_oas_db_test_set_extraction_no_dupl.txt
+```
+
+**Explanation:**
+
+•	-F, tells awk to treat commas as field separators (since it’s a CSV file).
+
+•	OFS="," ensures that the output fields are separated by commas.
+
+•	{print $7, $8, $9, $14}:
+
+•	$7 corresponds to v_call_heavy.
+
+•	$8 corresponds to d_call_heavy.
+
+•	$9 corresponds to j_call_heavy.
+
+•	$14 corresponds to sequence_alignment_heavy_sep_light.
+
+ v_call_heavy,d_call_heavy,j_call_heavy have the form IGHV4-38-2*01,IGHD5-12*01,IGHJ4*02, only take the first part until the first - and make a new column with this informaton called v_call_fewer_heavy,d_call_fewer_heavy,j_call_fewer_heavy
+
+use for this the script:
+
+```bash
+/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/heavy_model_vdj_gene_analysis/extract_relevant_gene_names.py
+```
 
