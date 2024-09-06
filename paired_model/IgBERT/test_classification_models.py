@@ -1,10 +1,11 @@
 import torch
 from torch.utils.data import Dataset
-from transformers import BertTokenizer, BertForSequenceClassification, TrainingArguments, AdapterTrainer
+from transformers import BertTokenizer, BertForSequenceClassification, TrainingArguments
 import pandas as pd
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 import wandb
-from adapters import BnConfig
+from adapters import BnConfig, Seq2SeqAdapterTrainer, AdapterTrainer, BertAdapterModel, init
+
 
 # Load the test dataset from a CSV file
 def load_paired_data(data_file):
@@ -66,23 +67,29 @@ def compute_metrics(pred):
 # Initialize W&B for logging
 wandb.init(
     project="classification_heavy_light_own_classifier",  # Set your W&B project name
-    name="test_set_eval_adapters_FULL_data_lr_2e-06_batch_64_epochs_10_weight_decay_0.3_warmup_steps_1000_max_grad_norm1.0",   # Name your evaluation run
+    name="test_set_eval_FULL_DATA_lr_2e-06_batch_64_epochs_40_weight_decay_0.3_warmup_steps_1000_max_grad_norm_1.0",   # Name your evaluation run
     config={
         "model": "BertForSequenceClassification",  # Log any relevant model configurations
         "batch_size": 64,
         "max_length": 256
     }
 )
-
 # Load the test data
 
 # small test file
-test_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/small_paired_full_seqs_sep_test_with_unpaired.csv"
+#test_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/small_paired_full_seqs_sep_test_with_unpaired.csv"
+
+# full test file
+test_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_full_seqs_sep_test_with_unpaired.csv"
+
 test_heavy, test_light, test_labels = load_paired_data(test_file)
+
+run_name = "FULL_DATA_lr_2e-06_batch_64_epochs_40_weight_decay_0.3_warmup_steps_1000_max_grad_norm_1.0"
+print(f"Running full evaluation of test set for: {run_name}")
 
 # Set up the tokenizer and model
 bert_model_name = 'Exscientia/IgBERT'
-adapter_output_dir = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/checkpoints_light_heavy_classification/adapters_FULL_data_lr_2e-06_batch_64_epochs_10_weight_decay_0.3_warmup_steps_1000_max_grad_norm1.0/class_adap"
+adapter_output_dir = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/checkpoints_light_heavy_classification/FULL_DATA_lr_2e-06_batch_64_epochs_40_weight_decay_0.3_warmup_steps_1000_max_grad_norm_1.0"
 max_length = 256
 num_classes = 2
 batch_size = 64
@@ -92,7 +99,8 @@ tokenizer = BertTokenizer.from_pretrained(bert_model_name)
 model = BertForSequenceClassification.from_pretrained(adapter_output_dir, num_labels=num_classes)
 
 # Load the adapter (if using adapters)
-model.load_adapter(adapter_output_dir, "class_adap")
+init(model)
+model.load_adapter("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/checkpoints_light_heavy_classification/FULL_DATA_lr_2e-06_batch_64_epochs_40_weight_decay_0.3_warmup_steps_1000_max_grad_norm_1.0/checkpoint-672080/class_adap")
 model.set_active_adapters("class_adap")
 model.to('cuda' if torch.cuda.is_available() else 'cpu')
 
