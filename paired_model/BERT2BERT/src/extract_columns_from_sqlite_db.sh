@@ -1,18 +1,23 @@
 #!/bin/bash
 
-#SBATCH --gres=gpu:h100:1
+#SBATCH --gres=gpu:alphafold:1
 #SBATCH --job-name=extract_columns_from_slite_db_analysis
 #SBATCH --output=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/extract_columns_from_slite_db_analysis_%j.o
 #SBATCH --error=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/extract_columns_from_slite_db_analysis_%j.e
 
 
 # Path to the database
-DATABASE_PATH="/ibmm_data2/oas_database/OAS_paired.db"
+# paired database
+#DATABASE_PATH="/ibmm_data2/oas_database/OAS_paired.db"
+
+# heavy database
+DATABASE_PATH="/ibmm_data2/oas_database/OAS_heavy_part1.db"
 
 # Output CSV file
 #OUTPUT_FILE="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/full_paired_data_for_analysis.csv"
 #OUTPUT_FILE="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/Btypes_full_paired_data_for_analysis.csv"
-OUTPUT_FILE="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/species_subgroups_analysis/paired_oas_db_full_extraction.csv"
+#OUTPUT_FILE="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/heavy_vdj_genes_paired_oas_db_full_extraction.csv"
+OUTPUT_FILE="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/umap_tsne_pca_heavy_light_models/full_extraction_heavy_unpaired_seqs.csv"
 
 
 # Columns to extract
@@ -27,14 +32,21 @@ OUTPUT_FILE="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqli
 
 #COLUMNS="BType, sequence_alignment_aa_light, sequence_alignment_light, sequence_alignment_aa_heavy, sequence_alignment_heavy, sequence_alignment_heavy_sep_light"
 
-COLUMNS="Species, Disease, BType, Isotype_light, sequence_alignment_aa_light, sequence_alignment_light, sequence_alignment_aa_heavy, sequence_alignment_heavy, sequence_alignment_heavy_sep_light"
+# paired
+#COLUMNS="Species, Disease, BType, Isotype_light, locus_heavy, locus_light, v_call_heavy, d_call_heavy, j_call_heavy, sequence_alignment_aa_light, sequence_alignment_light, sequence_alignment_aa_heavy, sequence_alignment_heavy, sequence_alignment_heavy_sep_light"
 
+# unpiared heavy
+COLUMNS="locus, v_call, d_call, j_call, sequence_alignment_aa, fwr1_aa, cdr1_aa, fwr2_aa, cdr2_aa, fwr3_aa, fwr4_aa, cdr3_aa, BType, Disease, Age, Species, Vaccine"
+
+#TABLE_NAME="all_human_paired"
+TABLE_NAME="human_unpaired_novaccine_nodisease_heavy"
+#v_call_heavy	d_call_heavy	j_call_heavy
 
 # Run SQLite commands
 sqlite3 $DATABASE_PATH <<EOF
 .mode csv
 .output $OUTPUT_FILE
-SELECT $COLUMNS FROM all_human_paired;
+SELECT $COLUMNS FROM $TABLE_NAME;
 .output stdout
 .quit
 EOF
