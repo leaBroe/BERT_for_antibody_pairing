@@ -62,12 +62,16 @@ def compute_metrics(pred):
         'recall': recall
     }
 
+#run_name = "FULL_DATA_lr_2e-06_batch_64_epochs_40_weight_decay_0.3_warmup_steps_1000_max_grad_norm_1.0"
+#run_name = "adapters_FULL_data_lr_2e-06_batch_64_epochs_10_weight_decay_0.3_warmup_steps_1000_max_grad_norm1.0"
+run_name="FULL_DATA_lr_2e-05_batch_64_epochs_10_weight_decay_0.1_warmup_steps_500_max_grad_norm_1.0"
+print(f"Running full evaluation of test set for: {run_name}")
 
 
 # Initialize W&B for logging
 wandb.init(
     project="classification_heavy_light_own_classifier",  # Set your W&B project name
-    name="test_set_eval_FULL_DATA_lr_2e-06_batch_64_epochs_40_weight_decay_0.3_warmup_steps_1000_max_grad_norm_1.0",   # Name your evaluation run
+    name=f"test_set_eval_{run_name}",   # Name your evaluation run
     config={
         "model": "BertForSequenceClassification",  # Log any relevant model configurations
         "batch_size": 64,
@@ -84,12 +88,11 @@ test_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/paired_
 
 test_heavy, test_light, test_labels = load_paired_data(test_file)
 
-run_name = "FULL_DATA_lr_2e-06_batch_64_epochs_40_weight_decay_0.3_warmup_steps_1000_max_grad_norm_1.0"
-print(f"Running full evaluation of test set for: {run_name}")
-
+# if full model was saved, use this for BertForSequenceClassification.from_pretrained and then load the adapter, if only the adapter was saved, load IgBERT and then load the adapter
 # Set up the tokenizer and model
 bert_model_name = 'Exscientia/IgBERT'
-adapter_output_dir = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/checkpoints_light_heavy_classification/FULL_DATA_lr_2e-06_batch_64_epochs_40_weight_decay_0.3_warmup_steps_1000_max_grad_norm_1.0"
+#adapter_output_dir = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/checkpoints_light_heavy_classification/FULL_DATA_lr_2e-06_batch_64_epochs_40_weight_decay_0.3_warmup_steps_1000_max_grad_norm_1.0"
+adapter_output_dir = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/checkpoints_light_heavy_classification/FULL_DATA_lr_2e-05_batch_64_epochs_10_weight_decay_0.1_warmup_steps_500_max_grad_norm_1.0"
 max_length = 256
 num_classes = 2
 batch_size = 64
@@ -97,15 +100,24 @@ batch_size = 64
 # Load the tokenizer and model
 tokenizer = BertTokenizer.from_pretrained(bert_model_name)
 model = BertForSequenceClassification.from_pretrained(adapter_output_dir, num_labels=num_classes)
+#model = BertForSequenceClassification.from_pretrained(bert_model_name, num_labels=num_classes)
 
 # Load the adapter (if using adapters)
 init(model)
-model.load_adapter("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/checkpoints_light_heavy_classification/FULL_DATA_lr_2e-06_batch_64_epochs_40_weight_decay_0.3_warmup_steps_1000_max_grad_norm_1.0/checkpoint-672080/class_adap")
+#model.load_adapter("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/checkpoints_light_heavy_classification/FULL_DATA_lr_2e-06_batch_64_epochs_40_weight_decay_0.3_warmup_steps_1000_max_grad_norm_1.0/checkpoint-672080/class_adap")
+#model.load_adapter("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/checkpoints_light_heavy_classification/adapters_FULL_data_lr_2e-06_batch_64_epochs_10_weight_decay_0.3_warmup_steps_1000_max_grad_norm1.0/class_adap")
+model.load_adapter("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/checkpoints_light_heavy_classification/FULL_DATA_lr_2e-05_batch_64_epochs_10_weight_decay_0.1_warmup_steps_500_max_grad_norm_1.0/checkpoint-50406/class_adap")
 model.set_active_adapters("class_adap")
 model.to('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Create the test dataset
 test_dataset = PairedChainsDataset(test_heavy, test_light, test_labels, tokenizer, max_length)
+
+# print lengths of test_heavy, test_light, test_labels
+print(f"Length of test_heavy: {len(test_heavy)}")
+print(f"Length of test_light: {len(test_light)}")
+print(f"Length of test_labels: {len(test_labels)}")
+
 
 # Define training arguments (for evaluation)
 training_args = TrainingArguments(
