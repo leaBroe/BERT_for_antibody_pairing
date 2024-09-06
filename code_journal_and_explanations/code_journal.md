@@ -4141,3 +4141,214 @@ use for this the script:
 /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/heavy_model_vdj_gene_analysis/extract_relevant_gene_names.py
 ```
 
+# Used models
+
+|  | Architecture | Base Model | Used with Adapters | Number of trainable parameters | Number of trainable parameters from adapter | Dataset | Task | Reference |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Heavy MLM model | RoBERTa | Trained drom Scratch | No | 13’150’745 | - | Heavy Chains Unpaired | MLM |  |
+| Light MLM model | RoBERTa | Trained from Scratch | No | 13’150’745 | - | Light Chains Unpaired | MLM |  |
+| NSP model | BERT | ProtBERT bfd | No | 419’931’136 | - | Paired Sequences | MLM & NSP | Rost et al. (2020) |
+| Classification model | BERT | IgBERT | Yes | 427’862’786 | 7’931’650 | Paired Sequences | Sequence Classification |  |
+| Encoder-Decoder model “Heavy2Light” | RoBERTa | Encoder: Heavy MLM model Decoder: Light MLM model  | Yes | 31’173’273 | 4’872’832 | Paired Sequences | Text Generation |  |
+| Encoder-Decoder model “IgBERT2IgBERT” | BERT  | Encoder: IgBERT Decoder: IgBERT | Yes | 985’701’790 | 145’837’440 | Paired Sequences | Text Generation |  |
+| IgBERT MLM model | BERT | IgBERT | No | 418’881’536 | - | Paired Sequences | MLM with 100% masking of light chain |  |
+
+# Heavy and Light MLM models Results
+
+|  | Heavy MLM model small conf. | Heavy MLM model big conf. | Light MLM model small conf. | Light MLM model big conf. |
+| --- | --- | --- | --- | --- |
+| Epochs | 19 | 9 | 44 | 25 |
+| Learning Rate | 5e-5 | 5e-5 | 5e-5 | 5e-5 |
+| Weight Decay | 0.1 | 0.1 | 0.1 | 0.1 |
+| Train loss | 0.4537 | 0.4353 | 0.3968 | 0.361 |
+| Eval Loss | 0.4359 | 0.4235 | 0.6291 | 0.5449 |
+| Accuracy | 88.95% | 89.12% | 84.3683 % | 86.52% |
+|  |  |  |  |  |
+
+```bash
+Running full evaluation of test set for: FULL_DATA_lr_2e-06_batch_64_epochs_40_weight_decay_0.3_warmup_steps_1000_max_grad_norm_1.0
+Length of test_heavy: 134418
+Length of test_light: 134418
+Length of test_labels: 134418
+Test set results: {'eval_loss': 0.7342624664306641, 'eval_accuracy': 0.5, 'eval_f1': 0.6666666666666666, 'eval_precision': 0.5, 'eval_recall': 1.0, 'eval_runtime': 1436.6958, 'eval_samples_per_second': 93.561, 'eval_steps_per_second': 1.462}
+Predicted pairing for heavy: EVQLVESGGGLVKPGGSLRLSCAASGFTFSSYSMNWVRQAPGKGLEWVSSISSSSSYIYYADSVKGRFTISRDNAKNSLYLQMNSLRAEDTAVYYCARDEGVPMVTPPYYYYYMDVWGKGTTVTVSS and light: SSELTQDPAVSVALGQTVRITCQGDSLRSYYASWYQQKPGQAPVLVIYGKNNRPSGIPDRFSGSSSGNTASLTITGAQAEDEADYYCNSRDSSGNHWVFGGGTKLTVL: paired
+Predicted pairing for heavy: EVQLVESGGGLVQPGGSLRLSCAASGFTFSSYWMSWVRQAPGKGLEWVANIKQDGSEKYYVDSVKGRFTISRDNAKNSLYLQMNSLRAEDTAVYYCARDLSGRVPEFDYWGQGTLVTVSS and light: SYELTQPPSVSVSPGQTASITCSGDKLGDKYACWYQQKPGQSPVLVIYQDSKRPSGIPERFSGSNSGNTATLTISGTQAMDEADYYCQAWDSSTVVFGGGTKLTVL: paired
+Predicted pairing for heavy: QVQLVQSGAEVKKPGSSVRVSCKASGGTFSRYAISWVRQAPGQGLEWMGGIVPTLGPANYAQKFQGRVTILADESTTTAYMELSSLRSDDTAMYYCATDRSGVFDYWGQGTLVTVSS and light: DIQMTQSPLSLSASMGDRVSLTCRASQSISVYLNWYQQKPGKAPKLLIYAAFSLQSGVPSRFSGSGSGTDFTLTISSLQPEDSATYYCQQSYSTPWTFGQGTKVEIK: paired
+Predicted pairing for heavy: QVQLVQSGADEKKPGASVKVSCKASGFTFISYYFHWVRQAPGHGLEWMGVINPNGGRASYAQKFQGRITMTTDTSTSTVYMELSSLRSEDTAVYYCARENRVWGQGTRVTVSS and light: DIQMTQSPSSLSASVGDSVTITCQASQDINNYLNWFQQKPGEAPKLLIYGASNLETGVPSRFSGGGSGTDFTFTITSLQPEDIATYYCQQYDNLFSFGPGTKVDFK: paired
+Predicted pairing for heavy: QVQLVESGGGVVQPGKSLRLSCAASRFTFSNYGMHWVRQAPGKGLEWVAVVSYDETYKYYADSVKGRFTISRDNSKNTLYLQMDSLRADDSAVYYCAKEEYSARWYEEGYYFDYWGQGTLVTVSS and light: DIQMTQSPSTLSASVGDRVTITCRASQSISSWLAWYQQKPGKAPKLLIYKASSLESGVPSRFSGSGSGTEFTLTISSLQPDDFATYYCQQYNSYWTFGQGTKVEIK: paired
+```
+
+```bash
+Running full evaluation of test set for: adapters_FULL_data_lr_2e-06_batch_64_epochs_10_weight_decay_0.3_warmup_steps_1000_max_grad_norm1.0
+Length of test_heavy: 134418
+Length of test_light: 134418
+Length of test_labels: 134418
+Test set results: {'eval_loss': 0.7002736330032349, 'eval_accuracy': 0.5, 'eval_f1': 0.6666666666666666, 'eval_precision': 0.5, 'eval_recall': 1.0, 'eval_runtime': 1435.9076, 'eval_samples_per_second': 93.612, 'eval_steps_per_second': 1.463}
+Predicted pairing for heavy: EVQLVESGGGLVKPGGSLRLSCAASGFTFSSYSMNWVRQAPGKGLEWVSSISSSSSYIYYADSVKGRFTISRDNAKNSLYLQMNSLRAEDTAVYYCARDEGVPMVTPPYYYYYMDVWGKGTTVTVSS and light: SSELTQDPAVSVALGQTVRITCQGDSLRSYYASWYQQKPGQAPVLVIYGKNNRPSGIPDRFSGSSSGNTASLTITGAQAEDEADYYCNSRDSSGNHWVFGGGTKLTVL: paired
+Predicted pairing for heavy: EVQLVESGGGLVQPGGSLRLSCAASGFTFSSYWMSWVRQAPGKGLEWVANIKQDGSEKYYVDSVKGRFTISRDNAKNSLYLQMNSLRAEDTAVYYCARDLSGRVPEFDYWGQGTLVTVSS and light: SYELTQPPSVSVSPGQTASITCSGDKLGDKYACWYQQKPGQSPVLVIYQDSKRPSGIPERFSGSNSGNTATLTISGTQAMDEADYYCQAWDSSTVVFGGGTKLTVL: paired
+Predicted pairing for heavy: QVQLVQSGAEVKKPGSSVRVSCKASGGTFSRYAISWVRQAPGQGLEWMGGIVPTLGPANYAQKFQGRVTILADESTTTAYMELSSLRSDDTAMYYCATDRSGVFDYWGQGTLVTVSS and light: DIQMTQSPLSLSASMGDRVSLTCRASQSISVYLNWYQQKPGKAPKLLIYAAFSLQSGVPSRFSGSGSGTDFTLTISSLQPEDSATYYCQQSYSTPWTFGQGTKVEIK: paired
+Predicted pairing for heavy: QVQLVQSGADEKKPGASVKVSCKASGFTFISYYFHWVRQAPGHGLEWMGVINPNGGRASYAQKFQGRITMTTDTSTSTVYMELSSLRSEDTAVYYCARENRVWGQGTRVTVSS and light: DIQMTQSPSSLSASVGDSVTITCQASQDINNYLNWFQQKPGEAPKLLIYGASNLETGVPSRFSGGGSGTDFTFTITSLQPEDIATYYCQQYDNLFSFGPGTKVDFK: paired
+Predicted pairing for heavy: QVQLVESGGGVVQPGKSLRLSCAASRFTFSNYGMHWVRQAPGKGLEWVAVVSYDETYKYYADSVKGRFTISRDNSKNTLYLQMDSLRADDSAVYYCAKEEYSARWYEEGYYFDYWGQGTLVTVSS and light: DIQMTQSPSTLSASVGDRVTITCRASQSISSWLAWYQQKPGKAPKLLIYKASSLESGVPSRFSGSGSGTEFTLTISSLQPDDFATYYCQQYNSYWTFGQGTKVEIK: paired
+
+```
+
+```bash
+Running full evaluation of test set for: FULL_DATA_lr_2e-05_batch_64_epochs_10_weight_decay_0.1_warmup_steps_500_max_grad_norm_1.0
+Length of test_heavy: 134418
+Length of test_light: 134418
+Length of test_labels: 134418
+Test set results: {'eval_loss': 0.849236011505127, 'eval_accuracy': 0.5, 'eval_f1': 0.0, 'eval_precision': 1.0, 'eval_recall': 0.0, 'eval_runtime': 1427.6909, 'eval_samples_per_second': 94.151, 'eval_steps_per_second': 1.472}
+Predicted pairing for heavy: EVQLVESGGGLVKPGGSLRLSCAASGFTFSSYSMNWVRQAPGKGLEWVSSISSSSSYIYYADSVKGRFTISRDNAKNSLYLQMNSLRAEDTAVYYCARDEGVPMVTPPYYYYYMDVWGKGTTVTVSS and light: SSELTQDPAVSVALGQTVRITCQGDSLRSYYASWYQQKPGQAPVLVIYGKNNRPSGIPDRFSGSSSGNTASLTITGAQAEDEADYYCNSRDSSGNHWVFGGGTKLTVL: not paired
+Predicted pairing for heavy: EVQLVESGGGLVQPGGSLRLSCAASGFTFSSYWMSWVRQAPGKGLEWVANIKQDGSEKYYVDSVKGRFTISRDNAKNSLYLQMNSLRAEDTAVYYCARDLSGRVPEFDYWGQGTLVTVSS and light: SYELTQPPSVSVSPGQTASITCSGDKLGDKYACWYQQKPGQSPVLVIYQDSKRPSGIPERFSGSNSGNTATLTISGTQAMDEADYYCQAWDSSTVVFGGGTKLTVL: not paired
+Predicted pairing for heavy: QVQLVQSGAEVKKPGSSVRVSCKASGGTFSRYAISWVRQAPGQGLEWMGGIVPTLGPANYAQKFQGRVTILADESTTTAYMELSSLRSDDTAMYYCATDRSGVFDYWGQGTLVTVSS and light: DIQMTQSPLSLSASMGDRVSLTCRASQSISVYLNWYQQKPGKAPKLLIYAAFSLQSGVPSRFSGSGSGTDFTLTISSLQPEDSATYYCQQSYSTPWTFGQGTKVEIK: not paired
+Predicted pairing for heavy: QVQLVQSGADEKKPGASVKVSCKASGFTFISYYFHWVRQAPGHGLEWMGVINPNGGRASYAQKFQGRITMTTDTSTSTVYMELSSLRSEDTAVYYCARENRVWGQGTRVTVSS and light: DIQMTQSPSSLSASVGDSVTITCQASQDINNYLNWFQQKPGEAPKLLIYGASNLETGVPSRFSGGGSGTDFTFTITSLQPEDIATYYCQQYDNLFSFGPGTKVDFK: not paired
+Predicted pairing for heavy: QVQLVESGGGVVQPGKSLRLSCAASRFTFSNYGMHWVRQAPGKGLEWVAVVSYDETYKYYADSVKGRFTISRDNSKNTLYLQMDSLRADDSAVYYCAKEEYSARWYEEGYYFDYWGQGTLVTVSS and light: DIQMTQSPSTLSASVGDRVTITCRASQSISSWLAWYQQKPGKAPKLLIYKASSLESGVPSRFSGSGSGTEFTLTISSLQPDDFATYYCQQYNSYWTFGQGTKVEIK: not paired
+
+```
+
+### Alternative Approach for classification task? SVM: Workflow for Classifying Paired and Non-Paired Antibody Chains
+
+### 1. **Dataset Structure**
+
+You will have pairs of sequences, each consisting of:
+
+- A heavy chain sequence.
+- A light chain sequence.
+- A binary label: `1` (paired) or `0` (not paired).
+
+Example dataset:
+
+| Heavy Chain Sequence | Light Chain Sequence | Label |
+| --- | --- | --- |
+| EVQLVESGGGLVQPGGSLRLSCAASGFTFSSYWMSWVRQAPGKGLEWVANIK... | SYELTQPPSVSVSPGQTASITCSGDKLGDKYACWYQQKPGQSPVLVIYQD... | 1 |
+| QVQLVQSGAEVKKPGSSVRVSCKASGGTFSRYAISWVRQAPGQGLEWMGGI... | DIQMTQSPLSLSASMGDRVSLTCRASQSISVYLNWYQQKPGKAPKLLIYA... | 0 |
+
+Each row in the dataset consists of a heavy chain, a light chain, and a label indicating whether they are paired.
+
+### 2. **Feature Engineering**
+
+Since SVM models require numerical inputs, you need to convert the heavy and light chain sequences into meaningful numerical features that can capture the relationship between the two chains. Here are a few approaches for feature extraction:
+
+### a. **Pairwise Amino Acid Composition (AAC)**
+
+You can compute the amino acid composition for each chain separately, then concatenate them to form a single feature vector for the heavy and light chain pair. This would give you a feature vector of length 40 (20 features for the heavy chain and 20 for the light chain).
+
+### b. **Pairwise Dipeptide Composition**
+
+Similarly, you can calculate the dipeptide composition (pairwise frequency of amino acids) for both the heavy and light chains and concatenate the results. This would give a feature vector of length 800 (400 features for the heavy chain and 400 for the light chain).
+
+### c. **Sequence Alignment or Similarity Scores**
+
+One advanced feature could be the **sequence alignment score** (e.g., using BLOSUM62 or PAM matrices) between the heavy and light chains to capture how well they are paired at a structural level. You could generate a similarity score as a feature.
+
+### d. **Physicochemical Properties**
+
+For each chain, calculate properties like:
+
+- Hydrophobicity
+- Molecular weight
+- Isoelectric point
+- Polarizability
+
+Concatenate these properties for the heavy and light chains to form a feature vector.
+
+You can choose one or a combination of the above methods to extract features from the sequences.
+
+### Example of Feature Extraction Code (AAC in Python using `biopython`):
+
+```python
+from Bio.SeqUtils.ProtParam import ProteinAnalysis
+
+def calculate_aac(sequence):
+    """Calculate the amino acid composition (AAC) of a given protein sequence."""
+    analysed_seq = ProteinAnalysis(sequence)
+    return analysed_seq.get_amino_acids_percent()
+
+# Example: Compute AAC for heavy and light chains and concatenate them
+heavy_chain = "EVQLVESGGGLVQPGGSLRLSCAASGFTFSSYWMSWVRQAPGKGLEWVANIK..."
+light_chain = "SYELTQPPSVSVSPGQTASITCSGDKLGDKYACWYQQKPGQSPVLVIYQDS..."
+
+heavy_aac = calculate_aac(heavy_chain)
+light_aac = calculate_aac(light_chain)
+
+# Combine both feature vectors
+features = list(heavy_aac.values()) + list(light_aac.values())
+print(features)  # This can be fed into the SVM model
+
+```
+
+### 3. **Preparing the Dataset**
+
+Once the feature extraction is complete for each pair of heavy and light chains, you should have a matrix of features (X) and corresponding labels (y).
+
+- **X**: The feature matrix, where each row is a pair of sequences with extracted features.
+- **y**: The binary label for each pair (1 = paired, 0 = not paired).
+
+### 4. **Train/Test Split**
+
+You’ll need to split your data into training and test sets to train your SVM model and evaluate its performance. You can use `train_test_split` from `scikit-learn`.
+
+```python
+from sklearn.model_selection import train_test_split
+
+# X is the feature matrix, y is the label (paired or not)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+```
+
+### 5. **Training the SVM Model**
+
+Now you can train an SVM model using `scikit-learn`:
+
+```python
+from sklearn.svm import SVC
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, classification_report
+
+# Standardize features
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# Train the SVM classifier
+svm = SVC(kernel='linear', C=1)  # You can also experiment with 'rbf' or 'poly' kernels
+svm.fit(X_train_scaled, y_train)
+
+# Make predictions
+y_pred = svm.predict(X_test_scaled)
+
+# Evaluate the model
+accuracy = accuracy_score(y_test, y_pred)
+print(f'Accuracy: {accuracy * 100:.2f}%')
+
+# Detailed classification report
+print(classification_report(y_test, y_pred))
+
+```
+
+### 6. **Evaluating the Model**
+
+- **Accuracy**: A simple metric showing the percentage of correctly classified pairs.
+- **Precision, Recall, F1-Score**: These metrics help you understand how well the model is performing, especially in handling false positives and false negatives.
+
+### 7. **Hyperparameter Tuning (Optional)**
+
+To improve the model’s performance, you can tune the SVM hyperparameters such as the regularization parameter `C` and the kernel type (linear, polynomial, or RBF) using cross-validation and grid search.
+
+```python
+from sklearn.model_selection import GridSearchCV
+
+# Define the parameter grid
+param_grid = {'C': [0.1, 1, 10, 100], 'kernel': ['linear', 'rbf', 'poly']}
+
+# Perform grid search with cross-validation
+grid = GridSearchCV(SVC(), param_grid, refit=True, cv=5)
+grid.fit(X_train_scaled, y_train)
+
+# Best parameters and best model evaluation
+print(f"Best Parameters: {grid.best_params_}")
+best_model = grid.best_estimator_
+y_pred_best = best_model.predict(X_test_scaled)
+print(classification_report(y_test, y_pred_best))
+
+```
