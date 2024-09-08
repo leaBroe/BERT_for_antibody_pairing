@@ -211,6 +211,6 @@ ax.set_position([box.x0, box.y0 + box.height * 0.2,
 # Place the legend below the plot
 ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=5)
 # Save the plot before showing
-plt.savefig(f'{output_path}/decoder_heavy_umap_heavy2light_FULL_data_{target}.png')
+plt.savefig(f'{output_path}/decoder_heavy_umap_heavy2light_FULL_data_{target}_2.png')
 # Display the plot
 plt.show()

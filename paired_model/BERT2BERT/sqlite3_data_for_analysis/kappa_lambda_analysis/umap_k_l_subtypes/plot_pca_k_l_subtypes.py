@@ -101,7 +101,7 @@ if not os.path.exists(output_path):
 # test_df_labels.to_csv(output_file_path, index=False)
 
 
-# FULL test path with lambda and kappa subtypes (only subtypes without specific gene)
+# FULL test path with lambda and kappa subtypes (only subtypes without specific gene) file format heavy[SEP]light
 test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/kappa_lambda_analysis/umap_k_l_subtypes/updated_test_file_subtypes.csv"
 
 # load test file as csv
@@ -123,8 +123,8 @@ def load_data(file_path):
     df = pd.DataFrame(sequences, columns=['heavy', 'light'])
     return df
 
-#target = 'locus'
-target = 'subtype'
+target = 'locus'
+#target = 'subtype'
 
 test_df = load_data(test_file_path)
 heavy_sequences = test_df["heavy"].tolist()

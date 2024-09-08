@@ -120,8 +120,8 @@ def load_data(file_path):
     df = pd.DataFrame(sequences, columns=['heavy', 'light'])
     return df
 
-#target = 'locus'
-target = 'subtype'
+target = 'locus'
+#target = 'subtype'
 
 test_df = load_data(test_file_path)
 heavy_sequences = test_df["heavy"].tolist()
@@ -202,7 +202,7 @@ for idx, label in enumerate(unique_labels):
     ax.scatter(tsne_result[indices, 0], tsne_result[indices, 1], label=label, alpha=0.7, color=color, marker=marker, s=10)
 
 # Set title and labels
-ax.set_title('Differentiation of Kappa and Lambda Subtypes via t-SNE of Last Layer Embeddings')
+ax.set_title('Differentiation of Kappa and Lambda Loci via t-SNE of Last Layer Embeddings')
 ax.set_xlabel('t-SNE Component 1')
 ax.set_ylabel('t-SNE Component 2')
 
