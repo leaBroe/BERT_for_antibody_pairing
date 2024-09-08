@@ -4352,3 +4352,116 @@ y_pred_best = best_model.predict(X_test_scaled)
 print(classification_report(y_test, y_pred_best))
 
 ```
+
+# U-MAP of individual MLM models with heavy / light seqs unpaired
+
+.schema of /ibmm_data2/oas_database/OAS_heavy_part1.db (same for part2):
+
+```bash
+CREATE TABLE IF NOT EXISTS "human_unpaired_novaccine_nodisease_heavy"(
+"sequence" TEXT, "locus" TEXT, "stop_codon" TEXT, "vj_in_frame" TEXT,
+ "v_frameshift" TEXT, "productive" TEXT, "rev_comp" TEXT, "complete_vdj" TEXT,
+ "v_call" TEXT, "d_call" TEXT, "j_call" TEXT, "sequence_alignment" TEXT,
+ "germline_alignment" TEXT, "sequence_alignment_aa" TEXT, "germline_alignment_aa" TEXT, "v_alignment_start" TEXT,
+ "v_alignment_end" TEXT, "d_alignment_start" TEXT, "d_alignment_end" TEXT, "j_alignment_start" TEXT,
+ "j_alignment_end" TEXT, "v_sequence_alignment" TEXT, "v_sequence_alignment_aa" TEXT, "v_germline_alignment" TEXT,
+ "v_germline_alignment_aa" TEXT, "d_sequence_alignment" TEXT, "d_sequence_alignment_aa" TEXT, "d_germline_alignment" TEXT,
+ "d_germline_alignment_aa" TEXT, "j_sequence_alignment" TEXT, "j_sequence_alignment_aa" TEXT, "j_germline_alignment" TEXT,
+ "j_germline_alignment_aa" TEXT, "fwr1" TEXT, "fwr1_aa" TEXT, "cdr1" TEXT,
+ "cdr1_aa" TEXT, "fwr2" TEXT, "fwr2_aa" TEXT, "cdr2" TEXT,
+ "cdr2_aa" TEXT, "fwr3" TEXT, "fwr3_aa" TEXT, "fwr4" TEXT,
+ "fwr4_aa" TEXT, "cdr3" TEXT, "cdr3_aa" TEXT, "junction" TEXT,
+ "junction_length" TEXT, "junction_aa" TEXT, "junction_aa_length" TEXT, "v_score" TEXT,
+ "d_score" TEXT, "j_score" TEXT, "v_cigar" TEXT, "d_cigar" TEXT,
+ "j_cigar" TEXT, "v_support" TEXT, "d_support" TEXT, "j_support" TEXT,
+ "v_identity" TEXT, "d_identity" TEXT, "j_identity" TEXT, "v_sequence_start" TEXT,
+ "v_sequence_end" TEXT, "v_germline_start" TEXT, "v_germline_end" TEXT, "d_sequence_start" TEXT,
+ "d_sequence_end" TEXT, "d_germline_start" TEXT, "d_germline_end" TEXT, "j_sequence_start" TEXT,
+ "j_sequence_end" TEXT, "j_germline_start" TEXT, "j_germline_end" TEXT, "fwr1_start" TEXT,
+ "fwr1_end" TEXT, "cdr1_start" TEXT, "cdr1_end" TEXT, "fwr2_start" TEXT,
+ "fwr2_end" TEXT, "cdr2_start" TEXT, "cdr2_end" TEXT, "fwr3_start" TEXT,
+ "fwr3_end" TEXT, "fwr4_start" TEXT, "fwr4_end" TEXT, "cdr3_start" TEXT,
+ "cdr3_end" TEXT, "np1" TEXT, "np1_length" TEXT, "np2" TEXT,
+ "np2_length" TEXT, "c_region" TEXT, "Redundancy" TEXT, "ANARCI_numbering" TEXT,
+ "ANARCI_status" TEXT, "Age" TEXT, "Author" TEXT, "BSource" TEXT,
+ "BType" TEXT, "Chain" TEXT, "Disease" TEXT, "Isotype" TEXT,
+ "Link" TEXT, "Longitudinal" TEXT, "Run" TEXT, "Species" TEXT,
+ "Subject" TEXT, "Total sequences" TEXT, "Unique sequences" TEXT, "Vaccine" TEXT,
+ "download_date" TEXT);
+```
+
+```bash
+COLUMNS="locus, v_call, d_call, j_call, sequence_alignment_aa, fwr1_aa, cdr1_aa, fwr2_aa, cdr2_aa, fwr3_aa, fwr4_aa, cdr3_aa, BType, Disease, Age, Species, Vaccine"
+```
+
+used the script
+
+```bash
+/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/src/extract_columns_from_sqlite_db.sh
+```
+
+.schema of  /ibmm_data2/oas_database/OAS_light.db:
+
+```bash
+CREATE TABLE IF NOT EXISTS "human_unpaired_novaccine_nodisease_light"(
+"sequence" TEXT, "locus" TEXT, "stop_codon" TEXT, "vj_in_frame" TEXT,
+ "v_frameshift" TEXT, "productive" TEXT, "rev_comp" TEXT, "complete_vdj" TEXT,
+ "v_call" TEXT, "d_call" TEXT, "j_call" TEXT, "sequence_alignment" TEXT,
+ "germline_alignment" TEXT, "sequence_alignment_aa" TEXT, "germline_alignment_aa" TEXT, "v_alignment_start" TEXT,
+ "v_alignment_end" TEXT, "d_alignment_start" TEXT, "d_alignment_end" TEXT, "j_alignment_start" TEXT,
+ "j_alignment_end" TEXT, "v_sequence_alignment" TEXT, "v_sequence_alignment_aa" TEXT, "v_germline_alignment" TEXT,
+ "v_germline_alignment_aa" TEXT, "d_sequence_alignment" TEXT, "d_sequence_alignment_aa" TEXT, "d_germline_alignment" TEXT,
+ "d_germline_alignment_aa" TEXT, "j_sequence_alignment" TEXT, "j_sequence_alignment_aa" TEXT, "j_germline_alignment" TEXT,
+ "j_germline_alignment_aa" TEXT, "fwr1" TEXT, "fwr1_aa" TEXT, "cdr1" TEXT,
+ "cdr1_aa" TEXT, "fwr2" TEXT, "fwr2_aa" TEXT, "cdr2" TEXT,
+ "cdr2_aa" TEXT, "fwr3" TEXT, "fwr3_aa" TEXT, "fwr4" TEXT,
+ "fwr4_aa" TEXT, "cdr3" TEXT, "cdr3_aa" TEXT, "junction" TEXT,
+ "junction_length" TEXT, "junction_aa" TEXT, "junction_aa_length" TEXT, "v_score" TEXT,
+ "d_score" TEXT, "j_score" TEXT, "v_cigar" TEXT, "d_cigar" TEXT,
+ "j_cigar" TEXT, "v_support" TEXT, "d_support" TEXT, "j_support" TEXT,
+ "v_identity" TEXT, "d_identity" TEXT, "j_identity" TEXT, "v_sequence_start" TEXT,
+ "v_sequence_end" TEXT, "v_germline_start" TEXT, "v_germline_end" TEXT, "d_sequence_start" TEXT,
+ "d_sequence_end" TEXT, "d_germline_start" TEXT, "d_germline_end" TEXT, "j_sequence_start" TEXT,
+ "j_sequence_end" TEXT, "j_germline_start" TEXT, "j_germline_end" TEXT, "fwr1_start" TEXT,
+ "fwr1_end" TEXT, "cdr1_start" TEXT, "cdr1_end" TEXT, "fwr2_start" TEXT,
+ "fwr2_end" TEXT, "cdr2_start" TEXT, "cdr2_end" TEXT, "fwr3_start" TEXT,
+ "fwr3_end" TEXT, "fwr4_start" TEXT, "fwr4_end" TEXT, "cdr3_start" TEXT,
+ "cdr3_end" TEXT, "np1" TEXT, "np1_length" TEXT, "np2" TEXT,
+ "np2_length" TEXT, "c_region" TEXT, "Redundancy" TEXT, "ANARCI_numbering" TEXT,
+ "ANARCI_status" TEXT, "Age" TEXT, "Author" TEXT, "BSource" TEXT,
+ "BType" TEXT, "Chain" TEXT, "Disease" TEXT, "Isotype" TEXT,
+ "Link" TEXT, "Longitudinal" TEXT, "Run" TEXT, "Species" TEXT,
+ "Subject" TEXT, "Total sequences" TEXT, "Unique sequences" TEXT, "Vaccine" TEXT,
+ "download_date" TEXT);
+```
+
+```bash
+COLUMNS="locus, v_call, d_call, j_call, sequence_alignment_aa, fwr1_aa, cdr1_aa, fwr2_aa, cdr2_aa, fwr3_aa, fwr4_aa, cdr3_aa, BType, Disease, Age, Species, Vaccine"
+```
+
+test set light sequences 
+
+```bash
+/ibmm_data2/oas_database/paired_lea_tmp/light_model/data/train_test_val_datasets/light_all_seqs_test_no_ids.txt
+```
+
+output file extracted test set sequences
+
+```bash
+/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/umap_tsne_pca_heavy_light_models/extracted_seqs_light_model_test_set.txt
+```
+
+remove duplicates
+
+```bash
+awk -F ',' '!seen[$5]++' /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/umap_tsne_pca_heavy_light_models/extracted_seqs_light_model_test_set.txt > /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/umap_tsne_pca_heavy_light_models/extracted_seqs_light_model_test_set_no_dupl.txt
+
+```
+
+```bash
+/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/umap_tsne_pca_heavy_light_models/extracted_seqs_light_model_test_set_no_dupl.txt
+```
+
+```bash
+locus,v_call,d_call,j_call,sequence_alignment_aa,fwr1_aa,cdr1_aa,fwr2_aa,cdr2_aa,fwr3_aa,fwr4_aa,cdr3_aa,BType,Disease,Age,Species,Vaccine
+```
