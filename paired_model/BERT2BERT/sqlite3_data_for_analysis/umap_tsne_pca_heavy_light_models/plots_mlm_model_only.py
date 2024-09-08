@@ -57,14 +57,14 @@ def get_mlm_last_layer_embeddings(model, tokenizer, sequences, device):
 small_heavy_encoder = "/ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-117674391"
 small_light_decoder =  "/ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-56556520"
 
-model_name = "light_model"
+model_name = "heavy_model"
 
 # Load a pre-trained BERT model and tokenizer
 #tokenizer = BertTokenizer.from_pretrained(small_heavy_encoder)
 #model = BertModel.from_pretrained(small_heavy_encoder)
 
-tokenizer = BertTokenizer.from_pretrained(small_light_decoder)
-model = RobertaForMaskedLM.from_pretrained(small_light_decoder)
+tokenizer = BertTokenizer.from_pretrained(small_heavy_encoder)
+model = RobertaForMaskedLM.from_pretrained(small_heavy_encoder)
 
 
 # Device configuration
@@ -92,9 +92,12 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/umap_tsne_pca_heavy_light_models/extracted_seqs_light_model_test_set_no_dupl.txt"
 
 # FULL unpaired light test seqs 80'000 rows
-test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/umap_tsne_pca_heavy_light_models/extracted_seqs_light_model_test_set_no_dupl_80000.txt"
+#test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/umap_tsne_pca_heavy_light_models/extracted_seqs_light_model_test_set_no_dupl_80000.txt"
 
 #test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/umap_tsne_pca_heavy_light_models/fewer_gene_names_extracted_seqs_light_model_test_set_no_dupl_80000.txt"
+
+# FULL unpaired heavy test seqs
+test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/umap_tsne_pca_heavy_light_models/fewer_genes_extracted_seqs_heavy_model_test_set_80000.txt"
 
 # load test file as csv
 test_df_labels = pd.read_csv(test_file_path)
@@ -134,10 +137,10 @@ def load_data(file_path):
 
 #target = "locus"
 #target = "v_call"
-#target = "j_call_fewer"
+#target = "d_call_fewer"
 #target="BType"
-target="Age"
-#target = 'v_call_fewer_heavy_star'
+#target="Age"
+target = 'v_call_fewer_star'
 #target = 'v_call_heavy'
 #target = 'd_call_fewer_heavy'
 #target = 'j_call_fewer_heavy'
@@ -155,8 +158,8 @@ target="Age"
 labels = test_df_labels[f'{target}'].tolist()
 
 #plot_title_target = "B-Cell Types"
-plot_title_target = "Age"
-#plot_title_target = "J Gene Families"
+#plot_title_target = "Age"
+plot_title_target = "V Gene Families"
 #plot_title_target = "Kappa / Lambda Loci"
 #plot_title_target = "J Gene Families"
 #plot_title_target = "D Gene Families"
@@ -164,17 +167,18 @@ plot_title_target = "Age"
 #plot_save_prefix = "v_call_fewer_heavy_star_better_layout2"
 #plot_save_prefix = "locus_unpaired_light_seqs_80000"
 #plot_save_prefix = "jgenes_fewer_unpaired_light_seqs_80000"
-#plot_save_prefix = "BTypes_unpaired_light_seqs_80000"
-plot_save_prefix = "Age_unpaired_light_seqs_80000"
+#plot_save_prefix = "BTypes_unpaired_heavy_seqs_80000"
+plot_save_prefix = "fewer_star_vgenes_unpaired_heavy_seqs_80000"
+#plot_save_prefix = "Age_unpaired_light_seqs_80000"
 #plot_save_prefix = "fewer_heavy_j_gene_families"
 #plot_save_prefix = "heavy_d_gene_families"
 
 # if input file is of the format: Species,Disease,BType,Isotype_light,sequence_alignment_aa_light,sequence_alignment_light,sequence_alignment_aa_heavy,sequence_alignment_heavy,sequence_alignment_heavy_sep_light use this for the extraction of heavy and light sequences
 # Extract sequences into lists
 #light_sequences = filtered_df['sequence_alignment_aa_light'].tolist()
-light_sequences = filtered_df['sequence_alignment_aa'].tolist()
+#light_sequences = filtered_df['sequence_alignment_aa'].tolist()
 
-#heavy_sequences = filtered_df['sequence_alignment_aa_heavy'].tolist()
+heavy_sequences = filtered_df['sequence_alignment_aa'].tolist()
 
 
 # #test_df = load_data(test_file_path)
@@ -185,7 +189,7 @@ light_sequences = filtered_df['sequence_alignment_aa'].tolist()
 
 
 # Get embeddings
-embeddings = get_mlm_last_layer_embeddings(model, tokenizer, light_sequences, device)
+embeddings = get_mlm_last_layer_embeddings(model, tokenizer, heavy_sequences, device)
 #embeddings = get_mlm_last_layer_embeddings(model, tokenizer, light_sequences, device)
 print(embeddings)  # This will print the array of embeddings
 
