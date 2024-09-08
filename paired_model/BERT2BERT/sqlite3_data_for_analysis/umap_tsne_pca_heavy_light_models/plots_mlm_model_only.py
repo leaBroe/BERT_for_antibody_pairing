@@ -57,14 +57,14 @@ def get_mlm_last_layer_embeddings(model, tokenizer, sequences, device):
 small_heavy_encoder = "/ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-117674391"
 small_light_decoder =  "/ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-56556520"
 
-model_name = "heavy_model"
+model_name = "light_model"
 
 # Load a pre-trained BERT model and tokenizer
 #tokenizer = BertTokenizer.from_pretrained(small_heavy_encoder)
 #model = BertModel.from_pretrained(small_heavy_encoder)
 
-tokenizer = BertTokenizer.from_pretrained(small_heavy_encoder)
-model = RobertaForMaskedLM.from_pretrained(small_heavy_encoder)
+tokenizer = BertTokenizer.from_pretrained(small_light_decoder)
+model = RobertaForMaskedLM.from_pretrained(small_light_decoder)
 
 
 # Device configuration
@@ -76,11 +76,20 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # FULL test path only with BType memory and naive input format: Species,Disease,BType,Isotype_light,sequence_alignment_aa_light,sequence_alignment_light,sequence_alignment_aa_heavy,sequence_alignment_heavy,sequence_alignment_heavy_sep_light
 #test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/species_diseases_subgroups_analysis/filtered_mem_naive_full_test_data_extraction_species_diseases_no_dupl.csv"
 
+# FULL test path input format: "Species,Disease,BType,Isotype_light,locus_heavy,locus_light,v_call_heavy,d_call_heavy,j_call_heavy,sequence_alignment_aa_light,sequence_alignment_light,sequence_alignment_aa_heavy,sequence_alignment_heavy,sequence_alignment_heavy_sep_light"
+#test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/heavy_model_vdj_gene_analysis/heavy_vdj_genes_paired_oas_db_test_set_extraction_no_dupl.txt"
+
+# FULL test file path with v d and j genes 
+#test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/heavy_model_vdj_gene_analysis/fewer_genes_relevant_cols_spaces_heavy_vdj_genes_paired_oas_db_test_set_extraction_no_dupl.txt"
+
 # FULL test path with lambda and kappa subtypes (only subtypes without specific gene) file format heavy[SEP]light
-test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/kappa_lambda_analysis/umap_k_l_subtypes/updated_test_file_subtypes.csv"
+#test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/kappa_lambda_analysis/umap_k_l_subtypes/updated_test_file_subtypes.csv"
 
 # small test path
 #test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/species_diseases_subgroups_analysis/filtered_mem_naive_full_test_data_extraction_species_diseases_no_dupl_small.csv"
+
+# FULL unpaired light test seqs
+test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/umap_tsne_pca_heavy_light_models/extracted_seqs_light_model_test_set_no_dupl.txt"
 
 # load test file as csv
 test_df_labels = pd.read_csv(test_file_path)
@@ -118,36 +127,52 @@ def load_data(file_path):
     df = pd.DataFrame(sequences, columns=['heavy', 'light'])
     return df
 
+target = "locus"
+#target = 'v_call_fewer_heavy_star'
+#target = 'v_call_heavy'
+#target = 'd_call_fewer_heavy'
+#target = 'j_call_fewer_heavy'
+#target = 'v_call_fewer_heavy'
 #target = 'locus'
-target = 'subtype'
+#target = 'subtype'
 
 
 
-test_df = load_data(test_file_path)
-heavy_sequences = test_df["heavy"].tolist()
-#light_sequences = test_df["light"].tolist()
+# test_df = load_data(test_file_path)
+# heavy_sequences = test_df["heavy"].tolist()
+# light_sequences = test_df["light"].tolist()
 #labels = test_df_labels['v_family'].tolist()
 #labels = test_df_labels['subtype'].tolist()
 labels = test_df_labels[f'{target}'].tolist()
 
 #plot_title_target = "B-Cell Types"
-plot_title_target = "Kappa / Lambda Subtypes"
+#plot_title_target = "V Gene Families"
+plot_title_target = "Kappa / Lambda Loci"
+#plot_title_target = "J Gene Families"
+#plot_title_target = "D Gene Families"
+#plot_save_prefix = "heavy_v_gene_families"
+#plot_save_prefix = "v_call_fewer_heavy_star_better_layout2"
+plot_save_prefix = "locus_unpaired_light_seqs"
+#plot_save_prefix = "fewer_heavy_j_gene_families"
+#plot_save_prefix = "heavy_d_gene_families"
 
 # if input file is of the format: Species,Disease,BType,Isotype_light,sequence_alignment_aa_light,sequence_alignment_light,sequence_alignment_aa_heavy,sequence_alignment_heavy,sequence_alignment_heavy_sep_light use this for the extraction of heavy and light sequences
 # Extract sequences into lists
 #light_sequences = filtered_df['sequence_alignment_aa_light'].tolist()
+light_sequences = filtered_df['sequence_alignment_aa'].tolist()
+
 #heavy_sequences = filtered_df['sequence_alignment_aa_heavy'].tolist()
 
 
-#test_df = load_data(test_file_path)
-#light_sequences = test_df["light"].tolist()
-#heavy_sequences = test_df["heavy"].tolist()
-#labels = test_df_labels['Disease'].tolist()
-#labels = test_df_labels['BType'].tolist()
+# #test_df = load_data(test_file_path)
+# light_sequences = test_df["light"].tolist()
+# heavy_sequences = test_df["heavy"].tolist()
+# labels = test_df_labels['Disease'].tolist()
+# labels = test_df_labels['BType'].tolist()
 
 
 # Get embeddings
-embeddings = get_mlm_last_layer_embeddings(model, tokenizer, heavy_sequences, device)
+embeddings = get_mlm_last_layer_embeddings(model, tokenizer, light_sequences, device)
 #embeddings = get_mlm_last_layer_embeddings(model, tokenizer, light_sequences, device)
 print(embeddings)  # This will print the array of embeddings
 
@@ -183,13 +208,13 @@ ax.set_ylabel('UMAP Component 2')
 
 # Shrink current axis's height by 10% on the bottom
 box = ax.get_position()
-ax.set_position([box.x0, box.y0 + box.height * 0.2,
-                 box.width, box.height * 0.8])
+ax.set_position([box.x0, box.y0 + box.height * 0.3,
+                 box.width, box.height * 0.7])
 
 # Place the legend below the plot
-ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=5)
+ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=6)
 # Save the plot before showing
-plt.savefig(f'/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/{model_name}/UMAP/{plot_title_target}_mlm_heavy2light_FULL_data_robertaformaskedlm.png')
+plt.savefig(f'/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/{model_name}/UMAP/{plot_save_prefix}_mlm_heavy2light_FULL_data_robertaformaskedlm.png')
 # Display the plot
 plt.show()
 
@@ -210,7 +235,7 @@ markers = ['o', 'v', 's', 'P', '*', 'X', 'D']  # List of markers
 fig, ax = plt.subplots(figsize=(10, 8))
 
 # Plot PCA result with labels
-unique_labels = sorted(set(labels))  # Sort to ensure consistent color/marker assignment
+unique_labels = set(labels)  
 for idx, label in enumerate(unique_labels):
     indices = [i for i, l in enumerate(labels) if l == label]
     color = all_colors[idx % len(all_colors)]
@@ -226,12 +251,14 @@ ax.set_ylabel('PCA Component 2')
 
 # Shrink current axis's height by 20% on the bottom
 box = ax.get_position()
-ax.set_position([box.x0, box.y0 + box.height * 0.2,
-                 box.width, box.height * 0.8])
+ax.set_position([box.x0, box.y0 + box.height * 0.3,
+                 box.width, box.height * 0.7])
 # Place the legend below the plot
-ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=5)
+ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=6)
 plt.show()
-plt.savefig(f'/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/{model_name}/PCA/{plot_title_target}_mlm_heavy2light_FULL_data.png')
+plt.savefig(f'/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/{model_name}/PCA/{plot_save_prefix}_mlm_heavy2light_FULL_data.png')
+
+
 
 # Perform t-SNE
 tsne = TSNE(n_components=2, random_state=42)
@@ -264,11 +291,11 @@ ax.set_ylabel('t-SNE Component 2')
 
 # Shrink current axis's height by 10% on the bottom
 box = ax.get_position()
-ax.set_position([box.x0, box.y0 + box.height * 0.2,
-                 box.width, box.height * 0.8])
+ax.set_position([box.x0, box.y0 + box.height * 0.3,
+                 box.width, box.height * 0.7])
 
 # Place the legend below the plot
-ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=3)
+ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=6)
 plt.show()
-plt.savefig(f'/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/{model_name}/t-SNE/{plot_title_target}_mlm_heavy2light_FULL_data.png')
+plt.savefig(f'/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/{model_name}/t-SNE/{plot_save_prefix}_mlm_heavy2light_FULL_data_better_layout.png')
 
