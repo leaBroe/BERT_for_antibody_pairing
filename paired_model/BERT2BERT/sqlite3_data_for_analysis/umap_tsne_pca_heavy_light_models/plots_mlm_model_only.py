@@ -89,7 +89,12 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/species_diseases_subgroups_analysis/filtered_mem_naive_full_test_data_extraction_species_diseases_no_dupl_small.csv"
 
 # FULL unpaired light test seqs
-test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/umap_tsne_pca_heavy_light_models/extracted_seqs_light_model_test_set_no_dupl.txt"
+#test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/umap_tsne_pca_heavy_light_models/extracted_seqs_light_model_test_set_no_dupl.txt"
+
+# FULL unpaired light test seqs 80'000 rows
+test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/umap_tsne_pca_heavy_light_models/extracted_seqs_light_model_test_set_no_dupl_80000.txt"
+
+#test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/umap_tsne_pca_heavy_light_models/fewer_gene_names_extracted_seqs_light_model_test_set_no_dupl_80000.txt"
 
 # load test file as csv
 test_df_labels = pd.read_csv(test_file_path)
@@ -127,7 +132,11 @@ def load_data(file_path):
     df = pd.DataFrame(sequences, columns=['heavy', 'light'])
     return df
 
-target = "locus"
+#target = "locus"
+#target = "v_call"
+#target = "j_call_fewer"
+#target="BType"
+target="Age"
 #target = 'v_call_fewer_heavy_star'
 #target = 'v_call_heavy'
 #target = 'd_call_fewer_heavy'
@@ -146,13 +155,17 @@ target = "locus"
 labels = test_df_labels[f'{target}'].tolist()
 
 #plot_title_target = "B-Cell Types"
-#plot_title_target = "V Gene Families"
-plot_title_target = "Kappa / Lambda Loci"
+plot_title_target = "Age"
+#plot_title_target = "J Gene Families"
+#plot_title_target = "Kappa / Lambda Loci"
 #plot_title_target = "J Gene Families"
 #plot_title_target = "D Gene Families"
 #plot_save_prefix = "heavy_v_gene_families"
 #plot_save_prefix = "v_call_fewer_heavy_star_better_layout2"
-plot_save_prefix = "locus_unpaired_light_seqs"
+#plot_save_prefix = "locus_unpaired_light_seqs_80000"
+#plot_save_prefix = "jgenes_fewer_unpaired_light_seqs_80000"
+#plot_save_prefix = "BTypes_unpaired_light_seqs_80000"
+plot_save_prefix = "Age_unpaired_light_seqs_80000"
 #plot_save_prefix = "fewer_heavy_j_gene_families"
 #plot_save_prefix = "heavy_d_gene_families"
 
