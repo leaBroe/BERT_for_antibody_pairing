@@ -29,13 +29,11 @@ to extract the test set sequences from the full paired db
 lines: 74218
 should be: 67209
 ```
-
 remove duplicates from heavy[SEP]light column (last column → $NF)
 
 ```python
 awk -F ',' '!seen[$NF]++' /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/species_subgroups_analysis/full_test_data_extraction_species_diseases.txt > /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/species_subgroups_analysis/full_test_data_extraction_species_diseases_no_dupl.txt
 ```
-
 output file with 67209 sequences:
 
 ```python
