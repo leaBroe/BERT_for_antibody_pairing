@@ -47,20 +47,29 @@ model = RobertaForMaskedLM.from_pretrained(small_heavy_encoder)
 # col names: v_call_fewer,j_call_fewer,d_call_fewer,v_call_fewer_star,v_call,d_call,j_call,sequence_alignment_aa
 test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/umap_tsne_pca_heavy_light_models/fewer_genes_extracted_seqs_heavy_model_test_set_80000.txt"
 
-# Small unpaired heavy test seqs
+# Small unpaired HEAVY test seqs
 # col names: v_call_fewer,j_call_fewer,d_call_fewer,v_call_fewer_star,v_call,d_call,j_call,sequence_alignment_aa
 #test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/umap_tsne_pca_heavy_light_models/fewer_genes_extracted_seqs_heavy_model_test_set_100.txt"
+
+# FULL unpaired LIGHT test seqs 80'000 rows
+# col names: v_call_fewer,j_call_fewer,v_call_fewer_star,v_call,d_call,j_call,sequence_alignment_aa
+#test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/umap_tsne_pca_heavy_light_models/fewer_gene_names_extracted_seqs_light_model_test_set_no_dupl_80000.txt"
+
+# col names: locus,v_call,d_call,j_call,sequence_alignment_aa,fwr1_aa,cdr1_aa,fwr2_aa,cdr2_aa,fwr3_aa,fwr4_aa,cdr3_aa,BType,Disease,Age,Species,Vaccine
+#test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqlite3_data_for_analysis/umap_tsne_pca_heavy_light_models/extracted_seqs_light_model_test_set_no_dupl_80000.txt"
+
 
 filtered_df = pd.read_csv(test_file_path)
 
 
-target = 'j_call_fewer'
-plot_title_target = "J Gene Families"
-plot_save_prefix = "j_call_fewer"
+target = 'd_call_fewer'
+plot_title_target = "D Gene Families"
+plot_save_prefix = "d_call_fewer"
 
 labels = filtered_df[f'{target}'].tolist()
 
 heavy_sequences = filtered_df['sequence_alignment_aa'].tolist()
+#light_sequences = filtered_df['sequence_alignment_aa'].tolist()
 
 # Device configuration
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -77,7 +86,10 @@ label_encoder = LabelEncoder()
 encoded_labels = label_encoder.fit_transform(labels)
 
 # Apply LDA (Number of components should be less than number of classes)
-lda = LDA(n_components=2)
+lda = LDA(n_components=2) # n_components = 2 for 2d visualization, j_call_fewer has 6 classes, therefore max n_components = 5
+#lda = LDA(n_components=5) # n_components = 2 for 2d visualization, j_call_fewer has 6 classes, therefore max n_components = 5, if you choose n_components > 2 you cannot visualize the result in a plot
+
+
 lda_result = lda.fit_transform(embeddings, encoded_labels)
 
 # Define colors and markers (same as PCA/t-SNE/UMAP plots)
@@ -112,5 +124,13 @@ ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=6)
 plt.show()
 plt.savefig(f'/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/{model_name}/LDA/full_{plot_save_prefix}_mlm_heavy2light_LDA.png')
 
+# explained_variance_ratio = lda.explained_variance_ratio_
+
+# plt.bar(range(1, len(explained_variance_ratio) + 1), explained_variance_ratio)
+# plt.xlabel('LDA Component')
+# plt.ylabel('Explained Variance Ratio')
+# plt.title('Explained Variance by LDA Components')
+# plt.show()
+# plt.savefig(f'/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/{model_name}/LDA/explained_variance_{plot_save_prefix}_mlm_heavy2light_LDA.png')
 
 
