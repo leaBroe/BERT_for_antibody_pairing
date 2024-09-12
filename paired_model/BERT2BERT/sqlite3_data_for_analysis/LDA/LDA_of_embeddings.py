@@ -136,46 +136,31 @@ lda_result = lda.fit_transform(embeddings, encoded_labels)
 # plt.show()
 # plt.savefig(f'/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/{model_name}/LDA/explained_variance_{plot_save_prefix}_mlm_heavy2light_LDA.png')
 
+# Save the LDA components to a DataFrame
+lda_result_df = pd.DataFrame(lda_result, columns=['Component 1', 'Component 2'])
 
-# Assuming 'j_call_fewer' column exists in filtered_df
-filtered_df[target] = filtered_df[target].astype(str)  # Ensure it's treated as a categorical string
+# Add the original labels to the DataFrame
+lda_result_df['j_call_fewer'] = labels
 
-# Get the embeddings using your defined function
-embeddings = get_mlm_last_layer_embeddings(model, tokenizer, heavy_sequences, device)
+# Create a larger JointGrid to plot the LDA components with marginal distributions
+g = sns.JointGrid(data=lda_result_df, x="Component 1", y="Component 2", height=10)  # Increase height to make plot larger
 
-# Ensure the labels (for coloring) are the 'j_call_fewer' column
-j_call_fewer_labels = filtered_df[target].tolist()
+# Plot the scatterplot of LDA components, explicitly passing the DataFrame and hue for coloring
+g = g.plot(sns.scatterplot, sns.histplot, data=lda_result_df, hue='j_call_fewer', palette='muted')
 
-# Apply LDA with 2 components for 2D visualization
-lda = LDA(n_components=2)
-lda_result = lda.fit_transform(embeddings, j_call_fewer_labels)
+# Manually add a single legend, renaming it to 'J Gene Family'
+handles, labels = g.ax_joint.get_legend_handles_labels()
+g.ax_joint.legend(handles=handles, labels=labels, title='J Gene Family', loc='upper left')
 
-# Create a DataFrame to combine LDA results and j_call_fewer labels
-lda_result_df = pd.DataFrame(lda_result, columns=["Component 1", "Component 2"])
-lda_result_df[target] = j_call_fewer_labels  # Add the j_call_fewer labels to the DataFrame
+# Adjust the layout to make room for the title and the legend
+plt.subplots_adjust(top=0.9, right=0.85)
 
-# Plot using seaborn with hue set to 'j_call_fewer' for color encoding
-plt.figure(figsize=(10, 8))
-sns.scatterplot(
-    data=lda_result_df, 
-    x="Component 1", 
-    y="Component 2", 
-    hue=target, 
-    palette="tab20",  # You can use different color palettes
-    s=100,  # Adjust the size of the markers
-    alpha=0.7  # Adjust the transparency
-)
+# Customize the plot title
+#g.fig.suptitle(f'Differentiation of {plot_title_target} via LDA of Last Layer Embeddings with Marginals', y=1.02)
 
-# Set title and labels
-plt.title(f'Differentiation by {plot_title_target} via LDA of Last Layer Embeddings')
-plt.xlabel('LDA Component 1')
-plt.ylabel('LDA Component 2')
+# Save the plot
+g.savefig(f'/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/{model_name}/LDA/full4_marginals_{plot_save_prefix}_mlm_heavy2light_LDA.png')
 
-# Move the legend outside the plot
-plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-
-# Save and show the plot
-plt.tight_layout()
-plt.savefig(f'/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/{model_name}/LDA/marginals_colored_{plot_save_prefix}_mlm_heavy2light_LDA.png')
+# Show the plot
 plt.show()
 
