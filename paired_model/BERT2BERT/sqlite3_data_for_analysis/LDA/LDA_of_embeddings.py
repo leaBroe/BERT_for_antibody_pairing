@@ -8,6 +8,9 @@ from adapters import init
 import umap
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import LabelEncoder
+import seaborn as sns
+import matplotlib.pyplot as plt
+
 
 # Assuming you have already computed `embeddings` and `labels`
 def get_mlm_last_layer_embeddings(model, tokenizer, sequences, device):
@@ -62,9 +65,9 @@ test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT
 filtered_df = pd.read_csv(test_file_path)
 
 
-target = 'd_call_fewer'
-plot_title_target = "D Gene Families"
-plot_save_prefix = "d_call_fewer"
+target = 'j_call_fewer'
+plot_title_target = "J Gene Families"
+plot_save_prefix = "j_call_fewer"
 
 labels = filtered_df[f'{target}'].tolist()
 
@@ -92,37 +95,37 @@ lda = LDA(n_components=2) # n_components = 2 for 2d visualization, j_call_fewer 
 
 lda_result = lda.fit_transform(embeddings, encoded_labels)
 
-# Define colors and markers (same as PCA/t-SNE/UMAP plots)
-cmap = plt.get_cmap('tab20')
-colors = cmap(np.linspace(0, 1, 20))
-additional_cmap = plt.get_cmap('tab20b')
-additional_colors = additional_cmap(np.linspace(0, 1, 20))
-all_colors = np.vstack((colors, additional_colors))
+# # Define colors and markers (same as PCA/t-SNE/UMAP plots)
+# cmap = plt.get_cmap('tab20')
+# colors = cmap(np.linspace(0, 1, 20))
+# additional_cmap = plt.get_cmap('tab20b')
+# additional_colors = additional_cmap(np.linspace(0, 1, 20))
+# all_colors = np.vstack((colors, additional_colors))
 
-markers = ['o', 'v', 's', 'P', '*', 'X', 'D']  # List of markers
+# markers = ['o', 'v', 's', 'P', '*', 'X', 'D']  # List of markers
 
-# Plot LDA result
-fig, ax = plt.subplots(figsize=(10, 8))
-unique_labels = set(labels)
-for idx, label in enumerate(unique_labels):
-    indices = [i for i, l in enumerate(labels) if l == label]
-    color = all_colors[idx % len(all_colors)]
-    marker = markers[idx % len(markers)]
-    ax.scatter(lda_result[indices, 0], lda_result[indices, 1], label=label, alpha=0.7, color=color, marker=marker, s=10)
+# # Plot LDA result
+# fig, ax = plt.subplots(figsize=(10, 8))
+# unique_labels = set(labels)
+# for idx, label in enumerate(unique_labels):
+#     indices = [i for i, l in enumerate(labels) if l == label]
+#     color = all_colors[idx % len(all_colors)]
+#     marker = markers[idx % len(markers)]
+#     ax.scatter(lda_result[indices, 0], lda_result[indices, 1], label=label, alpha=0.7, color=color, marker=marker, s=10)
 
-# Set title and labels
-ax.set_title(f'Differentiation of {plot_title_target} via LDA of Last Layer Embeddings')
-ax.set_xlabel('LDA Component 1')
-ax.set_ylabel('LDA Component 2')
+# # Set title and labels
+# ax.set_title(f'Differentiation of {plot_title_target} via LDA of Last Layer Embeddings')
+# ax.set_xlabel('LDA Component 1')
+# ax.set_ylabel('LDA Component 2')
 
-# Adjust legend position
-box = ax.get_position()
-ax.set_position([box.x0, box.y0 + box.height * 0.3, box.width, box.height * 0.7])
-ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=6)
+# # Adjust legend position
+# box = ax.get_position()
+# ax.set_position([box.x0, box.y0 + box.height * 0.3, box.width, box.height * 0.7])
+# ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=6)
 
-# Display and save the plot
-plt.show()
-plt.savefig(f'/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/{model_name}/LDA/full_{plot_save_prefix}_mlm_heavy2light_LDA.png')
+# # Display and save the plot
+# plt.show()
+# plt.savefig(f'/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/{model_name}/LDA/full_{plot_save_prefix}_mlm_heavy2light_LDA.png')
 
 # explained_variance_ratio = lda.explained_variance_ratio_
 
@@ -133,4 +136,46 @@ plt.savefig(f'/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/ana
 # plt.show()
 # plt.savefig(f'/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/{model_name}/LDA/explained_variance_{plot_save_prefix}_mlm_heavy2light_LDA.png')
 
+
+# Assuming 'j_call_fewer' column exists in filtered_df
+filtered_df[target] = filtered_df[target].astype(str)  # Ensure it's treated as a categorical string
+
+# Get the embeddings using your defined function
+embeddings = get_mlm_last_layer_embeddings(model, tokenizer, heavy_sequences, device)
+
+# Ensure the labels (for coloring) are the 'j_call_fewer' column
+j_call_fewer_labels = filtered_df[target].tolist()
+
+# Apply LDA with 2 components for 2D visualization
+lda = LDA(n_components=2)
+lda_result = lda.fit_transform(embeddings, j_call_fewer_labels)
+
+# Create a DataFrame to combine LDA results and j_call_fewer labels
+lda_result_df = pd.DataFrame(lda_result, columns=["Component 1", "Component 2"])
+lda_result_df[target] = j_call_fewer_labels  # Add the j_call_fewer labels to the DataFrame
+
+# Plot using seaborn with hue set to 'j_call_fewer' for color encoding
+plt.figure(figsize=(10, 8))
+sns.scatterplot(
+    data=lda_result_df, 
+    x="Component 1", 
+    y="Component 2", 
+    hue=target, 
+    palette="tab20",  # You can use different color palettes
+    s=100,  # Adjust the size of the markers
+    alpha=0.7  # Adjust the transparency
+)
+
+# Set title and labels
+plt.title(f'Differentiation by {plot_title_target} via LDA of Last Layer Embeddings')
+plt.xlabel('LDA Component 1')
+plt.ylabel('LDA Component 2')
+
+# Move the legend outside the plot
+plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+
+# Save and show the plot
+plt.tight_layout()
+plt.savefig(f'/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/analysis_plots/{model_name}/LDA/marginals_colored_{plot_save_prefix}_mlm_heavy2light_LDA.png')
+plt.show()
 
