@@ -2,15 +2,21 @@ import torch
 from transformers import BertTokenizer, BertModel, BertForMaskedLM, RobertaForMaskedLM, AutoModel, EncoderDecoderModel
 from adapters import init
 
-
 # light and heavy MLM models
-# small_heavy_encoder = "/ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-117674391"
-# small_light_decoder =  "/ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-56556520"
+small_heavy_encoder = "/ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-117674391"
+small_light_decoder =  "/ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-56556520"
 
-# model_name = "light_model"
+big_heavy_encoder = "/ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/redo_ch/FULL_config_3_roberta_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-55740501"
+big_light_decoder = "/ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_3_roberta_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-32519999"
 
-# tokenizer = BertTokenizer.from_pretrained(small_light_decoder)
-# model = RobertaForMaskedLM.from_pretrained(small_light_decoder)
+model_name = "light_model"
+
+tokenizer = BertTokenizer.from_pretrained(big_light_decoder)
+model = RobertaForMaskedLM.from_pretrained(big_light_decoder)
+
+print(model)
+base_model_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+print(f"Trainable parameters in base model: {base_model_params}")
 
 
 # protbert bfd NSP model
@@ -69,10 +75,10 @@ from adapters import init
 
 # igbert MLM model
 
-tokeniser = BertTokenizer.from_pretrained("Exscientia/IgBert", do_lower_case=False)
-model = BertModel.from_pretrained("Exscientia/IgBert", add_pooling_layer=False)
+# tokeniser = BertTokenizer.from_pretrained("Exscientia/IgBert", do_lower_case=False)
+# model = BertModel.from_pretrained("Exscientia/IgBert", add_pooling_layer=False)
 
-print(model)
-base_model_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+# print(model)
+# base_model_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-print(f"Trainable parameters in base model: {base_model_params}")
+# print(f"Trainable parameters in base model: {base_model_params}")
