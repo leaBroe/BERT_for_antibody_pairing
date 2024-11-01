@@ -10,7 +10,7 @@
 DATABASE="/ibmm_data2/oas_database/OAS_paired.db"
 
 # Define the SQL query
-SQL_QUERY="SELECT * FROM all_human_paired WHERE Disease = 'None' AND Vaccination = 'None';"
+SQL_QUERY="SELECT * FROM all_human_paired WHERE Disease = 'None' AND Vaccine = 'None';"
 
 # Execute the SQL query and output the results
 sqlite3 "$DATABASE" "$SQL_QUERY"
