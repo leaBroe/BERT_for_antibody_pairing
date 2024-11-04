@@ -113,8 +113,16 @@ def format_attention(attention, layers=None, heads=None):
 
 # print(formatted_attention.shape)
 
-input_text = "QSALTQPASVSGSPGQSITISCTGTSSDVGGYNYVSWYQQHPGKAPKLMIYDVSNRPSGVSNRFSGSKSGNTASLTISGLQAEDEADYYCSSYTSSSTLVFGGGTKLTVL"
-#input_text = "Q A G L T Q P P S V S K G L R Q T A T L T C T G N S N N V G N Q G A A W L Q Q H Q G H P P K L L S Y R N N N R P S G I S E R L S A S R S G N T A S L T I T G L Q P E D E A D Y Y C S A W D S S L S A W V F G G G T K L T V L"
+# Sequence pair 40780:
+# True Sequence: S Y E L T Q P P S V S V S P G Q T A S I T C S G D K L G D K Y A C W Y Q Q K P G Q S P V L V I Y Q D S K R P S G I P E R F S G S N S G N T A T L T I S G T Q A M D E A D Y Y C Q A W D S S T V V F G G G T K L T V L
+# Generated Sequence: S Y E L T Q P P S V S V S P G Q T A S I T C S G D K L G D K Y A C W Y Q Q K P G Q S P V L V I Y Q D S K R P S G I P E R F S G S N S G N T A T L T I S G T Q A M D E A D Y Y C Q A W D S S T V V F G G G T K L T V L
+# BLOSUM Score: 563.0
+# Similarity Percentage: 100.0%
+# Perplexity: 1.5024986267089844
+# model is on device cuda:0
+#input_text = "SYELTQPPSVSVSPGQTASITCSGDKLGDKYACWYQQKPGQSPVLVIYQDSKRPSGIPERFSGSNSGNTATLTISGTQAMDEADYYCQAWDSSTVVFGGGTKLTVL"
+input_text = "S Y E L T Q P P S V S V S P G Q T A S I T C S G D K L G D K Y A C W Y Q Q K P G Q S P V L V I Y Q D S K R P S G I P E R F S G S N S G N T A T L T I S G T Q A M D E A D Y Y C Q A W D S S T V V F G G G T K L T V L"
+
 
 # #inputs = tokenizer(input_text, return_tensors='pt') ##COME ERA
 # inputs = tokenizer(input_text, return_tensors='pt').to(device)
@@ -169,6 +177,8 @@ def attention_score_to_cls_token_and_to_all(input_text, model, tokenizer, device
     attention_mask = inputs['attention_mask']
     outputs = model.generate(inputs['input_ids'], output_attentions=True, return_dict_in_generate=True, attention_mask=attention_mask, generation_config=generation_config)
 
+    # print generated sequence
+    print(tokenizer.decode(outputs[0][0], skip_special_tokens=True))
 
     # Extract encoder and decoder attention scores
     encoder_attentions = outputs.encoder_attentions  # tuple of tensors, one per layer
@@ -178,8 +188,8 @@ def attention_score_to_cls_token_and_to_all(input_text, model, tokenizer, device
     # Example: Process one layer of encoder attention
     # encoder_attentions[0] would be of shape (batch_size, num_heads, seq_len, seq_len)
     print("Last Encoder Layer Attention shape:", encoder_attentions[-1].shape)
-    #print("Last Decoder Layer Attention shape:", decoder_attentions[-1].shape)
-    #print("Last Cross Layer Attention shape:", cross_attentions[-1].shape)
+    print("Last Decoder Layer Attention shape:", decoder_attentions[-1][0].shape)
+    print("Last Cross Layer Attention shape:", cross_attentions[-1][0].shape)
 
     # Extract the attention scores from the last layer of the decoder 
     #attention = outputs["decoder_attentions"][-1][0]  # Access the first element of the tuple
@@ -236,4 +246,8 @@ def attention_score_to_cls_token_and_to_all(input_text, model, tokenizer, device
 
 df_all_vs_all, att_to_cls, df_att_to_cls_exp = attention_score_to_cls_token_and_to_all(input_text, model, tokenizer, device)
 
-print(df_all_vs_all)
+# save the attention scores to a csv file
+df_all_vs_all.to_csv(f"attention_scores_{run_name}.csv")
+df_att_to_cls_exp.to_csv(f"attention_scores_to_cls_exp_{run_name}.csv")
+att_to_cls.to_csv(f"attention_scores_to_cls_{run_name}.csv")
+
