@@ -64,59 +64,52 @@ adapter_name="heavy2light_adapter"
 
 model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, generation_config_path, device, adapter_name)
 
+
 # update generation config to return attentions (if needed)
 generation_config.output_attentions = True
 
-
 def format_attention(attention, layers=None, heads=None):
-    # Select specified layers if any
     if layers:
         attention = [attention[layer_index] for layer_index in layers]
-    
     squeezed = []
     for layer_attention in attention:
-        # Expected shape: batch_size x num_heads x 1 x seq_len
-        if len(layer_attention.shape) != 4 or layer_attention.shape[2] != 1:
-            raise ValueError(
-                "The attention tensor does not have the expected dimensions. "
-                "Expected shape [batch_size, num_heads, 1, seq_len]."
-            )
-        
-        # Remove the singleton dimension at position 2
-        layer_attention = layer_attention.squeeze(2)  # Shape now: batch_size x num_heads x seq_len
-        
-        # Select specified heads if any
+        # 1 x num_heads x seq_len x seq_len
+        if len(layer_attention.shape) != 4:
+            raise ValueError("The attention tensor does not have the correct number of dimensions. Make sure you set output_attentions=True when initializing your model.")
+        layer_attention = layer_attention.squeeze(0)
         if heads:
-            layer_attention = layer_attention[:, heads, :]
-        
-        # If multiple items in the batch, average across batch dimension
-        layer_attention = layer_attention.mean(dim=0)  # Averaging across batch dimension
+            layer_attention = layer_attention[heads]
         squeezed.append(layer_attention)
-    
-    # Stack across layers; shape: num_layers x num_heads x seq_len
+    # num_layers x num_heads x seq_len x seq_len
     return torch.stack(squeezed)
 
+
+
 input_text = "QSALTQPASVSGSPGQSITISCTGTSSDVGGYNYVSWYQQHPGKAPKLMIYDVSNRPSGVSNRFSGSKSGNTASLTISGLQAEDEADYYCSSYTSSSTLVFGGGTKLTVL"
+#input_text = "Q A G L T Q P P S V S K G L R Q T A T L T C T G N S N N V G N Q G A A W L Q Q H Q G H P P K L L S Y R N N N R P S G I S E R L S A S R S G N T A S L T I T G L Q P E D E A D Y Y C S A W D S S L S A W V F G G G T K L T V L"
 
 #inputs = tokenizer(input_text, return_tensors='pt') ##COME ERA
 inputs = tokenizer(input_text, return_tensors='pt').to(device)
 #attention_mask=inputs['attention_mask']
 model.to(device)
-outputs = model.generate(inputs['input_ids'], output_attentions = True, return_dict_in_generate=True) 
+attention_mask = inputs['attention_mask'].to(device)
+outputs = model.generate(inputs['input_ids'], output_attentions = True, return_dict_in_generate=True, attention_mask=attention_mask, generation_config=generation_config)
 
 print(type(outputs))
 print(outputs.keys())
 
-attention = outputs['decoder_attentions'][-1] # shape: (num_heads, seq_len, seq_len)
-
-
-for i, attention in enumerate(attention):
-    print(f"Shape of attention tensor {i}: {attention.shape}")
+attention = outputs['decoder_attentions'][-1]
 
 inputs=inputs['input_ids'][0] #tokens id in the tokenizer vocab, same len as the input_test before adding whitespace and special char
 tokens = tokenizer.convert_ids_to_tokens(inputs)  # Convert input ids to token strings
 
-last_layer_attention = format_attention(attention, layers=[-1], heads=[0])  # Shape: (num_layers, seq_len, seq_len)
+last_attentions=format_attention(attention, layers=[-1], heads=[-1]) #extract attention from last layer from last head (29,15)
+
+print(last_attentions.shape)
+
+for i in list(last_attentions[0][0]):
+    print(i)
+
 # # Average across heads to get a single attention matrix
 # # Shape after mean: (seq_len, seq_len)
 # attention_scores_avg = torch.mean(attention, dim=0).detach().numpy()
