@@ -108,15 +108,16 @@ tokenizer = AutoTokenizer.from_pretrained('/ibmm_data2/oas_database/paired_lea_t
 
 
 batch_size = 64
-num_train_epochs = 200
-learning_rate = 1e-3
+num_train_epochs = 50
+learning_rate = 1e-4
 weight_decay = 0.1
 temperature = 0.2
 num_beams = 5
 
+flag = "PLAbDab"
 
 # Set up the run name
-run_name=f"full_diverse_beam_search_{num_beams}_temp_{temperature}_max_length_150_early_stopping_true_batch_size_{batch_size}_epochs_{num_train_epochs}_lr_{learning_rate}_wd_{weight_decay}"
+run_name=f"{flag}_human_healthy_full_diverse_beam_search_{num_beams}_temp_{temperature}_max_length_150_early_stopping_true_batch_size_{batch_size}_epochs_{num_train_epochs}_lr_{learning_rate}_wd_{weight_decay}"
 
 output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/{run_name}"
 logging_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/{run_name}_logging"
@@ -235,8 +236,16 @@ def load_data(file_path):
 #test_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated_SMALL.txt'
 
 # FULL dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
-train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids_space_separated.txt"
-val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids_space_separated.txt"
+#train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_train_no_ids_space_separated.txt"
+#val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_val_no_ids_space_separated.txt"
+
+# FULL dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED with dataset: human healthy, no vaccine, no disease
+#train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/human_healthy_no_vac/train_test_val_datasets/human_healthy_no_vac_allocated_sep_train_no_identifiers_space.txt"
+#val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/human_healthy_no_vac/train_test_val_datasets/human_healthy_no_vac_allocated_sep_val_no_identifiers_space.txt"
+
+# FULL dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED with dataset: human healthy, no vaccine, no disease and PLAbDab unique paired seqs
+train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_train_no_identifiers_spaces.txt"
+val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_val_no_identifiers_spaces.txt"
 
 # MEDIUM dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
 #train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/medium_sized_train_data_seq2seq.txt"

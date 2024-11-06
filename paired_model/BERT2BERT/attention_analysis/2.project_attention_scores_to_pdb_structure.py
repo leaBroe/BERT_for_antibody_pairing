@@ -47,9 +47,10 @@ def update_pdb_bfactor(pdb_file, output_file, attention_scores):
             out_pdb.write(line)
 
 # Paths to input files
-csv_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/attention_analysis/data/attention_scores_to_cls_exp_full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1.csv"
+#csv_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/attention_analysis/data/attention_scores_to_cls_exp_full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1.csv"
+csv_file="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/attention_analysis/data/attention_scores_to_cls_full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1.csv"
 pdb_file = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/attention_analysis/pdb_files/attention_analysis_gen_seq_2d1fe_unrelaxed_rank_001_alphafold2_ptm_model_1_seed_000.pdb"
-output_pdb = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/attention_analysis/output_modified.pdb"
+output_pdb = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/attention_analysis/output_modified_no_exp.pdb"
 
 # Load the attention scores from CSV
 attention_scores = load_attention_scores(csv_file)

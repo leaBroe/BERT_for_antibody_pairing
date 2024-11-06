@@ -34,8 +34,17 @@ percentage_matches_in_col2 = (count_matches_in_col2 / len(col2)) * 100
 print(f"Entries in col1 found anywhere in col2: {count_matches_in_col1} ({percentage_matches_in_col1}%)")
 print(f"Entries in col2 found anywhere in col1: {count_matches_in_col2} ({percentage_matches_in_col2}%)")
 
-# concatenate the two dataframes 
-df = pd.concat([df1, df2], axis=1)
+# # print lengths of the two columns
+# print(len(col1))
+# print(len(col2))
+
+# # concatenate the two dataframes 
+# df = pd.concat([df1, df2], axis=1)
+
+# # print number of rows and columns
+# print(df.shape)
+
+df = pd.read_csv("/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/plabdab_paired_sequences_full_seqs_no_dupl_with_human_healthy_no_vac_from_oas_2.csv")
 
 # add a new column to the dataframe with a unique ID (numbering ascending from 1)
 df['unique_id'] = range(1, len(df) + 1)
@@ -43,4 +52,4 @@ df['unique_id'] = range(1, len(df) + 1)
 df = df[['unique_id'] + [col for col in df.columns if col != 'unique_id']]
 
 # Save the updated DataFrame to a new CSV file
-df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/plabdab_paired_sequences_full_seqs_no_dupl_with_human_healthy_no_vac_from_oas.csv', index=False)
+df.to_csv('/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/plabdab_paired_sequences_full_seqs_no_dupl_with_human_healthy_no_vac_from_oas_2', index=False)
