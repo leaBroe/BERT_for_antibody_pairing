@@ -80,73 +80,64 @@ class AttentionAnalyzer:
         att_to_cls: pandas.Series with attention score of all tokens related to the CLS token
         df_att_to_cls_exp: att_to_cls in pandas.Dataframe format with score in exponential format
         '''
-        model.to(device)
-        tokenizer = tokenizer
-        inputs = tokenizer(input_text, return_tensors='pt').to(device)
-        attention_mask = inputs['attention_mask']
-        outputs = model.generate(inputs['input_ids'], output_attentions=True, return_dict_in_generate=True, attention_mask=attention_mask, generation_config=generation_config)
-
-        # print generated sequence
-        print(tokenizer.decode(outputs[0][0], skip_special_tokens=True))
-
-        # Extract encoder and decoder attention scores
-        encoder_attentions = outputs.encoder_attentions  # tuple of tensors, one per layer
-        decoder_attentions = outputs.decoder_attentions  # tuple of tensors, one per layer
-        cross_attentions = outputs.cross_attentions      # tuple of tensors, one per layer (encoder-decoder attention)
-
-        # Example: Process one layer of encoder attention
-        # encoder_attentions[0] would be of shape (batch_size, num_heads, seq_len, seq_len)
-        print("Last Encoder Layer Attention shape:", encoder_attentions[-1].shape)
-        print("Last Decoder Layer Attention shape:", decoder_attentions[-1][0].shape)
-        print("Last Cross Layer Attention shape:", cross_attentions[-1][0].shape)
-
-        # Extract the attention scores from the last layer of the decoder 
-        #attention = outputs["decoder_attentions"][-1][0]  # Access the first element of the tuple
+        logger.info("Starting attention score computation.")
+        self.model.to(self.device)
+        inputs = self.tokenizer(input_text, return_tensors='pt').to(self.device)
         
-        # take the mean of the attention scores across all heads
-        #attention = torch.mean(attention, dim=1)
+        # Generate sequences
+        generated_outputs = self.model.generate(
+            inputs['input_ids'],
+            attention_mask=inputs['attention_mask'],
+            generation_config=self.generation_config,
+            return_dict_in_generate=True
+        )
+        generated_ids = generated_outputs.sequences  # Extract the sequences tensor
 
-        # Convert input IDs to tokens
-        inputs = inputs['input_ids'][0]
-        tokens = tokenizer.convert_ids_to_tokens(inputs)
-        
-        # Extract attention from the last layer and last head
-        last_attentions = self.format_attention(encoder_attentions, layers=[-1], heads=[-1])
+        # Convert generated IDs to tokens
+        generated_ids = generated_ids[0]  # Assuming batch size is 1
+        generated_tokens = self.tokenizer.convert_ids_to_tokens(generated_ids)
 
-        print(last_attentions.shape)
+        # Pass inputs and generated_ids to the model to get attentions
+        outputs = self.model(
+            input_ids=inputs['input_ids'],
+            attention_mask=inputs['attention_mask'],
+            decoder_input_ids=generated_ids.unsqueeze(0),  # Add batch dimension
+            output_attentions=True,
+            return_dict=True
+        )
 
-        # Average over heads to get a single attention matrix
-        att_score = last_attentions.mean(dim=1).squeeze(0).detach().cpu().numpy()
+        # Extract the decoder attentions
+        decoder_attentions = outputs.decoder_attentions  # List of tensors
 
-        print(att_score.shape)
-        
-        # att_score=[]
-        # for i in list(last_attentions[0][0]): #extracting every list of attention
-        #     att_score.append((i).detach().cpu().numpy())
+        # Extract attention from the last layer
+        last_decoder_attention = decoder_attentions[-1]  # Shape: (batch_size, num_heads, tgt_seq_len, tgt_seq_len)
 
-        # # access first element of att_score
-        # att_score = att_score
-        # att_score = np.array(att_score)
+        # Average over heads if necessary
+        # Here, we average over heads to get a single attention matrix
+        attention_matrix = last_decoder_attention.mean(dim=1).squeeze(0).detach().cpu().numpy()  # Shape: (tgt_seq_len, tgt_seq_len)
 
-        # Convert to matrix
-        m = np.asmatrix(att_score)
-        
-        # Create a DataFrame for all tokens versus all tokens
-        names = [_ for _ in tokens]
-        df_all_vs_all = pd.DataFrame(m, index=names, columns=names)
-        
-        # Extract attention scores related to the CLS token
-        att_to_cls = df_all_vs_all.loc['[CLS]']
-        
+        # Create DataFrame with generated tokens as labels
+        names = generated_tokens
+        df_all_vs_all = pd.DataFrame(attention_matrix, index=names, columns=names)
+
+        # Extract attention scores related to the [CLS] token
+        if '[CLS]' in names:
+            att_to_cls = df_all_vs_all.loc['[CLS]']
+        else:
+            logger.warning("'[CLS]' token not found in generated tokens.")
+            att_to_cls = None
+
         # Convert attention scores to exponential format
-        attention_to_cls_exp = [math.exp(float(i)) for i in att_to_cls]
-        
-        # Create a DataFrame for attention scores related to the CLS token
-        token_att_num = tuple(zip(names, attention_to_cls_exp))
-        df_att_to_cls_exp = pd.DataFrame(token_att_num, columns=['token', 'attention'])
-        df_att_to_cls_exp = df_att_to_cls_exp[df_att_to_cls_exp.token != '[CLS]']
-        df_att_to_cls_exp = df_att_to_cls_exp[df_att_to_cls_exp.token != '[SEP]']
-        
+        attention_to_cls_exp = [math.exp(float(i)) for i in att_to_cls] if att_to_cls is not None else []
+
+        # Create a DataFrame for attention scores related to the [CLS] token
+        if att_to_cls is not None:
+            token_att_num = list(zip(names, attention_to_cls_exp))
+            df_att_to_cls_exp = pd.DataFrame(token_att_num, columns=['token', 'attention'])
+            df_att_to_cls_exp = df_att_to_cls_exp[~df_att_to_cls_exp['token'].isin(['[CLS]', '[SEP]'])]
+        else:
+            df_att_to_cls_exp = pd.DataFrame(columns=['token', 'attention'])
+
         # Clear cache and return results
         torch.cuda.empty_cache()
         gc.collect()
@@ -177,12 +168,12 @@ if __name__ == "__main__":
     )
 
     input_text = "S Y E L T Q P P S V S V S P G Q T A S I T C S G D K L G D K Y A C W Y Q Q K P G Q S P V L V I Y Q D S K R P S G I P E R F S G S N S G N T A T L T I S G T Q A M D E A D Y Y C Q A W D S S T V V F G G G T K L T V L"
-    df_all_vs_all, att_to_cls, df_att_to_cls_exp = analyzer.attention_score_to_cls_token_and_to_all(input_text)
+    df_all_vs_all, att_to_cls, df_att_to_cls_exp = analyzer.attention_score_to_cls_token_and_to_all(input_text, analyzer.model, analyzer.tokenizer, analyzer.device)
 
     # Save the results
-    df_all_vs_all.to_csv(f"attention_scores_{config['run_name']}.csv")
-    df_att_to_cls_exp.to_csv(f"attention_scores_to_cls_exp_{config['run_name']}.csv")
-    att_to_cls.to_csv(f"attention_scores_to_cls_{config['run_name']}.csv")
+    df_all_vs_all.to_csv(f"decoder_attention_scores_{config['run_name']}.csv")
+    df_att_to_cls_exp.to_csv(f"decoder_attention_scores_to_cls_exp_{config['run_name']}.csv")
+    att_to_cls.to_csv(f"decoder_attention_scores_to_cls_{config['run_name']}.csv")
 
 
 
