@@ -132,10 +132,27 @@ def initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, gen
 # generation_config_path=model_path
 # adapter_name="heavy2light_adapter"
 
-# heavy2light 100 epochs diverse beam search beam = 5
-run_name="full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_100_lr_0.001_wd_0.1"
-model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_100_lr_0.001_wd_0.1"
-tokenizer_path=f"{model_path}/checkpoint-840100"
+# # heavy2light 100 epochs diverse beam search beam = 5
+# run_name="full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_100_lr_0.001_wd_0.1"
+# model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_100_lr_0.001_wd_0.1"
+# tokenizer_path=f"{model_path}/checkpoint-840100"
+# adapter_path=f"{model_path}/final_adapter"
+# generation_config_path=model_path
+# adapter_name="heavy2light_adapter"
+
+################## NEW DATA ##################
+# # PLAbDab_human_healthy_full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_50_lr_0.0001_wd_0.1
+# run_name="PLAbDab_human_healthy_full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_50_lr_0.0001_wd_0.1"
+# model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/PLAbDab_human_healthy_full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_50_lr_0.0001_wd_0.1"
+# tokenizer_path=f"{model_path}/checkpoint-367750"
+# adapter_path=f"{model_path}/final_adapter"
+# generation_config_path=model_path
+# adapter_name="heavy2light_adapter"
+
+# PLAbDab_human_healthy_full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1
+run_name="PLAbDab_human_healthy_full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1"
+model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/PLAbDab_human_healthy_full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1"
+tokenizer_path=f"{model_path}/checkpoint-441300"
 adapter_path=f"{model_path}/final_adapter"
 generation_config_path=model_path
 adapter_name="heavy2light_adapter"
@@ -146,7 +163,10 @@ model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path,
 #test_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated_SMALL.txt'
 
 # load FULL test data
-test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated.txt"
+#test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated.txt"
+
+# NEW DATA
+test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_test_no_identifiers_spaces.txt"
 
 print(f"Fully evaluating model with run name: {run_name}")
 
