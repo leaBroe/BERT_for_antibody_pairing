@@ -13,6 +13,8 @@ from adapters import BertAdapterModel, init
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
+pd.options.display.precision = 6  
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -83,7 +85,7 @@ class AttentionAnalyzer:
         logger.info("Starting attention score computation.")
         self.model.to(self.device)
         inputs = self.tokenizer(input_text, return_tensors='pt').to(self.device)
-        
+
         # Generate sequences
         generated_outputs = self.model.generate(
             inputs['input_ids'],
@@ -112,36 +114,24 @@ class AttentionAnalyzer:
         # Extract attention from the last layer
         last_decoder_attention = decoder_attentions[-1]  # Shape: (batch_size, num_heads, tgt_seq_len, tgt_seq_len)
 
-        # Average over heads if necessary
-        # Here, we average over heads to get a single attention matrix
-        attention_matrix = last_decoder_attention.mean(dim=1).squeeze(0).detach().cpu().numpy()  # Shape: (tgt_seq_len, tgt_seq_len)
+        att_score=[]
+        for i in list(last_decoder_attention[0][0]): #extracting every list of attention
+            #att_score.append((i).detach().numpy()) ### COME ERA
+            att_score.append((i).detach().cpu().numpy())
+            
+        #len(att_score) # same len as number of tokens (len text + special char)
+        x = np.stack(att_score, axis=0 )
+        m = np.asmatrix(x) # attention score as matrix
+        names = [_ for _ in generated_tokens]
+        df_all_vs_all = pd.DataFrame(m, index=names, columns=names) #attention score matrix all tokens vs all tokens
 
-        # Create DataFrame with generated tokens as labels
-        names = generated_tokens
-        df_all_vs_all = pd.DataFrame(attention_matrix, index=names, columns=names)
+        # Extract attention to CLS token
+        att_to_cls = df_all_vs_all.loc['[CLS]']
 
-        # Extract attention scores related to the [CLS] token
-        if '[CLS]' in names:
-            att_to_cls = df_all_vs_all.loc['[CLS]']
-        else:
-            logger.warning("'[CLS]' token not found in generated tokens.")
-            att_to_cls = None
-
-        # Convert attention scores to exponential format
-        attention_to_cls_exp = [math.exp(float(i)) for i in att_to_cls] if att_to_cls is not None else []
-
-        # Create a DataFrame for attention scores related to the [CLS] token
-        if att_to_cls is not None:
-            token_att_num = list(zip(names, attention_to_cls_exp))
-            df_att_to_cls_exp = pd.DataFrame(token_att_num, columns=['token', 'attention'])
-            df_att_to_cls_exp = df_att_to_cls_exp[~df_att_to_cls_exp['token'].isin(['[CLS]', '[SEP]'])]
-        else:
-            df_att_to_cls_exp = pd.DataFrame(columns=['token', 'attention'])
-
-        # Clear cache and return results
         torch.cuda.empty_cache()
         gc.collect()
-        return df_all_vs_all, att_to_cls, df_att_to_cls_exp
+
+        return df_all_vs_all, att_to_cls
 
 
 
@@ -168,12 +158,12 @@ if __name__ == "__main__":
     )
 
     input_text = "S Y E L T Q P P S V S V S P G Q T A S I T C S G D K L G D K Y A C W Y Q Q K P G Q S P V L V I Y Q D S K R P S G I P E R F S G S N S G N T A T L T I S G T Q A M D E A D Y Y C Q A W D S S T V V F G G G T K L T V L"
-    df_all_vs_all, att_to_cls, df_att_to_cls_exp = analyzer.attention_score_to_cls_token_and_to_all(input_text, analyzer.model, analyzer.tokenizer, analyzer.device)
+    df_all_vs_all, att_to_cls = analyzer.attention_score_to_cls_token_and_to_all(input_text, analyzer.model, analyzer.tokenizer, analyzer.device)
 
     # Save the results
-    df_all_vs_all.to_csv(f"decoder_attention_scores_{config['run_name']}.csv")
-    df_att_to_cls_exp.to_csv(f"decoder_attention_scores_to_cls_exp_{config['run_name']}.csv")
-    att_to_cls.to_csv(f"decoder_attention_scores_to_cls_{config['run_name']}.csv")
+    df_all_vs_all.to_csv(f"decoder_attention_scores_2_{config['run_name']}.csv", float_format='%.6f')
+    # df_att_to_cls_exp.to_csv(f"decoder_attention_scores_to_cls_exp_{config['run_name']}.csv")
+    att_to_cls.to_csv(f"decoder_attention_scores_to_cls_{config['run_name']}.csv", float_format='%.6f')
 
 
 
