@@ -114,10 +114,17 @@ weight_decay = 0.1
 temperature = 0.2
 num_beams = 5
 
+repetition_penalty = 0.2
+dola_layers = "low"
+max_length = 120
+
 flag = "PLAbDab"
+dataset = "healthy_human"
+dataset_size = "small"
+decoding = "DoLa"
 
 # Set up the run name
-run_name=f"{flag}_human_healthy_full_diverse_beam_search_{num_beams}_temp_{temperature}_max_length_150_early_stopping_true_batch_size_{batch_size}_epochs_{num_train_epochs}_lr_{learning_rate}_wd_{weight_decay}"
+run_name=f"{dataset_size}_{flag}_{dataset}_{dola_layers}_{decoding}_max_length_{max_length}_rep_penalty_{repetition_penalty}_num_epochs_{num_train_epochs}"
 
 output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/{run_name}"
 logging_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/{run_name}_logging"
@@ -168,9 +175,36 @@ model.config.vocab_size = model.config.encoder.vocab_size
 #     return_dict_in_generate=True, )
 
 
-#generation_config.save_pretrained("generation_config", f"diverse_beam_search_beams_{num_beams}.json")
+# Define generation configuration with DoLa settings
+generation_config = GenerationConfig(
+    num_return_sequences=1,
+    max_length=max_length,
+    min_length=50,
+    #early_stopping=True,
+    
+    # Distribution and repetition control
+    #temperature=0.7,  # or your specific temperature value
+    dola_layers=dola_layers,  # or "high" or a list like [10, 12, 14]
+    repetition_penalty=repetition_penalty,  # Set to reduce repetition in DoLa decoding
+    
+    vocab_size=model.config.encoder.vocab_size,
 
-generation_config_name = f"Diverse_beam_search_decoding"
+    # Token IDs
+    pad_token_id=tokenizer.pad_token_id,
+    eos_token_id=tokenizer.sep_token_id,
+    decoder_start_token_id=tokenizer.cls_token_id,
+
+    # Output and caching options
+    use_cache=True,
+    output_scores=True,
+    output_hidden_states=True,
+    return_dict_in_generate=True
+)
+
+generation_config.save_pretrained("generation_config", f"DoLa_decoding_rep_penalty_{repetition_penalty}.json")
+
+generation_config_name = f"DoLa_decoding_rep_penalty_{repetition_penalty}"
+#generation_config_name = f"Diverse_beam_search_decoding"
 # before generation_config_7.json
 generation_config = GenerationConfig.from_pretrained("generation_config", f"{generation_config_name}.json")
 
@@ -244,8 +278,20 @@ def load_data(file_path):
 #val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/human_healthy_no_vac/train_test_val_datasets/human_healthy_no_vac_allocated_sep_val_no_identifiers_space.txt"
 
 # FULL dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED with dataset: human healthy, no vaccine, no disease and PLAbDab unique paired seqs
-train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_train_no_identifiers_spaces.txt"
-val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_val_no_identifiers_spaces.txt"
+#train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_train_no_identifiers_spaces.txt"
+#val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_val_no_identifiers_spaces.txt"
+
+# SMALL dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED with dataset: human healthy, no vaccine, no disease and PLAbDab unique paired seqs
+train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_train_no_identifiers_spaces_small.txt"
+val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_val_no_identifiers_spaces_small.txt"
+
+# FULL dataset all human paired, no duplicates + PLAbDab unique paired sequences
+#train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/human_healthy_all_disease_plabdab/train_val_test_datasets/human_healthy_all_diseases_plabdab_train_no_identifiers_spaces.txt"
+#val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/human_healthy_all_disease_plabdab/train_val_test_datasets/human_healthy_all_diseases_plabdab_val_no_identifiers_spaces.txt"
+
+# FULL dataset human healthy + covid paired, no duplicates + PLAbDab unique paired sequences
+# train_file_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/human_healthy_and_covid/train_test_val_datasets/human_healthy_covid_allocated__train_no_identifiers_spaces.txt"
+# val_file_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/human_healthy_and_covid/train_test_val_datasets/human_healthy_covid_allocated__val_no_identifiers_spaces.txt"
 
 # MEDIUM dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED!!
 #train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/data/medium_sized_train_data_seq2seq.txt"
@@ -278,8 +324,6 @@ def process_data_to_model_inputs(batch):
     batch["labels"] = [[-100 if token == tokenizer.pad_token_id else token for token in labels] for labels in batch["labels"]]
 
     return batch
-
-
 
 
 
@@ -403,7 +447,10 @@ model.save_adapter(adapter_output_path, "heavy2light_adapter")
 #decoder.save_adapter(output_path, "decoder_adapter")
 
 # Load your test data
-test_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated_SMALL.txt'
+#test_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated_SMALL.txt'
+
+# small test dataset all human paired, no duplicates + PLAbDab unique paired sequences
+test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/human_healthy_all_disease_plabdab/train_val_test_datasets/human_healthy_all_diseases_plabdab_test_no_identifiers_spaces_small.txt"
 
 # small test file with no spaces
 #test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_small.txt"
