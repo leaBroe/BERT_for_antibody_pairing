@@ -14,6 +14,7 @@ from transformers import BertGenerationEncoder, BertGenerationDecoder, EncoderDe
 from adapters import BnConfig, Seq2SeqAdapterTrainer, AdapterTrainer, BertAdapterModel, init
 import wandb
 import torch
+import torch.nn as nn
 import pandas as pd
 from datasets import Dataset
 import os
@@ -40,6 +41,14 @@ small_light_decoder =  "/ibmm_data2/oas_database/paired_lea_tmp/light_model/src/
 
 model = EncoderDecoderModel.from_encoder_decoder_pretrained(small_heavy_encoder, small_light_decoder , add_cross_attention=True)
 init(model)
+
+# Count the layers (modules)
+layer_count = sum(1 for _ in model.modules())
+print(f"Total number of layers (including activations, etc.): {layer_count}")
+
+# Count layers with trainable parameters
+trainable_layer_count = sum(1 for _ in model.children() if list(_.parameters()))
+print(f"Number of trainable layers: {trainable_layer_count}")
 
 ############################################ big heavy model / big light model ############################################
 # decoder: light model big config and encoder: heavy model big config
@@ -108,23 +117,26 @@ tokenizer = AutoTokenizer.from_pretrained('/ibmm_data2/oas_database/paired_lea_t
 
 
 batch_size = 64
-num_train_epochs = 50
+num_train_epochs = 30
 learning_rate = 1e-4
 weight_decay = 0.1
 temperature = 0.2
 num_beams = 5
 
-repetition_penalty = 0.2
-dola_layers = "low"
+repetition_penalty = 1.2
+#dola_layers = "high"
+dola_layers=[1,340]
 max_length = 120
 
 flag = "PLAbDab"
 dataset = "healthy_human"
-dataset_size = "small"
+dataset_size = "full"
 decoding = "DoLa"
 
 # Set up the run name
 run_name=f"{dataset_size}_{flag}_{dataset}_{dola_layers}_{decoding}_max_length_{max_length}_rep_penalty_{repetition_penalty}_num_epochs_{num_train_epochs}"
+
+print(f"Training model with run_name: {run_name}")
 
 output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/{run_name}"
 logging_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/{run_name}_logging"
@@ -278,12 +290,12 @@ def load_data(file_path):
 #val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/human_healthy_no_vac/train_test_val_datasets/human_healthy_no_vac_allocated_sep_val_no_identifiers_space.txt"
 
 # FULL dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED with dataset: human healthy, no vaccine, no disease and PLAbDab unique paired seqs
-#train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_train_no_identifiers_spaces.txt"
-#val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_val_no_identifiers_spaces.txt"
+train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_train_no_identifiers_spaces.txt"
+val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_val_no_identifiers_spaces.txt"
 
 # SMALL dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED with dataset: human healthy, no vaccine, no disease and PLAbDab unique paired seqs
-train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_train_no_identifiers_spaces_small.txt"
-val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_val_no_identifiers_spaces_small.txt"
+#train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_train_no_identifiers_spaces_small.txt"
+#val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_val_no_identifiers_spaces_small.txt"
 
 # FULL dataset all human paired, no duplicates + PLAbDab unique paired sequences
 #train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/human_healthy_all_disease_plabdab/train_val_test_datasets/human_healthy_all_diseases_plabdab_train_no_identifiers_spaces.txt"
