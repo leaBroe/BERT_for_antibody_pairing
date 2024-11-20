@@ -296,15 +296,11 @@ def calculate_blosum_score(true_seq, generated_seq, matrix):
 # Use the BLOSUM62 matrix
 blosum62 = substitution_matrices.load("BLOSUM62")
 
-def clean_sequence(seq):
-    valid_chars = set("ACDEFGHIKLMNPQRSTVWY")
-    return ''.join([char if char in valid_chars else 'X' for char in seq])
-
 
 def calculate_blosum_score_with_global_alignment(seq1, seq2, blosum_matrix):
     # Clean sequences to remove invalid characters
-    seq1 = clean_sequence(seq1)
-    seq2 = clean_sequence(seq2)
+    seq1 = seq1.replace(' ', '')
+    seq2 = seq2.replace(' ', '')
     
     # Perform global alignment
     alignments = pairwise2.align.globalds(seq1, seq2, blosum_matrix, -10, -1)
@@ -316,6 +312,12 @@ def calculate_blosum_score_with_global_alignment(seq1, seq2, blosum_matrix):
     similarity_percentage = (matches / max(len(seq1), len(seq2))) * 100
     
     return score, similarity_percentage
+
+# # test global alignment function
+# true_seq="DIELTQSPAIMSASLGEKVTMSCRASSSVNFIYWYQQKSDASPKLWVYYTSHLPPGVPARFSGSGSGNSYSLTISSMEGEDAATYYCQQFTSSPFTFGSGTKLEIK"
+# gen_seq="DIVMTQSPSSLAVSAGEKVTMSCKSSQSLLNSRTRKNYLAWYQQKPGQSPKLLIYWASTRESGVPDRFTGSGSGTDFTLTISSVQAEDLAVYYCKQSYNLRTFGGGTKLEIK"
+# score, similarity_percentage = calculate_blosum_score_with_global_alignment(true_seq, gen_seq, blosum62)
+# print(f"score: {score}, similarity_percentage: {similarity_percentage}")
 
 
 # Updated loop for sequence generation and BLOSUM score calculation

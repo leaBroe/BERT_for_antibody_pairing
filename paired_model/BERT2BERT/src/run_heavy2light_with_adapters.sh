@@ -2,9 +2,9 @@
 
 
 #SBATCH --gres=gpu:a100:1
-#SBATCH --job-name=plabdab_covid_human
-#SBATCH --output=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/decoding_strategies/contrastive_search/logs/small_dataset_human_healthy_contrastive_decoding_%j.o
-#SBATCH --error=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/decoding_strategies/contrastive_search/logs/small_dataset_human_healthy_contrastive_decoding_%j.e
+#SBATCH --job-name=dola
+#SBATCH --output=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/decoding_strategies/DoLa/logs/full_dataset_human_healthy_dola_%j.o
+#SBATCH --error=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/decoding_strategies/DoLa/logs/full_dataset_human_healthy_dola_%j.e
 
 eval "$(conda shell.bash hook)"
 conda init bash

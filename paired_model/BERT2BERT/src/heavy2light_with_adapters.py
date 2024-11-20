@@ -120,27 +120,27 @@ batch_size = 64
 num_train_epochs = 50
 learning_rate = 1e-4
 weight_decay = 0.1
-temperature = 0.1
+#temperature = 0.1
 num_beams = 5
 top_p = 0.9
 penalty_alpha = 0.8
 top_k = 2
 
 repetition_penalty = 1.2
-#dola_layers = "high"
+dola_layers = "high"
 #dola_layers=[1,340]
 max_length = 120
 
 flag = "PLAbDab"
 dataset = "healthy_human"
 dataset_size = "full"
-#decoding = "DoLa"
+decoding = "DoLa"
 #decoding="nucleus"
-decoding="contrastive"
+#decoding="contrastive"
 
 # Set up the run name
 #run_name=f"{dataset_size}_{flag}_{dataset}_{dola_layers}_{decoding}_max_length_{max_length}_rep_penalty_{repetition_penalty}_num_epochs_{num_train_epochs}"
-run_name=f"{decoding}_k_{top_k}_pen_{penalty_alpha}_temp_{temperature}_{dataset_size}_{flag}_{dataset}_max_length_{max_length}_num_epochs_{num_train_epochs}"
+run_name=f"{decoding}_layers_{dola_layers}_rep_penal_{repetition_penalty}_{dataset_size}_{flag}_{dataset}_max_length_{max_length}_num_epochs_{num_train_epochs}"
 
 
 print(f"Training model with run_name: {run_name}")
@@ -155,71 +155,71 @@ model.config.eos_token_id = tokenizer.sep_token_id
 model.config.pad_token_id = tokenizer.pad_token_id
 model.config.vocab_size = model.config.encoder.vocab_size
 
-generation_config = GenerationConfig(
-    num_return_sequences=1,
-    max_length=max_length,
-    min_length=50,
-    early_stopping = False,
-    
-    #length_penalty = -2.0,
-    
-    #num_beams = num_beams, # before: 3
-    #num_beam_groups=2,
-    #diversity_penalty=1.0,
-
-    # # sampling
-    do_sample=True,
-    penalty_alpha=penalty_alpha,
-    top_k=top_k,
-    #top_p=top_p,
-    
-    # no_repeat_ngram_size = 2,
-
-    # # distribution adjustment
-    #temperature=temperature, # before: 0.001 or 0.5
-    # repetition_penalty=1,
-    # encoder_repetition_penalty=1.5,
-
-    vocab_size=model.config.encoder.vocab_size,
-
-    # token ids
-    pad_token_id=tokenizer.pad_token_id,
-    eos_token_id=tokenizer.sep_token_id,
-    decoder_start_token_id=tokenizer.cls_token_id,
-
-    # others
-    use_cache=True,
-    output_logits=True,
-    output_scores=True,
-    output_hidden_states=True,
-    return_dict_in_generate=True, )
-
-
-# # Define generation configuration with DoLa settings
 # generation_config = GenerationConfig(
 #     num_return_sequences=1,
 #     max_length=max_length,
 #     min_length=50,
-#     #early_stopping=True,
+#     early_stopping = False,
     
-#     # Distribution and repetition control
-#     #temperature=0.7,  # or your specific temperature value
-#     dola_layers=dola_layers,  # or "high" or a list like [10, 12, 14]
-#     repetition_penalty=repetition_penalty,  # Set to reduce repetition in DoLa decoding
+#     #length_penalty = -2.0,
     
+#     #num_beams = num_beams, # before: 3
+#     #num_beam_groups=2,
+#     #diversity_penalty=1.0,
+
+#     # # sampling
+#     do_sample=True,
+#     penalty_alpha=penalty_alpha,
+#     top_k=top_k,
+#     #top_p=top_p,
+    
+#     # no_repeat_ngram_size = 2,
+
+#     # # distribution adjustment
+#     #temperature=temperature, # before: 0.001 or 0.5
+#     # repetition_penalty=1,
+#     # encoder_repetition_penalty=1.5,
+
 #     vocab_size=model.config.encoder.vocab_size,
 
-#     # Token IDs
+#     # token ids
 #     pad_token_id=tokenizer.pad_token_id,
 #     eos_token_id=tokenizer.sep_token_id,
 #     decoder_start_token_id=tokenizer.cls_token_id,
 
-#     # Output and caching options
+#     # others
 #     use_cache=True,
+#     output_logits=True,
 #     output_scores=True,
 #     output_hidden_states=True,
-#     return_dict_in_generate=True
-# )
+#     return_dict_in_generate=True, )
+
+
+# Define generation configuration with DoLa settings
+generation_config = GenerationConfig(
+    num_return_sequences=1,
+    max_length=max_length,
+    min_length=50,
+    #early_stopping=True,
+    
+    # Distribution and repetition control
+    #temperature=0.7,  # or your specific temperature value
+    dola_layers=dola_layers,  # or "high" or a list like [10, 12, 14]
+    repetition_penalty=repetition_penalty,  # Set to reduce repetition in DoLa decoding
+    
+    vocab_size=model.config.encoder.vocab_size,
+
+    # Token IDs
+    pad_token_id=tokenizer.pad_token_id,
+    eos_token_id=tokenizer.sep_token_id,
+    decoder_start_token_id=tokenizer.cls_token_id,
+
+    # Output and caching options
+    use_cache=True,
+    output_scores=True,
+    output_hidden_states=True,
+    return_dict_in_generate=True
+)
 
 generation_config.save_pretrained("generation_config", f"nucleus_decoding_generation_config_{top_p}.json")
 
