@@ -4574,3 +4574,141 @@ used script: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/sqli
 | IGL | 289.2826724788331 | 250.0 | 57.36146994975642 | 51.8181818181818 | 1.9306571228484795 | 1.76997798681259 | 23858 |
 
 LDA embeddings as input, label with j genes
+
+path to used script
+
+```bash
+/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/test_classification_models.py
+```
+
+used models:
+
+1. FULL_DATA_lr_2e-06_batch_64_epochs_40_weight_decay_0.3_warmup_steps_1000_max_grad_norm_1.0
+
+adapters and model path:
+
+```bash
+/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/checkpoints_light_heavy_classification/FULL_DATA_lr_2e-06_batch_64_epochs_40_weight_decay_0.3_warmup_steps_1000_max_grad_norm_1.0
+/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/checkpoints_light_heavy_classification/FULL_DATA_lr_2e-06_batch_64_epochs_40_weight_decay_0.3_warmup_steps_1000_max_grad_norm_1.0/checkpoint-672080/class_adap
+```
+
+1. adapters_FULL_data_lr_2e-06_batch_64_epochs_10_weight_decay_0.3_warmup_steps_1000_max_grad_norm1.0
+
+only adapters available
+
+```bash
+/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/checkpoints_light_heavy_classification/adapters_FULL_data_lr_2e-06_batch_64_epochs_10_weight_decay_0.3_warmup_steps_1000_max_grad_norm1.0
+/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/checkpoints_light_heavy_classification/adapters_FULL_data_lr_2e-06_batch_64_epochs_10_weight_decay_0.3_warmup_steps_1000_max_grad_norm1.0/class_adap
+```
+
+1. FULL_DATA_lr_2e-05_batch_64_epochs_10_weight_decay_0.1_warmup_steps_500_max_grad_norm_1.0
+
+adapter and model available
+
+used adapters at epoch 3 bc of overfitting after
+
+```bash
+/ibmm_data2/oas_database/paired_lea_tmp/paired_model/IgBERT/checkpoints_light_heavy_classification/FULL_DATA_lr_2e-05_batch_64_epochs_10_weight_decay_0.1_warmup_steps_500_max_grad_norm_1.0/checkpoint-50406
+```
+
+# IgBERT 100% Masking light Chain Generation results on full test set
+
+```bash
+output file: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/igbert_mlm_FULL_144577.o
+--- Averages Across All Sequences ---
+Average Perplexity: 157.3379544786811
+Average Global Alignment Similarity: 27.0515
+Average Global Alignment BLOSUM Score: -22.69960868336086
+Average 'Hard' Similarity: 7.24%
+Average 'Hard' BLOSUM Score: -71.55635405972414
+```
+
+# full evaluation IgBERT2IgBERT
+
+run name: FULL_data_cross_attention_with_adapters_batch_size_64_epochs_20_lr_0.0005_weight_decay_0.05
+
+```bash
+output file: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/logs/x_full_eval_IgBERT2IgBERT_127813.o
+Average BLOSUM Score: -51.87956970048654
+Average Similarity Percentage: 10.5584562033619%
+Mean Perplexity: 16.85335922241211
+
+> print(mean_blosum)
+[1] -84.3587
+> print(mean_similarity)
+[1] 25.35582
+> print(median_blosum)
+[1] -80
+> print(median_similarity)
+[1] 25.4386
+```
+
+|  | Mean Similarity | Mean BLOSUM score | Perplexity |
+| --- | --- | --- | --- |
+| IgBERT2IgBERT | 0.2536 | -84.3587 | 16.85335 |
+| IgBERT 100% Masking MLM | 0.2705 | -22.6996 | 157.3379 |
+
+# Gap Analysis in Global Alignment Explanation of Approach
+
+For the Gap analysis, Biopython (version 1.84)  and Python (version 3.10.11) was used. 
+
+Explanation:
+
+```bash
+target            0 EIVLTQSPG-TLSLSPGE-AATLSCK--SS 26
+                  0 ||||||||--||||||||-|-||||---|- 30
+query             0 EIVLTQSP-ATLSLSPGERA-TLSC-RAS- 26
+
+Total gaps: 8
+Alignment length: 30
+normalized gaps: 8 / 30 = 0.2667
+Gap Density: 0.2667
+
+#This was done for each region and the full test set 
+```
+
+Results:
+
+| Region (column_name) | Average Normalized Gaps |
+| --- | --- |
+| FWR 1 (fwr1_aa) | 0.5156 |
+| CDR 1 (cdr1_aa) | 0.6682 |
+| FWR 2 (fwr2_aa) | 0.3943 |
+| CDR 2 (cdr2_aa) | 0.6551 |
+| FWR 3 (fwr3_aa) | 0.4144 |
+| CDR 3 (cdr3_aa) | 0.7130 |
+| FWR 4 (fwr4_aa_correct) | 0.4139 |
+
+# MLM big/big conf Model evaluation
+
+|  | Mean BLOSUM | Median BLOSUM | Mean Similarity | Median Similarity | Perplexity | Encoder | Decoder |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Heavy2Light model | 260.2032 | 248 | 0.5288 | 49.091 | 3.4277 | Heavy MLM model with big configuration | Light MLM with big configuration |
+
+Big configuration: number of trainable parameters: 32’839’488 trainable params: 32’839’488 || all params: 204’963’673 || trainable%: 16.022101633590456
+
+### 
+
+| Locus | BLOSUM Mean | Similarity Mean | Perplexity Mean |
+| --- | --- | --- | --- |
+| κ (IGK) | 346.13 | 0.6634 | 1.89 |
+| λ (IGL) | 289.28 | 0.5736 | 1.93 |
+
+|  | Mean Similarity | Mean BLOSUM score | Perplexity |
+| --- | --- | --- | --- |
+| IgBERT2IgBERT | 0.2536 | -84.3587 | 16.85335 |
+| IgBERT 100% Masking MLM | 0.2705 | -22.6996 | 157.3379 |
+
+|  | Architecture | Base Model | Trainable Parameters | Parameters from Adapter | Task |
+| --- | --- | --- | --- | --- | --- |
+| Heavy MLM Model Unpaired | RoBERTa | Trained from Scratch | 13'150'745 | - | MLM |
+| Light MLM Model Unpaired | RoBERTa | Trained from Scratch | 13'150'745 | - | MLM |
+| NSP Model | BERT | ProtBert-BFD | 419'931'136 | - | MLM & NSP |
+| Classification Model | BERT | IgBERT | 427'862'786 | 7'931'650 | Sequence Classification |
+| Encoder-Decoder Model 'Heavy2Light' | RoBERTa | Encoder: Heavy MLM model Decoder: Light MLM model | 31'173'273 | 4'872'832 | Text Generation |
+| Encoder-Decoder Model 'IgBERT2IgBERT' | BERT | Encoder: IgBERT Decoder: IgBERT | 985'701'790 | 145'837'440 | Text Generation |
+| IgBERT MLM Model | BERT | IgBERT | 418'881'536 | - | MLM with 100% masking of light chain |
+
+| **IgBERT** | **Val. Set** | **0.5723** | **0.7457** | **0.7072** | **0.6589** | **0.8589** |
+| --- | --- | --- | --- | --- | --- | --- |
+| IgBERT | Test Set | 0.5470 | 0.7512 | 0.7286 | 0.6935 | 0.8194 |
