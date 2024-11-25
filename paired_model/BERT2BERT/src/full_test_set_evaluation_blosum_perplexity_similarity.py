@@ -166,13 +166,36 @@ def initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, gen
 # generation_config_path=model_path
 # adapter_name="heavy2light_adapter"
 
-# PLAbDab_healthy_human_covid_full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.0001_wd_0.1
-run_name="PLAbDab_healthy_human_covid_full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.0001_wd_0.1"
-model_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/PLAbDab_healthy_human_covid_full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.0001_wd_0.1"
-tokenizer_path = f"{model_path}/checkpoint-969240"
-adapter_path = f"{model_path}/final_adapter"
-generation_config_path = model_path
-adapter_name = "heavy2light_adapter"
+# # PLAbDab_healthy_human_covid_full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.0001_wd_0.1
+# run_name="PLAbDab_healthy_human_covid_full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.0001_wd_0.1"
+# model_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/PLAbDab_healthy_human_covid_full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.0001_wd_0.1"
+# tokenizer_path = f"{model_path}/checkpoint-969240"
+# adapter_path = f"{model_path}/final_adapter"
+# generation_config_path = model_path
+# adapter_name = "heavy2light_adapter"
+
+# # DoLa_layers_high_rep_penal_1.2_full_PLAbDab_healthy_human_max_length_120_num_epochs_50
+# run_name="DoLa_layers_high_rep_penal_1.2_full_PLAbDab_healthy_human_max_length_120_num_epochs_50"
+# model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/DoLa_layers_high_rep_penal_1.2_full_PLAbDab_healthy_human_max_length_120_num_epochs_50"
+# tokenizer_path=f"{model_path}/checkpoint-367750"
+# adapter_path=f"{model_path}/final_adapter"
+# generation_config_path=model_path
+# adapter_name="heavy2light_adapter"
+
+# # nucleus_0.9_temp_0.1_full_PLAbDab_healthy_human_max_length_120_num_epochs_30
+# run_name="nucleus_0.9_temp_0.1_full_PLAbDab_healthy_human_max_length_120_num_epochs_30"
+# model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/nucleus_0.9_temp_0.1_full_PLAbDab_healthy_human_max_length_120_num_epochs_30"
+# tokenizer_path=f"{model_path}/checkpoint-220650"
+# adapter_path=f"{model_path}/final_adapter"
+# generation_config_path=model_path
+# adapter_name="heavy2light_adapter"
+
+run_name="contrastive_k_2_pen_0.8_temp_0.1_full_PLAbDab_healthy_human_max_length_120_num_epochs_50"
+model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/contrastive_k_2_pen_0.8_temp_0.1_full_PLAbDab_healthy_human_max_length_120_num_epochs_50"
+tokenizer_path=f"{model_path}/checkpoint-367750"
+adapter_path=f"{model_path}/final_adapter"
+generation_config_path=model_path
+adapter_name="heavy2light_adapter"
 
 model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, generation_config_path, device, adapter_name)
 
@@ -182,14 +205,14 @@ model, tokenizer, generation_config = initialize_model_and_tokenizer(model_path,
 # load FULL test data
 #test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated.txt"
 
-# NEW DATA
-#test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_test_no_identifiers_spaces.txt"
+# NEW DATA (human healthy no diseases + plabdab)
+test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_test_no_identifiers_spaces.txt"
 
 # test data all human paired + plabdab
 #test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/human_healthy_all_disease_plabdab/train_val_test_datasets/human_healthy_all_diseases_plabdab_test_no_identifiers_spaces.txt"
 
 # human_healthy_and_covid
-test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/human_healthy_and_covid/train_test_val_datasets/human_healthy_covid_allocated__test_no_identifiers_spaces.txt"
+#test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/human_healthy_and_covid/train_test_val_datasets/human_healthy_covid_allocated__test_no_identifiers_spaces.txt"
 
 # small test data
 #test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/human_healthy_and_covid/train_test_val_datasets/human_healthy_covid_allocated__test_no_identifiers_spaces_small.txt"
@@ -303,7 +326,7 @@ def calculate_blosum_score_with_global_alignment(seq1, seq2, blosum_matrix):
     seq2 = seq2.replace(' ', '')
     
     # Perform global alignment
-    alignments = pairwise2.align.globalds(seq1, seq2, blosum_matrix, -10, -1)
+    alignments = pairwise2.align.globalds(seq1, seq2, blosum_matrix, -10, -4)
     best_alignment = alignments[0]
     
     # Extract aligned sequences and calculate similarity
@@ -384,4 +407,13 @@ for i in tqdm(range(len(heavy_sequences)), desc="Processing sequences"):
     print(f"Similarity Percentage: {similarity_percentage}%")
     print(f"Perplexity: {perplexity[0]}")
 
+
+# calculate average scores and perplexity
+average_blosum_score = np.mean(scores)
+average_similarity_percentage = np.mean(similarities)
+mean_perplexity = np.mean(perplexities)
+
+print(f"\nAverage BLOSUM Score: {average_blosum_score}")
+print(f"Average Similarity Percentage: {average_similarity_percentage}%")
+print(f"Mean Perplexity: {mean_perplexity}")
 
