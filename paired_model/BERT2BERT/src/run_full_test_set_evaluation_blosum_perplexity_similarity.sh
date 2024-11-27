@@ -1,10 +1,10 @@
 #!/bin/bash
 
 
-#SBATCH --gres=gpu:alphafold:1
+#SBATCH --gres=gpu:h100:1
 #SBATCH --job-name=full_eval
-#SBATCH --output=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_decoding_strategies/contrastive_search/logs/full_eval_contrastive_k_2_pen_0.8_temp_0.1_full_PLAbDab_healthy_human_max_length_120_num_epochs_50_%j.o
-#SBATCH --error=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_decoding_strategies/contrastive_search/logs/full_eval_contrastive_k_2_pen_0.8_temp_0.1_full_PLAbDab_healthy_human_max_length_120_num_epochs_50_%j.e
+#SBATCH --output=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_decoding_strategies/DoLa/logs/full_eval_full_PLAbDab_healthy_human_[1,340]_DoLa_max_length_120_rep_penalty_1.2_num_epochs_30_%j.o
+#SBATCH --error=/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_decoding_strategies/DoLa/logs/full_eval_full_PLAbDab_healthy_human_[1,340]_DoLa_max_length_120_rep_penalty_1.2_num_epochs_30_%j.e
 
 eval "$(conda shell.bash hook)"
 conda init bash

@@ -3,7 +3,9 @@ using Statistics
 # Define the file path
 #file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_decoding_strategies/nucleus_sampling/logs/full_eval_nucleus_0.9_temp_0.1_full_PLAbDab_healthy_human_184933.o"
 #file_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/human_healthy_and_covid/logs/heavy2light_eval_correct_2_184930.o"
-file_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_decoding_strategies/nucleus_sampling/logs/full_eval_nucleus_0.9_temp_0.1_full_PLAbDab_healthy_human_184933.o"
+#file_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_decoding_strategies/nucleus_sampling/logs/full_eval_nucleus_0.9_temp_0.1_full_PLAbDab_healthy_human_184933.o"
+#file_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/logs/full_eval_DoLa_layers_high_rep_penal_1.2_184932.o"
+file_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_decoding_strategies/DoLa/logs/full_eval_full_PLAbDab_healthy_human_[1,340]_DoLa_max_length_120_rep_penalty_1.2_num_epochs_30_184978.o"
 
 # Initialize accumulators
 blosum_scores = Float64[]

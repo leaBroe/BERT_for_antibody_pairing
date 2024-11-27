@@ -190,9 +190,16 @@ def initialize_model_and_tokenizer(model_path, tokenizer_path, adapter_path, gen
 # generation_config_path=model_path
 # adapter_name="heavy2light_adapter"
 
-run_name="contrastive_k_2_pen_0.8_temp_0.1_full_PLAbDab_healthy_human_max_length_120_num_epochs_50"
-model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/contrastive_k_2_pen_0.8_temp_0.1_full_PLAbDab_healthy_human_max_length_120_num_epochs_50"
-tokenizer_path=f"{model_path}/checkpoint-367750"
+# run_name="contrastive_k_2_pen_0.8_temp_0.1_full_PLAbDab_healthy_human_max_length_120_num_epochs_50"
+# model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/contrastive_k_2_pen_0.8_temp_0.1_full_PLAbDab_healthy_human_max_length_120_num_epochs_50"
+# tokenizer_path=f"{model_path}/checkpoint-367750"
+# adapter_path=f"{model_path}/final_adapter"
+# generation_config_path=model_path
+# adapter_name="heavy2light_adapter"
+
+run_name="full_PLAbDab_healthy_human_[1, 340]_DoLa_max_length_120_rep_penalty_1.2_num_epochs_30"
+model_path="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_PLAbDab_healthy_human_[1, 340]_DoLa_max_length_120_rep_penalty_1.2_num_epochs_30"
+tokenizer_path=f"{model_path}/checkpoint-220650"
 adapter_path=f"{model_path}/final_adapter"
 generation_config_path=model_path
 adapter_name="heavy2light_adapter"
