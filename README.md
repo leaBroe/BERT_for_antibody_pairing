@@ -1,8 +1,5 @@
 # Heavy-Light Chain Pair Identification and Prediction in Antibodies
 
-Institute of Biochemistry and Molecular Medicine  
-University of Bern  
-
 ### Background
 Antibodies are vital proteins produced by the immune system to identify and neutralize harmful substances such as bacteria or viruses. Each antibody comprises two key components: heavy chains and light chains. The pairing of these chains forms the basic structure of an antibody, with the heavy chain containing a variable region (VH) and a constant region (CH), and the light chain containing a variable region (VL) and a constant region (CL). The VH and VL regions are responsible for antigen binding, while the CH and CL regions determine the antibody's class and function.
 
