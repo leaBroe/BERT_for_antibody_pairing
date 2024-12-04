@@ -40,7 +40,9 @@ small_heavy_encoder = "/ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/r
 #small_light_decoder =  "/ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-56556520"
 
 #light_gpt_decoder = "/storage/homefs/lb24i892/gpt_light_model_unpaired/model_outputs/small_gpt2_test_light_seqs_unp/checkpoint-74"
-light_gpt_decoder ="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/gpt_decoder/checkpoint-74"
+#light_gpt_decoder ="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/gpt_decoder/checkpoint-74"
+#light_gpt_decoder = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/gpt_decoder/small_gpt2_test_light_seqs_unp_lr_5e-4/checkpoint-47"
+light_gpt_decoder = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/gpt_decoder/old_tokenizer/checkpoint-74"
 
 model = EncoderDecoderModel.from_encoder_decoder_pretrained(small_heavy_encoder, light_gpt_decoder , add_cross_attention=True)
 init(model)
@@ -53,7 +55,7 @@ print(f"Total number of layers (including activations, etc.): {layer_count}")
 trainable_layer_count = sum(1 for _ in model.children() if list(_.parameters()))
 print(f"Number of trainable layers: {trainable_layer_count}")
 
-# ############################################ add adapters ############################################
+############################################# add adapters ############################################
 
 config = BnConfig(mh_adapter=True, output_adapter=True, reduction_factor=16, non_linearity="relu")
 
@@ -113,11 +115,11 @@ top_k = 2
 repetition_penalty = 1.2
 dola_layers = "high"
 #dola_layers=[1,340]
-max_length = 120
+max_length = 110
 
 flag = "PLAbDab"
 dataset = "healthy_human"
-dataset_size = "full"
+dataset_size = "small"
 decoding = "DoLa"
 translation_model="bert2gpt"
 #decoding="nucleus"
@@ -125,7 +127,7 @@ translation_model="bert2gpt"
 
 # Set up the run name
 #run_name=f"{dataset_size}_{flag}_{dataset}_{dola_layers}_{decoding}_max_length_{max_length}_rep_penalty_{repetition_penalty}_num_epochs_{num_train_epochs}"
-run_name=f"{translation_model}_{decoding}_layers_{dola_layers}_rep_penal_{repetition_penalty}_{dataset_size}_{flag}_{dataset}_max_length_{max_length}_num_epochs_{num_train_epochs}_3"
+run_name=f"early_stopping_div_beam_search_{translation_model}_{dataset_size}_{flag}_{dataset}_max_length_{max_length}_num_epochs_{num_train_epochs}_no_spaces_prev_tokenizer_2"
 
 
 print(f"Training model with run_name: {run_name}")
@@ -152,11 +154,43 @@ model.config.pad_token_id = gpt_tokenizer.pad_token_id
 # Ensure the decoder's vocab size is correctly set
 model.config.decoder.vocab_size = model.config.decoder.vocab_size
 
+print("GPT Tokenizer Special Tokens and IDs:")
+print(f"bos_token: {gpt_tokenizer.bos_token}, id: {gpt_tokenizer.bos_token_id}")
+print(f"eos_token: {gpt_tokenizer.eos_token}, id: {gpt_tokenizer.eos_token_id}")
+print(f"pad_token: {gpt_tokenizer.pad_token}, id: {gpt_tokenizer.pad_token_id}")
+
+
+# Check the tokens corresponding to IDs 0 and 1
+token_0 = gpt_tokenizer.decode(0)
+token_1 = gpt_tokenizer.decode(1)
+print(f"Token for ID 0: '{token_0}'")
+print(f"Token for ID 1: '{token_1}'")
+
+
+# print("Adding '<|startoftext|>' to the GPT tokenizer...")
+# # If '<|startoftext|>' is not in the tokenizer, you can add it
+# if '<|startoftext|>' not in gpt_tokenizer.get_vocab():
+#     gpt_tokenizer.add_tokens('<|startoftext|>')
+
+# gpt_tokenizer.add_special_tokens({'bos_token': '<|startoftext|>'})
+
+# print("GPT Tokenizer Special Tokens and IDs:")
+# print(f"bos_token: {gpt_tokenizer.bos_token}, id: {gpt_tokenizer.bos_token_id}")
+# print(f"eos_token: {gpt_tokenizer.eos_token}, id: {gpt_tokenizer.eos_token_id}")
+# print(f"pad_token: {gpt_tokenizer.pad_token}, id: {gpt_tokenizer.pad_token_id}")
+
+
+# Update the model's configuration
+model.config.bos_token_id = gpt_tokenizer.bos_token_id
+
 
 generation_config = GenerationConfig(
     num_return_sequences=1,
     max_length=max_length,
-    min_length=50,
+    diversity_penalty=1.0,
+    early_stopping=True,
+    num_beams=num_beams,
+    num_beam_groups=5,
     # Distribution and repetition control
     # temperature=0.7,  # Set as needed
     # dola_layers=dola_layers,  # Define this variable appropriately
@@ -197,6 +231,7 @@ training_args = Seq2SeqTrainingArguments(
     weight_decay=weight_decay,
     num_train_epochs=num_train_epochs,
     predict_with_generate=True,
+    generation_max_length=110,
     report_to="wandb",
     run_name=run_name,
     generation_config=generation_config,
@@ -204,72 +239,7 @@ training_args = Seq2SeqTrainingArguments(
     #save_steps=100, # comment out for full data
 )
 
-
-
-class CustomDataCollatorForSeq2Seq:
-    def __init__(
-        self,
-        tokenizer_encoder: PreTrainedTokenizerBase,
-        tokenizer_decoder: PreTrainedTokenizerBase,
-        model=None,
-        padding: Union[bool, str] = True,
-        max_length: int = None,
-        label_pad_token_id: int = -100,
-    ):
-        self.tokenizer_encoder = tokenizer_encoder
-        self.tokenizer_decoder = tokenizer_decoder
-        self.model = model
-        self.padding = padding
-        self.max_length = max_length
-        self.label_pad_token_id = label_pad_token_id
-
-    def __call__(self, batch: List[Dict[str, Union[str, torch.Tensor]]]) -> Dict[str, torch.Tensor]:
-        # Extract source and target texts
-        source_texts = [example['source_text'] for example in batch]
-        target_texts = [example['target_text'] for example in batch]
-
-        # Tokenize source texts (encoder inputs)
-        encoder_inputs = self.tokenizer_encoder(
-            source_texts,
-            padding=self.padding,
-            truncation=True,
-            max_length=self.max_length,
-            return_tensors='pt'
-        )
-
-        # Tokenize target texts (decoder inputs and labels)
-        decoder_inputs = self.tokenizer_decoder(
-            target_texts,
-            padding=self.padding,
-            truncation=True,
-            max_length=self.max_length,
-            return_tensors='pt'
-        )
-
-        # Prepare labels
-        labels = decoder_inputs['input_ids'].clone()
-        labels[labels == self.tokenizer_decoder.pad_token_id] = self.label_pad_token_id  # Mask padding tokens
-
-        # Create the batch dictionary
-        batch = {
-            'input_ids': encoder_inputs['input_ids'],
-            'attention_mask': encoder_inputs['attention_mask'],
-            'labels': labels
-        }
-
-        return batch
     
-
-# Instantiate the custom data collator
-data_collator = CustomDataCollatorForSeq2Seq(
-    tokenizer_encoder=bert_tokenizer,
-    tokenizer_decoder=gpt_tokenizer,
-    model=model,  # Pass your model if it requires decoder_input_ids
-    padding='longest',  # Options: True, False, 'longest', 'max_length'
-    max_length=512,  # Set your desired max_length
-    label_pad_token_id=-100  # Tokens with this ID are ignored in loss computation
-)
-
 # Create directories if they do not exist
 os.makedirs(training_args.output_dir)
 os.makedirs(training_args.logging_dir)
@@ -302,13 +272,13 @@ def load_data(file_path):
 
 # on vader
 # SMALL dataset with input heavyseq[SEP]lightseq with each AA SPACE SEPARATED with dataset: human healthy, no vaccine, no disease and PLAbDab unique paired seqs
-train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_train_no_identifiers_spaces_small.txt"
+train_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_train_no_identifiers_small.txt"
 
 # on ubelix
 #train_file_path="/storage/homefs/lb24i892/bert2gpt_translation/plabdab_human_healthy_no_vac_allocated_train_no_identifiers_spaces_small.txt"
 
 # on vader
-val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_val_no_identifiers_spaces_small.txt"
+val_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_val_no_identifiers_small.txt"
 
 # on ubelix
 #val_file_path="/storage/homefs/lb24i892/bert2gpt_translation/plabdab_human_healthy_no_vac_allocated_val_no_identifiers_spaces_small.txt"
@@ -418,7 +388,7 @@ trainer = Seq2SeqAdapterTrainer(
     args=training_args,
     train_dataset=train_data,
     eval_dataset=val_data,
-    data_collator=data_collator,
+    #data_collator=data_collator,
     adapter_names=["heavy2light_adapter"],
 )
 
@@ -445,7 +415,7 @@ model.save_adapter(adapter_output_path, "heavy2light_adapter")
 #test_file_path = '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/train_test_val_datasets/heavy_sep_light_seq/paired_full_seqs_sep_test_no_ids_space_separated_SMALL.txt'
 
 # on vader: small test dataset all human paired, no duplicates + PLAbDab unique paired sequences
-test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/human_healthy_all_disease_plabdab/train_val_test_datasets/human_healthy_all_diseases_plabdab_test_no_identifiers_spaces_small.txt"
+test_file_path = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/new_data/PLAbDab_db/train_val_test_datasets/plabdab_human_healthy_no_vac_allocated_test_no_identifiers_small.txt"
 # on ubelix:
 #test_file_path="/storage/homefs/lb24i892/bert2gpt_translation/plabdab_human_healthy_no_vac_allocated_test_no_identifiers_spaces_small.txt"
 
@@ -475,10 +445,11 @@ for i in range(50):
 
     generated_seq = model.generate(input_ids=input_ids, 
                                attention_mask=attention_mask, 
-                               max_length=150, # small small: 150, big big: 130
+                               max_length=110, # small small: 150, big big: 130
+                               early_stopping=True,
                                output_scores=True, 
                                return_dict_in_generate=True,
-                                   generation_config=generation_config)
+                               generation_config=generation_config)
     
     # Access the first element in the generated sequence
     sequence = generated_seq["sequences"][0]
