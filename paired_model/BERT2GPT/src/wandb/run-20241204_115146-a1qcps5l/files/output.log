@@ -1,0 +1,9 @@
+Map: 100%|██████████| 1000/1000 [00:00<00:00, 3119.88 examples/s]
+Traceback (most recent call last):
+  File "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/bert2gpt_with_adapters.py", line 370, in <module>
+    train_data.set_format(
+  File "/home/leab/anaconda3/envs/adap_2/lib/python3.9/site-packages/datasets/fingerprint.py", line 482, in wrapper
+    out = func(dataset, *args, **kwargs)
+  File "/home/leab/anaconda3/envs/adap_2/lib/python3.9/site-packages/datasets/arrow_dataset.py", line 2591, in set_format
+    raise ValueError(
+ValueError: Columns ['decoder_attention_mask'] not in the dataset. Current columns in the dataset: ['heavy', 'light', 'input_ids', 'attention_mask', 'labels']

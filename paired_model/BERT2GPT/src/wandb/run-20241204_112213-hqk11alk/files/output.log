@@ -1,0 +1,93 @@
+Map: 100%|██████████| 1000/1000 [00:00<00:00, 2591.68 examples/s]
+Map: 100%|██████████| 200/200 [00:00<00:00, 2569.08 examples/s]
+Detected kernel version 4.18.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+/home/leab/anaconda3/envs/adap_2/lib/python3.9/site-packages/adapters/composition.py:183: FutureWarning: Passing list objects for adapter activation is deprecated. Please use Stack or Fuse explicitly.
+  warnings.warn(
+  0%|          | 0/480 [00:00<?, ?it/s]Traceback (most recent call last):
+  File "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/bert2gpt_with_adapters.py", line 471, in <module>
+    trainer.train()
+  File "/home/leab/anaconda3/envs/adap_2/lib/python3.9/site-packages/transformers/trainer.py", line 1859, in train
+    return inner_training_loop(
+  File "/home/leab/anaconda3/envs/adap_2/lib/python3.9/site-packages/transformers/trainer.py", line 2203, in _inner_training_loop
+    tr_loss_step = self.training_step(model, inputs)
+  File "/home/leab/anaconda3/envs/adap_2/lib/python3.9/site-packages/transformers/trainer.py", line 3138, in training_step
+    loss = self.compute_loss(model, inputs)
+  File "/home/leab/anaconda3/envs/adap_2/lib/python3.9/site-packages/transformers/trainer.py", line 3161, in compute_loss
+    outputs = model(**inputs)
+  File "/home/leab/anaconda3/envs/adap_2/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1532, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/leab/anaconda3/envs/adap_2/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1541, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/leab/anaconda3/envs/adap_2/lib/python3.9/site-packages/transformers/models/encoder_decoder/modeling_encoder_decoder.py", line 626, in forward
+    decoder_outputs = self.decoder(
+  File "/home/leab/anaconda3/envs/adap_2/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1532, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/leab/anaconda3/envs/adap_2/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1541, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/leab/anaconda3/envs/adap_2/lib/python3.9/site-packages/transformers/models/gpt2/modeling_gpt2.py", line 1305, in forward
+    transformer_outputs = self.transformer(
+  File "/home/leab/anaconda3/envs/adap_2/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1532, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/leab/anaconda3/envs/adap_2/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1541, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/leab/anaconda3/envs/adap_2/lib/python3.9/site-packages/adapters/context.py", line 116, in wrapper_func
+    results = f(self, *args, **kwargs)
+  File "/home/leab/anaconda3/envs/adap_2/lib/python3.9/site-packages/adapters/model_mixin.py", line 1352, in forward
+    return super().forward(*args, **kwargs)
+  File "/home/leab/anaconda3/envs/adap_2/lib/python3.9/site-packages/transformers/models/gpt2/modeling_gpt2.py", line 1068, in forward
+    inputs_embeds = self.wte(input_ids)
+  File "/home/leab/anaconda3/envs/adap_2/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1532, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/leab/anaconda3/envs/adap_2/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1541, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/leab/anaconda3/envs/adap_2/lib/python3.9/site-packages/torch/nn/modules/sparse.py", line 163, in forward
+    return F.embedding(
+  File "/home/leab/anaconda3/envs/adap_2/lib/python3.9/site-packages/torch/nn/functional.py", line 2264, in embedding
+    return torch.embedding(weight, input, padding_idx, scale_grad_by_freq, sparse)
+RuntimeError: CUDA error: device-side assert triggered
+Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+first example heavy and light seq {'heavy': 'Q V Q L Q E S G P G L V K P S E T L S L T C T V S G G S I S G F Y W S W I R Q S P G K G L E W I A Y I Y F S G S T N Y N P S L K S R V T L S V D T S K N Q F S L K L S S V T A A D S A V Y Y C A R D V G P Y N S I S P G R Y Y F D Y W G P G T L V T V S S ', 'light': ' Q S A L T Q P A S V S G S P G Q S I T I S C T G T S S D V G N Y N L V S W Y Q H H P G K A P K L M I Y E V S K R P S G I S N R F S G S K S G N T A S L T I S G L Q A D D E A D Y Y C C S Y A G S R I L Y V F G S G T K V T V L'}, {'heavy': 'Q V Q L Q E S G P G L V K P S E T L S L I C N V T G F S I S G Y F W S W V R Q P P G K G L E W I A S M T Y S G T T N Y N P S L Q G R V T M S L S M S K D Q V S L K L S S A T A A D T A V Y Y C A R M A R D G Y V L R D W Y F D L W G Q G T L V T V S S ', 'light': ' E I V L T Q S P G T L S L S T G E R A T L S C R A G Q T V D G N S L A W Y Q H K P G Q A P R L L I F R A S R R A A D I P D R F T G S G S G T D F T L T I S R L E V E D F A V Y Y C Q Q Y G A S P K T F G Q G T K V E'}
+{'input_ids': tensor([ 2, 18, 22, 18, 14, 18,  8, 20, 10, 17, 10, 14, 22, 13, 17, 20,  8, 21,
+        14, 20, 14, 21,  6, 21, 22, 20, 10, 10, 20, 12, 20, 10,  9, 24, 23, 20,
+        23, 12, 19, 18, 20, 17, 10, 13, 10, 14,  8, 23, 12,  5, 24, 12, 24,  9,
+        20, 10, 20, 21, 16, 24, 16, 17, 20, 14, 13, 20, 19, 22, 21, 14, 20, 22,
+         7, 21, 20, 13, 16, 18,  9, 20, 14, 13, 14, 20, 20, 22, 21,  5,  5,  7,
+        20,  5, 22, 24, 24,  6,  5, 19,  7, 22, 10, 17, 24, 16, 20, 12, 20, 17,
+        10, 19, 24, 24,  9,  7, 24, 23, 10, 17, 10, 21, 14, 22, 21, 22, 20, 20,
+         3,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+         0,  0]), 'attention_mask': tensor([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0]), 'decoder_attention_mask': tensor([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0]), 'labels': tensor([   2,   18,   20,    5,   14,   21,   18,   17,    5,   20,   22,   20,
+          10,   20,   17,   10,   18,   20,   12,   21,   12,   20,    6,   21,
+          10,   21,   20,   20,    7,   22,   10,   16,   24,   16,   14,   22,
+          20,   23,   24,   18,   11,   11,   17,   10,   13,    5,   17,   13,
+          14,   15,   12,   24,    8,   22,   20,   13,   19,   17,   20,   10,
+          12,   20,   16,   19,    9,   20,   10,   20,   13,   20,   10,   16,
+          21,    5,   20,   14,   21,   12,   20,   10,   14,   18,    5,    7,
+           7,    8,    5,    7,   24,   24,    6,    6,   20,   24,    5,   10,
+          20,   19,   12,   14,   24,   22,    9,   10,   20,   10,   21,   13,
+          22,   21,   22,   14,    3, -100, -100, -100, -100, -100, -100, -100,
+        -100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100,
+        -100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100,
+        -100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100,
+        -100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100,
+        -100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100,
+        -100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100,
+        -100, -100, -100, -100, -100, -100, -100, -100])}

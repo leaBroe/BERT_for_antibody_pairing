@@ -1,0 +1,195 @@
+2024-12-04 11:55:40,683 INFO    StreamThr :819348 [internal.py:wandb_internal():85] W&B internal server running at pid: 819348, started at: 2024-12-04 11:55:40.682727
+2024-12-04 11:55:40,686 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: status
+2024-12-04 11:55:40,686 INFO    WriterThread:819348 [datastore.py:open_for_write():87] open: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/run-cf22lbv0.wandb
+2024-12-04 11:55:40,687 DEBUG   SenderThread:819348 [sender.py:send():379] send: header
+2024-12-04 11:55:40,713 DEBUG   SenderThread:819348 [sender.py:send():379] send: run
+2024-12-04 11:55:41,094 INFO    SenderThread:819348 [dir_watcher.py:__init__():211] watching files in: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/files
+2024-12-04 11:55:41,094 INFO    SenderThread:819348 [sender.py:_start_run_threads():1188] run started: cf22lbv0 with start time 1733309740.682905
+2024-12-04 11:55:41,101 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: check_version
+2024-12-04 11:55:41,101 DEBUG   SenderThread:819348 [sender.py:send_request():406] send_request: check_version
+2024-12-04 11:55:41,200 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: run_start
+2024-12-04 11:55:41,224 DEBUG   HandlerThread:819348 [system_info.py:__init__():26] System info init
+2024-12-04 11:55:41,224 DEBUG   HandlerThread:819348 [system_info.py:__init__():41] System info init done
+2024-12-04 11:55:41,224 INFO    HandlerThread:819348 [system_monitor.py:start():194] Starting system monitor
+2024-12-04 11:55:41,224 INFO    SystemMonitor:819348 [system_monitor.py:_start():158] Starting system asset monitoring threads
+2024-12-04 11:55:41,224 INFO    HandlerThread:819348 [system_monitor.py:probe():214] Collecting system info
+2024-12-04 11:55:41,225 INFO    SystemMonitor:819348 [interfaces.py:start():188] Started cpu monitoring
+2024-12-04 11:55:41,226 INFO    SystemMonitor:819348 [interfaces.py:start():188] Started disk monitoring
+2024-12-04 11:55:41,226 INFO    SystemMonitor:819348 [interfaces.py:start():188] Started gpu monitoring
+2024-12-04 11:55:41,230 INFO    SystemMonitor:819348 [interfaces.py:start():188] Started memory monitoring
+2024-12-04 11:55:41,230 INFO    SystemMonitor:819348 [interfaces.py:start():188] Started network monitoring
+2024-12-04 11:55:41,254 DEBUG   HandlerThread:819348 [system_info.py:probe():152] Probing system
+2024-12-04 11:55:41,258 DEBUG   HandlerThread:819348 [system_info.py:_probe_git():137] Probing git
+2024-12-04 11:55:41,269 DEBUG   HandlerThread:819348 [system_info.py:_probe_git():145] Probing git done
+2024-12-04 11:55:41,269 DEBUG   HandlerThread:819348 [system_info.py:probe():200] Probing system done
+2024-12-04 11:55:41,269 DEBUG   HandlerThread:819348 [system_monitor.py:probe():223] {'os': 'Linux-4.18.0-513.24.1.el8_9.x86_64-x86_64-with-glibc2.28', 'python': '3.9.19', 'heartbeatAt': '2024-12-04T10:55:41.254262', 'startedAt': '2024-12-04T10:55:40.675711', 'docker': None, 'cuda': None, 'args': (), 'state': 'running', 'program': '/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/bert2gpt_with_adapters.py', 'codePathLocal': 'bert2gpt_with_adapters.py', 'codePath': 'paired_model/BERT2GPT/src/bert2gpt_with_adapters.py', 'git': {'remote': 'https://github.com/leaBroe/master_thesis.git', 'commit': '2d67fcb1e3f5a78ac11cffac1b686e3f2225db22'}, 'email': 'lea.broennimann@students.unibe.ch', 'root': '/ibmm_data2/oas_database/paired_lea_tmp', 'host': 'dalcosrv', 'username': 'leab', 'executable': '/home/leab/anaconda3/envs/adap_2/bin/python', 'cpu_count': 32, 'cpu_count_logical': 64, 'cpu_freq': {'current': 3.1232187500000004, 'min': 1500.0, 'max': 3729.491999999999}, 'cpu_freq_per_core': [{'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.724, 'min': 1500.0, 'max': 3729.492}, {'current': 3.725, 'min': 1500.0, 'max': 3729.492}, {'current': 3.725, 'min': 1500.0, 'max': 3729.492}, {'current': 3.725, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.724, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.722, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.725, 'min': 1500.0, 'max': 3729.492}, {'current': 3.724, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.725, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}, {'current': 3.0, 'min': 1500.0, 'max': 3729.492}], 'disk': {'/': {'total': 7086.048847198486, 'used': 4906.763759613037}}, 'gpu': 'NVIDIA A100 80GB PCIe', 'gpu_count': 1, 'gpu_devices': [{'name': 'NVIDIA A100 80GB PCIe', 'memory_total': 85899345920}], 'memory': {'total': 1007.6078681945801}}
+2024-12-04 11:55:41,269 INFO    HandlerThread:819348 [system_monitor.py:probe():224] Finished collecting system info
+2024-12-04 11:55:41,269 INFO    HandlerThread:819348 [system_monitor.py:probe():227] Publishing system info
+2024-12-04 11:55:41,269 DEBUG   HandlerThread:819348 [system_info.py:_save_conda():209] Saving list of conda packages installed into the current environment
+2024-12-04 11:55:42,096 INFO    Thread-12 :819348 [dir_watcher.py:_on_file_created():271] file/dir created: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/files/conda-environment.yaml
+2024-12-04 11:55:43,089 DEBUG   HandlerThread:819348 [system_info.py:_save_conda():224] Saving conda packages done
+2024-12-04 11:55:43,090 INFO    HandlerThread:819348 [system_monitor.py:probe():229] Finished publishing system info
+2024-12-04 11:55:43,092 DEBUG   SenderThread:819348 [sender.py:send():379] send: files
+2024-12-04 11:55:43,093 INFO    SenderThread:819348 [sender.py:_save_file():1454] saving file wandb-metadata.json with policy now
+2024-12-04 11:55:43,098 INFO    Thread-12 :819348 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/files/conda-environment.yaml
+2024-12-04 11:55:43,098 INFO    Thread-12 :819348 [dir_watcher.py:_on_file_created():271] file/dir created: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/files/wandb-metadata.json
+2024-12-04 11:55:43,168 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: python_packages
+2024-12-04 11:55:43,168 DEBUG   SenderThread:819348 [sender.py:send_request():406] send_request: python_packages
+2024-12-04 11:55:43,168 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: stop_status
+2024-12-04 11:55:43,169 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: internal_messages
+2024-12-04 11:55:43,169 DEBUG   SenderThread:819348 [sender.py:send_request():406] send_request: stop_status
+2024-12-04 11:55:43,369 DEBUG   SenderThread:819348 [sender.py:send():379] send: telemetry
+2024-12-04 11:55:43,625 INFO    wandb-upload_0:819348 [upload_job.py:push():130] Uploaded file /tmp/tmp73028a_uwandb/mw5nzt15-wandb-metadata.json
+2024-12-04 11:55:44,043 DEBUG   SenderThread:819348 [sender.py:send():379] send: config
+2024-12-04 11:55:44,044 DEBUG   SenderThread:819348 [sender.py:send():379] send: telemetry
+2024-12-04 11:55:44,044 DEBUG   SenderThread:819348 [sender.py:send():379] send: metric
+2024-12-04 11:55:44,044 DEBUG   SenderThread:819348 [sender.py:send():379] send: telemetry
+2024-12-04 11:55:44,044 DEBUG   SenderThread:819348 [sender.py:send():379] send: metric
+2024-12-04 11:55:44,044 WARNING SenderThread:819348 [sender.py:send_metric():1405] Seen metric with glob (shouldn't happen)
+2024-12-04 11:55:44,044 DEBUG   SenderThread:819348 [sender.py:send():379] send: telemetry
+2024-12-04 11:55:44,049 DEBUG   SenderThread:819348 [sender.py:send():379] send: exit
+2024-12-04 11:55:44,049 INFO    SenderThread:819348 [sender.py:send_exit():586] handling exit code: 1
+2024-12-04 11:55:44,049 INFO    SenderThread:819348 [sender.py:send_exit():588] handling runtime: 2
+2024-12-04 11:55:44,051 INFO    SenderThread:819348 [sender.py:_save_file():1454] saving file wandb-summary.json with policy end
+2024-12-04 11:55:44,051 INFO    SenderThread:819348 [sender.py:send_exit():594] send defer
+2024-12-04 11:55:44,051 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: defer
+2024-12-04 11:55:44,051 INFO    HandlerThread:819348 [handler.py:handle_request_defer():184] handle defer: 0
+2024-12-04 11:55:44,051 DEBUG   SenderThread:819348 [sender.py:send_request():406] send_request: defer
+2024-12-04 11:55:44,051 INFO    SenderThread:819348 [sender.py:send_request_defer():610] handle sender defer: 0
+2024-12-04 11:55:44,051 INFO    SenderThread:819348 [sender.py:transition_state():614] send defer: 1
+2024-12-04 11:55:44,051 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: defer
+2024-12-04 11:55:44,051 INFO    HandlerThread:819348 [handler.py:handle_request_defer():184] handle defer: 1
+2024-12-04 11:55:44,052 DEBUG   SenderThread:819348 [sender.py:send_request():406] send_request: defer
+2024-12-04 11:55:44,052 INFO    SenderThread:819348 [sender.py:send_request_defer():610] handle sender defer: 1
+2024-12-04 11:55:44,052 INFO    SenderThread:819348 [sender.py:transition_state():614] send defer: 2
+2024-12-04 11:55:44,052 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: defer
+2024-12-04 11:55:44,052 INFO    HandlerThread:819348 [handler.py:handle_request_defer():184] handle defer: 2
+2024-12-04 11:55:44,052 INFO    HandlerThread:819348 [system_monitor.py:finish():203] Stopping system monitor
+2024-12-04 11:55:44,052 DEBUG   SystemMonitor:819348 [system_monitor.py:_start():172] Starting system metrics aggregation loop
+2024-12-04 11:55:44,052 DEBUG   SystemMonitor:819348 [system_monitor.py:_start():179] Finished system metrics aggregation loop
+2024-12-04 11:55:44,052 DEBUG   SystemMonitor:819348 [system_monitor.py:_start():183] Publishing last batch of metrics
+2024-12-04 11:55:44,052 INFO    HandlerThread:819348 [interfaces.py:finish():200] Joined cpu monitor
+2024-12-04 11:55:44,053 INFO    HandlerThread:819348 [interfaces.py:finish():200] Joined disk monitor
+2024-12-04 11:55:44,106 INFO    Thread-12 :819348 [dir_watcher.py:_on_file_created():271] file/dir created: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/files/requirements.txt
+2024-12-04 11:55:44,106 INFO    Thread-12 :819348 [dir_watcher.py:_on_file_created():271] file/dir created: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/files/output.log
+2024-12-04 11:55:44,106 INFO    Thread-12 :819348 [dir_watcher.py:_on_file_created():271] file/dir created: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/files/wandb-summary.json
+2024-12-04 11:55:44,195 INFO    HandlerThread:819348 [interfaces.py:finish():200] Joined gpu monitor
+2024-12-04 11:55:44,195 INFO    HandlerThread:819348 [interfaces.py:finish():200] Joined memory monitor
+2024-12-04 11:55:44,195 INFO    HandlerThread:819348 [interfaces.py:finish():200] Joined network monitor
+2024-12-04 11:55:44,195 DEBUG   SenderThread:819348 [sender.py:send_request():406] send_request: defer
+2024-12-04 11:55:44,195 INFO    SenderThread:819348 [sender.py:send_request_defer():610] handle sender defer: 2
+2024-12-04 11:55:44,195 INFO    SenderThread:819348 [sender.py:transition_state():614] send defer: 3
+2024-12-04 11:55:44,195 DEBUG   SenderThread:819348 [sender.py:send():379] send: stats
+2024-12-04 11:55:44,195 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: defer
+2024-12-04 11:55:44,196 INFO    HandlerThread:819348 [handler.py:handle_request_defer():184] handle defer: 3
+2024-12-04 11:55:44,196 DEBUG   SenderThread:819348 [sender.py:send_request():406] send_request: defer
+2024-12-04 11:55:44,196 INFO    SenderThread:819348 [sender.py:send_request_defer():610] handle sender defer: 3
+2024-12-04 11:55:44,196 INFO    SenderThread:819348 [sender.py:transition_state():614] send defer: 4
+2024-12-04 11:55:44,196 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: defer
+2024-12-04 11:55:44,196 INFO    HandlerThread:819348 [handler.py:handle_request_defer():184] handle defer: 4
+2024-12-04 11:55:44,196 DEBUG   SenderThread:819348 [sender.py:send_request():406] send_request: defer
+2024-12-04 11:55:44,196 INFO    SenderThread:819348 [sender.py:send_request_defer():610] handle sender defer: 4
+2024-12-04 11:55:44,196 INFO    SenderThread:819348 [sender.py:transition_state():614] send defer: 5
+2024-12-04 11:55:44,196 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: defer
+2024-12-04 11:55:44,196 INFO    HandlerThread:819348 [handler.py:handle_request_defer():184] handle defer: 5
+2024-12-04 11:55:44,196 DEBUG   SenderThread:819348 [sender.py:send():379] send: summary
+2024-12-04 11:55:44,197 INFO    SenderThread:819348 [sender.py:_save_file():1454] saving file wandb-summary.json with policy end
+2024-12-04 11:55:44,198 DEBUG   SenderThread:819348 [sender.py:send_request():406] send_request: defer
+2024-12-04 11:55:44,198 INFO    SenderThread:819348 [sender.py:send_request_defer():610] handle sender defer: 5
+2024-12-04 11:55:44,198 INFO    SenderThread:819348 [sender.py:transition_state():614] send defer: 6
+2024-12-04 11:55:44,198 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: defer
+2024-12-04 11:55:44,198 INFO    HandlerThread:819348 [handler.py:handle_request_defer():184] handle defer: 6
+2024-12-04 11:55:44,198 DEBUG   SenderThread:819348 [sender.py:send_request():406] send_request: defer
+2024-12-04 11:55:44,198 INFO    SenderThread:819348 [sender.py:send_request_defer():610] handle sender defer: 6
+2024-12-04 11:55:44,201 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: status_report
+2024-12-04 11:55:44,503 INFO    SenderThread:819348 [sender.py:transition_state():614] send defer: 7
+2024-12-04 11:55:44,503 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: defer
+2024-12-04 11:55:44,503 INFO    HandlerThread:819348 [handler.py:handle_request_defer():184] handle defer: 7
+2024-12-04 11:55:44,503 DEBUG   SenderThread:819348 [sender.py:send_request():406] send_request: defer
+2024-12-04 11:55:44,503 INFO    SenderThread:819348 [sender.py:send_request_defer():610] handle sender defer: 7
+2024-12-04 11:55:45,049 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: poll_exit
+2024-12-04 11:55:45,107 INFO    Thread-12 :819348 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/files/config.yaml
+2024-12-04 11:55:45,107 INFO    Thread-12 :819348 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/files/wandb-summary.json
+2024-12-04 11:55:45,611 INFO    SenderThread:819348 [sender.py:transition_state():614] send defer: 8
+2024-12-04 11:55:45,611 DEBUG   SenderThread:819348 [sender.py:send_request():406] send_request: poll_exit
+2024-12-04 11:55:45,611 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: defer
+2024-12-04 11:55:45,611 INFO    HandlerThread:819348 [handler.py:handle_request_defer():184] handle defer: 8
+2024-12-04 11:55:45,612 DEBUG   SenderThread:819348 [sender.py:send_request():406] send_request: defer
+2024-12-04 11:55:45,612 INFO    SenderThread:819348 [sender.py:send_request_defer():610] handle sender defer: 8
+2024-12-04 11:55:45,612 INFO    SenderThread:819348 [job_builder.py:build():440] Attempting to build job artifact
+2024-12-04 11:55:45,613 INFO    SenderThread:819348 [job_builder.py:_get_source_type():569] is repo sourced job
+2024-12-04 11:55:45,630 INFO    SenderThread:819348 [job_builder.py:build():545] adding wandb-job metadata file
+2024-12-04 11:55:45,634 INFO    SenderThread:819348 [sender.py:transition_state():614] send defer: 9
+2024-12-04 11:55:45,634 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: defer
+2024-12-04 11:55:45,634 INFO    HandlerThread:819348 [handler.py:handle_request_defer():184] handle defer: 9
+2024-12-04 11:55:45,635 DEBUG   SenderThread:819348 [sender.py:send():379] send: artifact
+2024-12-04 11:55:46,050 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: poll_exit
+2024-12-04 11:55:46,107 INFO    Thread-12 :819348 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/files/output.log
+2024-12-04 11:55:46,644 INFO    wandb-upload_0:819348 [upload_job.py:push():85] Skipped uploading /home/leab/.local/share/wandb/artifacts/staging/tmps2ujzjv8
+2024-12-04 11:55:47,028 INFO    wandb-upload_1:819348 [upload_job.py:push():88] Uploaded file /tmp/tmpx40fubw6/wandb-job.json
+2024-12-04 11:55:48,181 INFO    SenderThread:819348 [sender.py:send_artifact():1530] sent artifact job-https___github.com_leaBroe_master_thesis.git_paired_model_BERT2GPT_src_bert2gpt_with_adapters.py - {'id': 'QXJ0aWZhY3Q6MTM1ODk3OTI2NQ==', 'state': 'PENDING', 'artifactSequence': {'id': 'QXJ0aWZhY3RDb2xsZWN0aW9uOjUwMDYzMDY2Mg==', 'latestArtifact': {'id': 'QXJ0aWZhY3Q6MTM1ODk3NjE4NA==', 'versionIndex': 0}}}
+2024-12-04 11:55:48,181 DEBUG   SenderThread:819348 [sender.py:send_request():406] send_request: defer
+2024-12-04 11:55:48,181 INFO    SenderThread:819348 [sender.py:send_request_defer():610] handle sender defer: 9
+2024-12-04 11:55:48,181 INFO    SenderThread:819348 [dir_watcher.py:finish():358] shutting down directory watcher
+2024-12-04 11:55:49,108 INFO    SenderThread:819348 [dir_watcher.py:finish():388] scan: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/files
+2024-12-04 11:55:49,109 INFO    SenderThread:819348 [dir_watcher.py:finish():402] scan save: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/files/config.yaml config.yaml
+2024-12-04 11:55:49,109 INFO    SenderThread:819348 [dir_watcher.py:finish():402] scan save: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/files/conda-environment.yaml conda-environment.yaml
+2024-12-04 11:55:49,109 INFO    SenderThread:819348 [dir_watcher.py:finish():402] scan save: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/files/wandb-metadata.json wandb-metadata.json
+2024-12-04 11:55:49,109 INFO    SenderThread:819348 [dir_watcher.py:finish():402] scan save: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/files/requirements.txt requirements.txt
+2024-12-04 11:55:49,111 INFO    SenderThread:819348 [dir_watcher.py:finish():402] scan save: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/files/output.log output.log
+2024-12-04 11:55:49,114 INFO    SenderThread:819348 [dir_watcher.py:finish():402] scan save: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/files/wandb-summary.json wandb-summary.json
+2024-12-04 11:55:49,114 INFO    SenderThread:819348 [sender.py:transition_state():614] send defer: 10
+2024-12-04 11:55:49,114 DEBUG   SenderThread:819348 [sender.py:send_request():406] send_request: poll_exit
+2024-12-04 11:55:49,114 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: defer
+2024-12-04 11:55:49,114 INFO    HandlerThread:819348 [handler.py:handle_request_defer():184] handle defer: 10
+2024-12-04 11:55:49,116 DEBUG   SenderThread:819348 [sender.py:send_request():406] send_request: defer
+2024-12-04 11:55:49,116 INFO    SenderThread:819348 [sender.py:send_request_defer():610] handle sender defer: 10
+2024-12-04 11:55:49,116 INFO    SenderThread:819348 [file_pusher.py:finish():169] shutting down file pusher
+2024-12-04 11:55:49,474 INFO    wandb-upload_1:819348 [upload_job.py:push():130] Uploaded file /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/files/conda-environment.yaml
+2024-12-04 11:55:49,510 INFO    wandb-upload_2:819348 [upload_job.py:push():130] Uploaded file /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/files/requirements.txt
+2024-12-04 11:55:49,527 INFO    wandb-upload_3:819348 [upload_job.py:push():130] Uploaded file /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/files/output.log
+2024-12-04 11:55:49,530 INFO    wandb-upload_0:819348 [upload_job.py:push():130] Uploaded file /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/files/config.yaml
+2024-12-04 11:55:49,558 INFO    wandb-upload_4:819348 [upload_job.py:push():130] Uploaded file /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/files/wandb-summary.json
+2024-12-04 11:55:49,758 INFO    Thread-11 :819348 [sender.py:transition_state():614] send defer: 11
+2024-12-04 11:55:49,759 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: defer
+2024-12-04 11:55:49,759 INFO    HandlerThread:819348 [handler.py:handle_request_defer():184] handle defer: 11
+2024-12-04 11:55:49,759 DEBUG   SenderThread:819348 [sender.py:send_request():406] send_request: defer
+2024-12-04 11:55:49,759 INFO    SenderThread:819348 [sender.py:send_request_defer():610] handle sender defer: 11
+2024-12-04 11:55:49,759 INFO    SenderThread:819348 [file_pusher.py:join():175] waiting for file pusher
+2024-12-04 11:55:49,759 INFO    SenderThread:819348 [sender.py:transition_state():614] send defer: 12
+2024-12-04 11:55:49,759 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: defer
+2024-12-04 11:55:49,759 INFO    HandlerThread:819348 [handler.py:handle_request_defer():184] handle defer: 12
+2024-12-04 11:55:49,759 DEBUG   SenderThread:819348 [sender.py:send_request():406] send_request: defer
+2024-12-04 11:55:49,759 INFO    SenderThread:819348 [sender.py:send_request_defer():610] handle sender defer: 12
+2024-12-04 11:55:49,759 INFO    SenderThread:819348 [file_stream.py:finish():601] file stream finish called
+2024-12-04 11:55:49,921 INFO    SenderThread:819348 [file_stream.py:finish():605] file stream finish is done
+2024-12-04 11:55:49,921 INFO    SenderThread:819348 [sender.py:transition_state():614] send defer: 13
+2024-12-04 11:55:49,921 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: defer
+2024-12-04 11:55:49,921 INFO    HandlerThread:819348 [handler.py:handle_request_defer():184] handle defer: 13
+2024-12-04 11:55:49,921 DEBUG   SenderThread:819348 [sender.py:send_request():406] send_request: defer
+2024-12-04 11:55:49,921 INFO    SenderThread:819348 [sender.py:send_request_defer():610] handle sender defer: 13
+2024-12-04 11:55:49,921 INFO    SenderThread:819348 [sender.py:transition_state():614] send defer: 14
+2024-12-04 11:55:49,921 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: defer
+2024-12-04 11:55:49,921 DEBUG   SenderThread:819348 [sender.py:send():379] send: final
+2024-12-04 11:55:49,921 INFO    HandlerThread:819348 [handler.py:handle_request_defer():184] handle defer: 14
+2024-12-04 11:55:49,921 DEBUG   SenderThread:819348 [sender.py:send():379] send: footer
+2024-12-04 11:55:49,921 DEBUG   SenderThread:819348 [sender.py:send_request():406] send_request: defer
+2024-12-04 11:55:49,922 INFO    SenderThread:819348 [sender.py:send_request_defer():610] handle sender defer: 14
+2024-12-04 11:55:49,922 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: poll_exit
+2024-12-04 11:55:49,922 DEBUG   SenderThread:819348 [sender.py:send_request():406] send_request: poll_exit
+2024-12-04 11:55:49,922 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: server_info
+2024-12-04 11:55:49,922 DEBUG   SenderThread:819348 [sender.py:send_request():406] send_request: server_info
+2024-12-04 11:55:49,924 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: poll_exit
+2024-12-04 11:55:49,924 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: get_summary
+2024-12-04 11:55:49,924 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: sampled_history
+2024-12-04 11:55:49,924 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: internal_messages
+2024-12-04 11:55:50,061 DEBUG   SenderThread:819348 [sender.py:send_request():406] send_request: poll_exit
+2024-12-04 11:55:50,061 INFO    MainThread:819348 [wandb_run.py:_footer_history_summary_info():3991] rendering history
+2024-12-04 11:55:50,061 INFO    MainThread:819348 [wandb_run.py:_footer_history_summary_info():4023] rendering summary
+2024-12-04 11:55:50,061 INFO    MainThread:819348 [wandb_run.py:_footer_sync_info():3950] logging synced files
+2024-12-04 11:55:50,062 DEBUG   HandlerThread:819348 [handler.py:handle_request():158] handle_request: shutdown
+2024-12-04 11:55:50,062 INFO    HandlerThread:819348 [handler.py:finish():882] shutting down handler
+2024-12-04 11:55:50,924 INFO    WriterThread:819348 [datastore.py:close():296] close: /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/src/wandb/run-20241204_115540-cf22lbv0/run-cf22lbv0.wandb
+2024-12-04 11:55:51,061 INFO    SenderThread:819348 [sender.py:finish():1608] shutting down sender
+2024-12-04 11:55:51,061 INFO    SenderThread:819348 [file_pusher.py:finish():169] shutting down file pusher
+2024-12-04 11:55:51,062 INFO    SenderThread:819348 [file_pusher.py:join():175] waiting for file pusher
