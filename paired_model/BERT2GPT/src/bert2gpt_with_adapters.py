@@ -12,7 +12,9 @@
 
 from transformers import EncoderDecoderModel, Seq2SeqTrainingArguments, GenerationConfig, AutoTokenizer
 from adapters import BnConfig, Seq2SeqAdapterTrainer, init
+from Bio.pairwise2 import format_alignment
 from typing import Dict, List, Union
+from Bio import pairwise2
 import wandb
 import torch
 import pandas as pd
@@ -99,41 +101,105 @@ bert_tokenizer = AutoTokenizer.from_pretrained(small_heavy_encoder)
 # Load GPT tokenizer for decoder
 gpt_tokenizer = AutoTokenizer.from_pretrained(light_gpt_decoder)
 
+# Common training hyperparameters
 batch_size = 64
-num_train_epochs = 50
+num_train_epochs = 40
 learning_rate = 1e-4
 weight_decay = 0.1
-#temperature = 0.1
-num_beams = 3
-num_beam_groups = 3
-top_p = 0.9
-penalty_alpha = 0.8
-top_k = 2
-diversity_penalty = 1.0
-length_penalty = 0.8
-num_return_sequences = 1
-early_stopping = True
 
-repetition_penalty = 1.2
-dola_layers = "high"
-#dola_layers=[1,340]
-max_length = 110
-max_new_tokens = 500
-
+# Common configurations
 flag = "PLAbDab"
 dataset = "healthy_human"
 dataset_size = "small"
-decoding = "DoLa"
-translation_model="bert2gpt"
-#decoding="nucleus"
-#decoding="contrastive"
+translation_model = "bert2gpt"
+max_length = 110
+max_new_tokens = 110
+num_return_sequences = 1  
 
-# Set up the run name
-#run_name=f"{dataset_size}_{flag}_{dataset}_{dola_layers}_{decoding}_max_length_{max_length}_rep_penalty_{repetition_penalty}_num_epochs_{num_train_epochs}"
-run_name=f"{dataset_size}_{flag}_{dataset}_{decoding}_max_new_tokens_{max_new_tokens}_num_epochs_{num_train_epochs}"
+# Choose decoding strategy
+decoding = "contrastive"  # Options: "DoLa", "nucleus", "contrastive", "diverse_beam_search", "beam_search"
 
+# Decoding strategy parameters
+decoding_params = {}
+
+if decoding == "DoLa":
+    decoding_params = {
+        'dola_layers': "high", # Options: "low", "high" or e.g. [320,340]
+        'repetition_penalty': 1.2, # recommended is 1.2
+    }
+elif decoding == "nucleus":
+    decoding_params = {
+        'do_sample': True,
+        'top_p': 0.9,
+        'top_k': 0,  # Typically set to 0 for pure nucleus sampling
+        'temperature': 0.7, # optional
+        'early_stopping': True,
+    }
+elif decoding == "contrastive":
+    decoding_params = {
+        'penalty_alpha': 0.9,
+        'top_k': 5,
+    }
+elif decoding == "diverse_beam_search":
+    decoding_params = {
+        'num_beams': 2,
+        'num_beam_groups': 2,
+        'diversity_penalty': 1.0,
+        'early_stopping': True,
+    }
+elif decoding == "beam_search":
+    decoding_params = {
+        'num_beams': 4,
+    }
+else:
+    raise ValueError(f"Unsupported decoding strategy: {decoding}")
+
+
+# Build run_name using the configurations
+run_name = (
+    f"{dataset_size}_{flag}_{dataset}_{decoding}_"
+    f"max_new_tokens_{max_new_tokens}_num_epochs_{num_train_epochs}"
+)
 
 print(f"Training model with run_name: {run_name}")
+print(f"Using decoding parameters: {decoding_params}")
+
+# Common generation parameters
+common_generation_params = {
+    'num_return_sequences': num_return_sequences,
+    'max_new_tokens': max_new_tokens,
+    'max_length': max_length,
+    'pad_token_id': gpt_tokenizer.pad_token_id,
+    'eos_token_id': gpt_tokenizer.eos_token_id,
+    'decoder_start_token_id': gpt_tokenizer.bos_token_id,
+    'use_cache': True,
+    'output_scores': True,
+    'output_hidden_states': True,
+    'return_dict_in_generate': True,
+}
+
+# Combine common parameters with decoding strategy parameters
+generation_params = {**common_generation_params, **decoding_params}
+
+# Combine common parameters with decoding strategy parameters
+generation_params = {**common_generation_params, **decoding_params}
+
+# Handle special parameters not part of GenerationConfig
+special_params = {}
+for key in ['dola_layers']:
+    if key in generation_params:
+        special_params[key] = generation_params.pop(key)
+
+# Create GenerationConfig object
+generation_config = GenerationConfig(**generation_params)
+
+# Save the generation configuration
+# generation_config_name = f"gpt_generation_config_{decoding}_max_new_tokens_{max_new_tokens}"
+# generation_config.save_pretrained("generation_config", f"{generation_config_name}.json")
+
+# Load the generation configuration if needed
+#generation_config = GenerationConfig.from_pretrained("generation_config", f"{generation_config_name}.json")
+
 
 #output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/{run_name}"
 #output_dir = f"/storage/homefs/lb24i892/bert2gpt_translation/model_outputs/{run_name}"
@@ -143,16 +209,11 @@ output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/mod
 logging_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/model_checkpoints/{run_name}_logging"
 
 
-# # Set up the Seq2Seq model configuration
-# model.config.decoder_start_token_id = tokenizer.cls_token_id
-# model.config.eos_token_id = tokenizer.sep_token_id
-# model.config.pad_token_id = tokenizer.pad_token_id
-# model.config.vocab_size = model.config.encoder.vocab_size
-
 # Set up the Seq2Seq model configuration
 model.config.decoder_start_token_id = gpt_tokenizer.bos_token_id
 model.config.eos_token_id = gpt_tokenizer.eos_token_id
 model.config.pad_token_id = gpt_tokenizer.pad_token_id
+model.config.bos_token_id = gpt_tokenizer.bos_token_id
 
 # Ensure the decoder's vocab size is correctly set
 model.config.decoder.vocab_size = model.config.decoder.vocab_size
@@ -169,54 +230,7 @@ token_1 = gpt_tokenizer.decode(1)
 print(f"Token for ID 0: '{token_0}'")
 print(f"Token for ID 1: '{token_1}'")
 
-
-# print("Adding '<|startoftext|>' to the GPT tokenizer...")
-# # If '<|startoftext|>' is not in the tokenizer, you can add it
-# if '<|startoftext|>' not in gpt_tokenizer.get_vocab():
-#     gpt_tokenizer.add_tokens('<|startoftext|>')
-
-# gpt_tokenizer.add_special_tokens({'bos_token': '<|startoftext|>'})
-
-# print("GPT Tokenizer Special Tokens and IDs:")
-# print(f"bos_token: {gpt_tokenizer.bos_token}, id: {gpt_tokenizer.bos_token_id}")
-# print(f"eos_token: {gpt_tokenizer.eos_token}, id: {gpt_tokenizer.eos_token_id}")
-# print(f"pad_token: {gpt_tokenizer.pad_token}, id: {gpt_tokenizer.pad_token_id}")
-
-
-# Update the model's configuration
-model.config.bos_token_id = gpt_tokenizer.bos_token_id
-
-
-generation_config = GenerationConfig(
-    num_return_sequences=num_return_sequences,
-    diversity_penalty=diversity_penalty,
-    early_stopping=early_stopping,
-    num_beams=num_beams,
-    num_beam_groups=num_beam_groups,
-    max_new_tokens=max_new_tokens,
-    length_penalty=length_penalty,
-
-    # Token IDs from GPT tokenizer
-    pad_token_id=gpt_tokenizer.pad_token_id,
-    eos_token_id=gpt_tokenizer.eos_token_id,
-    decoder_start_token_id=gpt_tokenizer.bos_token_id,
-
-    # Output and caching options
-    use_cache=True,
-    output_scores=True,
-    output_hidden_states=True,
-    return_dict_in_generate=True
-)
-
-generation_config.save_pretrained("generation_config", f"gpt_generation_config_max_new_tokens_3_beams.json")
-
-generation_config_name = f"gpt_generation_config_max_new_tokens_3_beams"
-#generation_config_name = f"Diverse_beam_search_decoding"
-# before generation_config_7.json
-generation_config = GenerationConfig.from_pretrained("generation_config", f"{generation_config_name}.json")
-
 ############################################ Training Arguments ############################################
-
 
 training_args = Seq2SeqTrainingArguments(
     output_dir=output_dir,
@@ -359,19 +373,6 @@ val_data.set_format(
     type="torch", columns=["input_ids", "attention_mask", "decoder_attention_mask", "labels"],
 )
 
-# test_data = test_dataset.map(
-#     process_data_to_model_inputs,   
-#     batched=True,
-#     batch_size=batch_size,
-# )   
-
-# # "decoder_input_ids",
-# test_data.set_format(
-#     type="torch", columns=["input_ids", "attention_mask", "decoder_attention_mask", "labels"],
-# )
-
-
-
 
 # print heavy and light seq from the first example in the training data (train_dataset)
 print(f"first example heavy and light seq {train_dataset[0]}, {train_dataset[1]}")
@@ -388,7 +389,6 @@ trainer = Seq2SeqAdapterTrainer(
     args=training_args,
     train_dataset=train_data,
     eval_dataset=val_data,
-    #data_collator=data_collator,
     adapter_names=["heavy2light_adapter"],
 )
 
@@ -437,20 +437,31 @@ generated_light_seqs = []
 # average similarity percentage
 total_similarity_percentage = []
 
-# Iterate through each sequence in the test dataset
+total_similarity_percentage = []
+total_similarity_percentage_alignment = []
+generated_light_seqs = []
+
 for i in range(50):
-    inputs = bert_tokenizer(heavy_sequences[i], padding="max_length", truncation=True, max_length=512, return_tensors="pt")
+    # Tokenize the input sequence
+    inputs = bert_tokenizer(
+        heavy_sequences[i],
+        padding="max_length",
+        truncation=True,
+        max_length=512,
+        return_tensors="pt"
+    )
     input_ids = inputs.input_ids.to(device)
     attention_mask = inputs.attention_mask.to(device)
 
-    generated_seq = model.generate(input_ids=input_ids, 
-                               attention_mask=attention_mask, 
-                               #max_length=110, # small small: 150, big big: 130
-                               #early_stopping=True,
-                               output_scores=True, 
-                               return_dict_in_generate=True,
-                               generation_config=generation_config)
-    
+    # Generate the sequence
+    generated_seq = model.generate(
+        input_ids=input_ids,
+        attention_mask=attention_mask,
+        output_scores=True,
+        return_dict_in_generate=True,
+        generation_config=generation_config
+    )
+
     # Access the first element in the generated sequence
     sequence = generated_seq["sequences"][0]
 
@@ -458,30 +469,64 @@ for i in range(50):
     generated_text = gpt_tokenizer.decode(sequence, skip_special_tokens=True)
     true_light_seq = true_light_sequences[i]
 
-    print("decoded light sequence: ", generated_text)
-    print("true light sequence: ", true_light_seq)
+    print(f"Decoded light sequence: {generated_text}")
+    print(f"True light sequence: {true_light_seq}")
 
     generated_light_seqs.append(generated_text)
-    
+
+    # Remove spaces from sequences
     generated_text = generated_text.replace(" ", "")
     true_light_seq = true_light_seq.replace(" ", "")
-    
+
+    # ----------------- Exact Matching Similarity -----------------
+
     # Determine the length of the shorter sequence
     min_length = min(len(generated_text), len(true_light_seq))
-    print(f"min_length:, {min_length}")
-    
-    # Calculate the number of matches
-    matches = sum(res1 == res2 for res1, res2 in zip(generated_text, true_light_seq))
-    print(f"matches:, {matches}")
+    print(f"Minimum length: {min_length}")
 
-    
-    # Calculate the similarity percentage
+    # Calculate the number of matches for exact matching
+    matches = sum(
+        res1 == res2
+        for res1, res2 in zip(generated_text[:min_length], true_light_seq[:min_length])
+    )
+    print(f"Exact matches: {matches}")
+
+    # Calculate the similarity percentage for exact matching
     similarity_percentage = (matches / min_length) * 100
-    
-    print(f"similarity percentage: {similarity_percentage}")
+    print(f"Exact matching similarity percentage: {similarity_percentage:.2f}%")
 
-    # add similarity percentage to list
+    # Add similarity percentage to list
     total_similarity_percentage.append(similarity_percentage)
+
+    # ----------------- Global Alignment Similarity -----------------
+
+    # Perform global alignment
+    alignments = pairwise2.align.globalxx(true_light_seq, generated_text)
+    # Take the alignment with the highest score
+    best_alignment = alignments[0]
+
+    aligned_true_seq = best_alignment.seqA
+    aligned_generated_seq = best_alignment.seqB
+    alignment_score = best_alignment.score
+
+    # Calculate the total length of the alignment (including gaps)
+    alignment_length = len(aligned_true_seq)
+    print(f"Alignment length: {alignment_length}")
+
+    # Calculate the number of matches in the alignment
+    alignment_matches = sum(
+        res1 == res2
+        for res1, res2 in zip(aligned_true_seq, aligned_generated_seq)
+        if res1 != '-' and res2 != '-'
+    )
+    print(f"Alignment matches: {alignment_matches}")
+
+    # Calculate the similarity percentage based on alignment
+    similarity_percentage_alignment = (alignment_matches / alignment_length) * 100
+    print(f"Global alignment similarity percentage: {similarity_percentage_alignment:.2f}%\n")
+
+    # Add alignment similarity percentage to list
+    total_similarity_percentage_alignment.append(similarity_percentage_alignment)
 
 
 # print average similarity percentage
