@@ -10,7 +10,7 @@
 # pip install accelerate -U
 # no need to install transformers since adapters will automatically install the correct version needed
 
-from transformers import EncoderDecoderModel, Seq2SeqTrainingArguments, GenerationConfig, AutoTokenizer, PreTrainedTokenizerBase
+from transformers import EncoderDecoderModel, Seq2SeqTrainingArguments, GenerationConfig, AutoTokenizer
 from adapters import BnConfig, Seq2SeqAdapterTrainer, init
 from typing import Dict, List, Union
 import wandb
@@ -93,9 +93,6 @@ def count_trainable_params(model):
 print(f"number of trainable parameters: {count_trainable_params(model)}")
 print_trainable_parameters(model)
 
-#tokenizer = AutoTokenizer.from_pretrained('/ibmm_data2/oas_database/paired_lea_tmp/light_model/src/redo_ch/FULL_config_4_smaller_model_run_lr5e-5_500epochs_max_seq_length_512/checkpoint-56556520')
-#tokenizer = AutoTokenizer.from_pretrained("/storage/homefs/lb24i892/bert2gpt_translation/bert_encoder_heavy/checkpoint-117674391")
-
 # Load BERT tokenizer for encoder
 bert_tokenizer = AutoTokenizer.from_pretrained(small_heavy_encoder)
 
@@ -103,19 +100,25 @@ bert_tokenizer = AutoTokenizer.from_pretrained(small_heavy_encoder)
 gpt_tokenizer = AutoTokenizer.from_pretrained(light_gpt_decoder)
 
 batch_size = 64
-num_train_epochs = 30
+num_train_epochs = 50
 learning_rate = 1e-4
 weight_decay = 0.1
 #temperature = 0.1
-num_beams = 5
+num_beams = 3
+num_beam_groups = 3
 top_p = 0.9
 penalty_alpha = 0.8
 top_k = 2
+diversity_penalty = 1.0
+length_penalty = 0.8
+num_return_sequences = 1
+early_stopping = True
 
 repetition_penalty = 1.2
 dola_layers = "high"
 #dola_layers=[1,340]
 max_length = 110
+max_new_tokens = 500
 
 flag = "PLAbDab"
 dataset = "healthy_human"
@@ -127,7 +130,7 @@ translation_model="bert2gpt"
 
 # Set up the run name
 #run_name=f"{dataset_size}_{flag}_{dataset}_{dola_layers}_{decoding}_max_length_{max_length}_rep_penalty_{repetition_penalty}_num_epochs_{num_train_epochs}"
-run_name=f"early_stopping_div_beam_search_{translation_model}_{dataset_size}_{flag}_{dataset}_max_length_{max_length}_num_epochs_{num_train_epochs}_no_spaces_prev_tokenizer_2"
+run_name=f"{dataset_size}_{flag}_{dataset}_{decoding}_max_new_tokens_{max_new_tokens}_num_epochs_{num_train_epochs}"
 
 
 print(f"Training model with run_name: {run_name}")
@@ -185,16 +188,13 @@ model.config.bos_token_id = gpt_tokenizer.bos_token_id
 
 
 generation_config = GenerationConfig(
-    num_return_sequences=1,
-    max_length=max_length,
-    diversity_penalty=1.0,
-    early_stopping=True,
+    num_return_sequences=num_return_sequences,
+    diversity_penalty=diversity_penalty,
+    early_stopping=early_stopping,
     num_beams=num_beams,
-    num_beam_groups=5,
-    # Distribution and repetition control
-    # temperature=0.7,  # Set as needed
-    # dola_layers=dola_layers,  # Define this variable appropriately
-    # repetition_penalty=repetition_penalty,  # Define this variable appropriately
+    num_beam_groups=num_beam_groups,
+    max_new_tokens=max_new_tokens,
+    length_penalty=length_penalty,
 
     # Token IDs from GPT tokenizer
     pad_token_id=gpt_tokenizer.pad_token_id,
@@ -208,9 +208,9 @@ generation_config = GenerationConfig(
     return_dict_in_generate=True
 )
 
-generation_config.save_pretrained("generation_config", f"gpt_generation_config.json")
+generation_config.save_pretrained("generation_config", f"gpt_generation_config_max_new_tokens_3_beams.json")
 
-generation_config_name = f"gpt_generation_config"
+generation_config_name = f"gpt_generation_config_max_new_tokens_3_beams"
 #generation_config_name = f"Diverse_beam_search_decoding"
 # before generation_config_7.json
 generation_config = GenerationConfig.from_pretrained("generation_config", f"{generation_config_name}.json")
@@ -231,7 +231,7 @@ training_args = Seq2SeqTrainingArguments(
     weight_decay=weight_decay,
     num_train_epochs=num_train_epochs,
     predict_with_generate=True,
-    generation_max_length=110,
+    #generation_max_length=110,
     report_to="wandb",
     run_name=run_name,
     generation_config=generation_config,
@@ -445,8 +445,8 @@ for i in range(50):
 
     generated_seq = model.generate(input_ids=input_ids, 
                                attention_mask=attention_mask, 
-                               max_length=110, # small small: 150, big big: 130
-                               early_stopping=True,
+                               #max_length=110, # small small: 150, big big: 130
+                               #early_stopping=True,
                                output_scores=True, 
                                return_dict_in_generate=True,
                                generation_config=generation_config)
