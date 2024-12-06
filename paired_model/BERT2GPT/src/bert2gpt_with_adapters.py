@@ -161,7 +161,7 @@ else:
 # Build run_name using the configurations
 run_name = (
     f"{dataset_size}_{flag}_{dataset}_{decoding}_"
-    f"max_new_tokens_{max_new_tokens}_num_epochs_{num_train_epochs}_bert_like_tokenizer_3"
+    f"max_new_tokens_{max_new_tokens}_num_epochs_{num_train_epochs}_bert_like_tokenizer_10"
 )
 
 print(f"Training model with run_name: {run_name}")
@@ -211,14 +211,17 @@ output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/mod
 #logging_dir = f"/storage/homefs/lb24i892/bert2gpt_translation/model_outputs/{run_name}_logging"
 logging_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/model_checkpoints/{run_name}_logging"
 
-gpt_tokenizer.bos_token = bert_tokenizer.cls_token
-gpt_tokenizer.eos_token = bert_tokenizer.sep_token
+# gpt_tokenizer.bos_token = bert_tokenizer.cls_token
+# gpt_tokenizer.eos_token = bert_tokenizer.sep_token
 
 # Set up the Seq2Seq model configuration
 model.config.decoder_start_token_id = gpt_tokenizer.bos_token_id
 model.config.eos_token_id = gpt_tokenizer.eos_token_id
 model.config.pad_token_id = gpt_tokenizer.pad_token_id
 model.config.bos_token_id = gpt_tokenizer.bos_token_id
+
+# add maske token to special tokens in gpt tokenizer
+model.config.mask_token = gpt_tokenizer.mask_token
 
 # Ensure the decoder's vocab size is correctly set
 model.config.decoder.vocab_size = model.config.decoder.vocab_size
@@ -321,33 +324,58 @@ def process_data_to_model_inputs(batch):
         return_tensors="pt"
     )
 
-    # Tokenize the decoder inputs (labels) using the GPT tokenizer
+    # We reserve space for BOS and EOS tokens by using decoder_max_length - 2 initially
     decoder_inputs = gpt_tokenizer(
         batch["light"],
         padding="max_length",
         truncation=True,
-        max_length=decoder_max_length,
+        max_length=decoder_max_length - 2,
         return_tensors="pt"
     )
+
+    bos_id = gpt_tokenizer.bos_token_id
+    eos_id = gpt_tokenizer.eos_token_id
+    pad_id = gpt_tokenizer.pad_token_id
+
+    # Convert to lists to manipulate
+    decoder_input_ids_list = decoder_inputs["input_ids"].tolist()
+    new_decoder_input_ids = []
+
+    for seq in decoder_input_ids_list:
+        # Remove trailing pad tokens
+        while seq and seq[-1] == pad_id:
+            seq.pop()
+
+        # Now insert BOS at the start and EOS at the end of the actual sequence
+        seq = [bos_id] + seq + [eos_id]
+
+        # Re-pad the sequence to the full decoder_max_length
+        if len(seq) > decoder_max_length:
+            seq = seq[:decoder_max_length]
+        else:
+            while len(seq) < decoder_max_length:
+                seq.append(pad_id)
+
+        new_decoder_input_ids.append(seq)
+
+    # Convert back to tensors
+    decoder_input_ids = torch.tensor(new_decoder_input_ids, dtype=torch.long)
+    decoder_attention_mask = (decoder_input_ids != pad_id).long()
 
     # Assign encoder inputs
     batch["input_ids"] = encoder_inputs["input_ids"]
     batch["attention_mask"] = encoder_inputs["attention_mask"]
 
     # Assign decoder inputs
-    batch["decoder_input_ids"] = decoder_inputs["input_ids"]
-    batch["decoder_attention_mask"] = decoder_inputs["attention_mask"]
+    batch["decoder_input_ids"] = decoder_input_ids
+    batch["decoder_attention_mask"] = decoder_attention_mask
 
-
-    # Prepare labels
-    labels = decoder_inputs["input_ids"].clone()
-    labels[labels == gpt_tokenizer.pad_token_id] = -100  # Mask padding tokens in labels
+    # Prepare labels (identical to decoder_input_ids, but with pad replaced by -100)
+    labels = decoder_input_ids.clone()
+    labels[labels == pad_id] = -100
     batch["labels"] = labels
 
-
-
     return batch
-
 
 
 # Convert the dataframes to Hugging Face datasets
@@ -386,6 +414,10 @@ print(f"first example heavy and light seq {train_dataset[0]}, {train_dataset[1]}
 for example in train_data.select(range(1)):
     print(example)
 
+# print first 10 encoder input ids
+print(f"first 10 encoder input ids: {train_data['input_ids'][:10]}")
+print(f"first 10 encoder attention mask: {train_data['attention_mask'][:10]}")
+print(f"first 10 labels: {train_data['labels'][:10]}")
 
 # print first 10 decoder input ids
 print(f"first 10 decoder input ids: {train_data['decoder_input_ids'][:10]}")
@@ -394,6 +426,7 @@ print(f"first 10 labels: {train_data['labels'][:10]}")
 
 # Assuming train_data['labels'][0] is a list of token IDs
 labels = train_data['labels'][0]
+print(f"labels: {labels}")
 
 # Filter out -100
 valid_label_ids = [token_id for token_id in labels if token_id >= 0]
