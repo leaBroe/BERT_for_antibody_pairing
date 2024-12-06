@@ -44,7 +44,10 @@ small_heavy_encoder = "/ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/r
 #light_gpt_decoder = "/storage/homefs/lb24i892/gpt_light_model_unpaired/model_outputs/small_gpt2_test_light_seqs_unp/checkpoint-74"
 #light_gpt_decoder ="/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/gpt_decoder/checkpoint-74"
 #light_gpt_decoder = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/gpt_decoder/small_gpt2_test_light_seqs_unp_lr_5e-4/checkpoint-47"
-light_gpt_decoder = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/gpt_decoder/old_tokenizer/checkpoint-74"
+#light_gpt_decoder = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/gpt_decoder/old_tokenizer/checkpoint-74"
+
+# not fully trained model with same tokenizer as light bert model unpaired
+light_gpt_decoder = "/ibmm_data2/oas_database/paired_lea_tmp/light_model/gpt_model_light_unpaired/src/gpt_light_model_unpaired/model_outputs/small_new_tokenizer_gpt2_light_seqs_unp_lr_5e-4_wd_0.1_bs_32_epochs_500_5/checkpoint-20"
 
 model = EncoderDecoderModel.from_encoder_decoder_pretrained(small_heavy_encoder, light_gpt_decoder , add_cross_attention=True)
 init(model)
@@ -117,7 +120,7 @@ max_new_tokens = 110
 num_return_sequences = 1  
 
 # Choose decoding strategy
-decoding = "contrastive"  # Options: "DoLa", "nucleus", "contrastive", "diverse_beam_search", "beam_search"
+decoding = "diverse_beam_search"  # Options: "DoLa", "nucleus", "contrastive", "diverse_beam_search", "beam_search"
 
 # Decoding strategy parameters
 decoding_params = {}
@@ -158,7 +161,7 @@ else:
 # Build run_name using the configurations
 run_name = (
     f"{dataset_size}_{flag}_{dataset}_{decoding}_"
-    f"max_new_tokens_{max_new_tokens}_num_epochs_{num_train_epochs}"
+    f"max_new_tokens_{max_new_tokens}_num_epochs_{num_train_epochs}_bert_like_tokenizer_3"
 )
 
 print(f"Training model with run_name: {run_name}")
@@ -208,6 +211,8 @@ output_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/mod
 #logging_dir = f"/storage/homefs/lb24i892/bert2gpt_translation/model_outputs/{run_name}_logging"
 logging_dir = f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/model_checkpoints/{run_name}_logging"
 
+gpt_tokenizer.bos_token = bert_tokenizer.cls_token
+gpt_tokenizer.eos_token = bert_tokenizer.sep_token
 
 # Set up the Seq2Seq model configuration
 model.config.decoder_start_token_id = gpt_tokenizer.bos_token_id
@@ -303,8 +308,8 @@ val_df = load_data(val_file_path)
 #test_df = load_data(test_file_path)
 
 
-encoder_max_length = 200
-decoder_max_length = 200
+encoder_max_length = 160
+decoder_max_length = 160
 
 def process_data_to_model_inputs(batch):
     # Tokenize the encoder inputs using the BERT tokenizer
@@ -382,6 +387,26 @@ for example in train_data.select(range(1)):
     print(example)
 
 
+# print first 10 decoder input ids
+print(f"first 10 decoder input ids: {train_data['decoder_input_ids'][:10]}")
+print(f"first 10 decoder attention mask: {train_data['decoder_attention_mask'][:10]}")
+print(f"first 10 labels: {train_data['labels'][:10]}")
+
+# Assuming train_data['labels'][0] is a list of token IDs
+labels = train_data['labels'][0]
+
+# Filter out -100
+valid_label_ids = [token_id for token_id in labels if token_id >= 0]
+
+# Now decode only valid token IDs
+decoded_text_gpt = gpt_tokenizer.decode(valid_label_ids)
+decoded_text_bert = bert_tokenizer.decode(valid_label_ids)
+print(f"decoded light sequence with gpt tokenizer: {decoded_text_gpt}")
+
+print(f"decoded light sequence with bert tokenizer without spaces: {decoded_text_bert.replace(' ', '')}")
+print(f"decoded light sequence with bert tokenizer: {decoded_text_bert}")
+
+
 # Initialize the trainer
 trainer = Seq2SeqAdapterTrainer(
     model=model,
@@ -437,31 +462,18 @@ generated_light_seqs = []
 # average similarity percentage
 total_similarity_percentage = []
 
-total_similarity_percentage = []
-total_similarity_percentage_alignment = []
-generated_light_seqs = []
-
+# Iterate through each sequence in the test dataset
 for i in range(50):
-    # Tokenize the input sequence
-    inputs = bert_tokenizer(
-        heavy_sequences[i],
-        padding="max_length",
-        truncation=True,
-        max_length=512,
-        return_tensors="pt"
-    )
+    inputs = bert_tokenizer(heavy_sequences[i], padding="max_length", truncation=True, max_length=512, return_tensors="pt")
     input_ids = inputs.input_ids.to(device)
     attention_mask = inputs.attention_mask.to(device)
 
-    # Generate the sequence
-    generated_seq = model.generate(
-        input_ids=input_ids,
-        attention_mask=attention_mask,
-        output_scores=True,
-        return_dict_in_generate=True,
-        generation_config=generation_config
-    )
-
+    generated_seq = model.generate(input_ids=input_ids, 
+                               attention_mask=attention_mask, 
+                               output_scores=True, 
+                               return_dict_in_generate=True,
+                               generation_config=generation_config)
+    
     # Access the first element in the generated sequence
     sequence = generated_seq["sequences"][0]
 
@@ -469,64 +481,27 @@ for i in range(50):
     generated_text = gpt_tokenizer.decode(sequence, skip_special_tokens=True)
     true_light_seq = true_light_sequences[i]
 
-    print(f"Decoded light sequence: {generated_text}")
-    print(f"True light sequence: {true_light_seq}")
+    print("decoded light sequence: ", generated_text)
+    print("true light sequence: ", true_light_seq)
 
     generated_light_seqs.append(generated_text)
-
-    # Remove spaces from sequences
-    generated_text = generated_text.replace(" ", "")
-    true_light_seq = true_light_seq.replace(" ", "")
-
-    # ----------------- Exact Matching Similarity -----------------
-
+    
     # Determine the length of the shorter sequence
     min_length = min(len(generated_text), len(true_light_seq))
-    print(f"Minimum length: {min_length}")
+    print(f"min_length:, {min_length}")
+    
+    # Calculate the number of matches
+    matches = sum(res1 == res2 for res1, res2 in zip(generated_text, true_light_seq))
+    print(f"matches:, {matches}")
 
-    # Calculate the number of matches for exact matching
-    matches = sum(
-        res1 == res2
-        for res1, res2 in zip(generated_text[:min_length], true_light_seq[:min_length])
-    )
-    print(f"Exact matches: {matches}")
-
-    # Calculate the similarity percentage for exact matching
+    
+    # Calculate the similarity percentage
     similarity_percentage = (matches / min_length) * 100
-    print(f"Exact matching similarity percentage: {similarity_percentage:.2f}%")
+    
+    print(f"similarity percentage: {similarity_percentage}")
 
-    # Add similarity percentage to list
+    # add similarity percentage to list
     total_similarity_percentage.append(similarity_percentage)
-
-    # ----------------- Global Alignment Similarity -----------------
-
-    # Perform global alignment
-    alignments = pairwise2.align.globalxx(true_light_seq, generated_text)
-    # Take the alignment with the highest score
-    best_alignment = alignments[0]
-
-    aligned_true_seq = best_alignment.seqA
-    aligned_generated_seq = best_alignment.seqB
-    alignment_score = best_alignment.score
-
-    # Calculate the total length of the alignment (including gaps)
-    alignment_length = len(aligned_true_seq)
-    print(f"Alignment length: {alignment_length}")
-
-    # Calculate the number of matches in the alignment
-    alignment_matches = sum(
-        res1 == res2
-        for res1, res2 in zip(aligned_true_seq, aligned_generated_seq)
-        if res1 != '-' and res2 != '-'
-    )
-    print(f"Alignment matches: {alignment_matches}")
-
-    # Calculate the similarity percentage based on alignment
-    similarity_percentage_alignment = (alignment_matches / alignment_length) * 100
-    print(f"Global alignment similarity percentage: {similarity_percentage_alignment:.2f}%\n")
-
-    # Add alignment similarity percentage to list
-    total_similarity_percentage_alignment.append(similarity_percentage_alignment)
 
 
 # print average similarity percentage
