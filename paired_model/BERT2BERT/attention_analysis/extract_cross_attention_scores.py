@@ -126,10 +126,15 @@ class AttentionAnalyzer:
         #Each target token has an attention distribution over all source tokens. Aggregate this distribution into a single value for each target token using the mean or max
         aggregated_scores = att_matrix.max(axis=1)  # Shape: (tgt_seq_len,)
 
+        # Create a DataFrame
+        df_tokens_scores = pd.DataFrame({
+            "Attention Score": aggregated_scores,
+        }, index=generated_tokens)
+
         torch.cuda.empty_cache()
         gc.collect()
 
-        return df_cross_att, aggregated_scores
+        return df_cross_att, df_tokens_scores
 
 
 if __name__ == "__main__":
@@ -155,8 +160,8 @@ if __name__ == "__main__":
     )
 
     input_text = "E V Q L V E S G G D L V R P G G S L R L S C A A S G F P F S R A W M T W V R Q A P G K G L D W V A R I K S K A A D G S A D Y A A A V V G R F V I S R D D A T G T V Y L Q M N S L R S E D T A M Y H C A T D I G L T L V P A T G Y W G Q G V L V T V S S"
-    df_cross_att, aggregated_scores = analyzer.cross_attention_scores(input_text, analyzer.model, analyzer.tokenizer, analyzer.device)
+    df_cross_att, df_tokens_scores = analyzer.cross_attention_scores(input_text, analyzer.model, analyzer.tokenizer, analyzer.device)
 
     # Save the results
     #df_cross_att.to_csv(f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/attention_analysis/attention_score_outputs/cross_attention_scores_{config['run_name']}.csv", float_format='%.6f')
-    np.savetxt(f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/attention_analysis/attention_score_outputs/aggregated_cross_attention_max_scores_{config['run_name']}.txt", aggregated_scores, fmt='%.6f')
+    df_tokens_scores.to_csv(f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/attention_analysis/attention_score_outputs/aggregated_cross_attention_max_scores_{config['run_name']}.csv", float_format='%.6f')

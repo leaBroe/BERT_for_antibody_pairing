@@ -137,10 +137,13 @@ class AttentionAnalyzer:
         # Extract attention to CLS token
         att_to_cls = df_all_vs_all.iloc[:,0] #retrieve the first column -> attention score of all tokens related to the CLS token
 
+        # extract first and last row for sep token attentions
+        sep_att = pd.concat([df_all_vs_all.iloc[0, :], df_all_vs_all.iloc[-1, :]], axis=0)
+
         torch.cuda.empty_cache()
         gc.collect()
 
-        return df_all_vs_all, att_to_cls
+        return df_all_vs_all, att_to_cls, sep_att
 
 
 
@@ -167,11 +170,11 @@ if __name__ == "__main__":
     )
 
     input_text = "E V Q L V E S G G D L V R P G G S L R L S C A A S G F P F S R A W M T W V R Q A P G K G L D W V A R I K S K A A D G S A D Y A A A V V G R F V I S R D D A T G T V Y L Q M N S L R S E D T A M Y H C A T D I G L T L V P A T G Y W G Q G V L V T V S S"
-    df_all_vs_all, att_to_cls = analyzer.attention_score_to_cls_token_and_to_all(input_text, analyzer.model, analyzer.tokenizer, analyzer.device)
+    df_all_vs_all, att_to_cls, sep_att = analyzer.attention_score_to_cls_token_and_to_all(input_text, analyzer.model, analyzer.tokenizer, analyzer.device)
 
     # Save the results
     df_all_vs_all.to_csv(f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/attention_analysis/attention_score_outputs/decoder_attention_scores_{config['run_name']}.csv", float_format='%.6f')
     att_to_cls.to_csv(f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/attention_analysis/attention_score_outputs/decoder_attention_scores_to_cls_{config['run_name']}.csv", float_format='%.6f')
-
+    sep_att.to_csv(f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/attention_analysis/attention_score_outputs/decoder_attention_scores_to_sep_{config['run_name']}.csv", float_format='%.6f')
 
 
