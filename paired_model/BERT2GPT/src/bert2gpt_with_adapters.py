@@ -47,7 +47,10 @@ small_heavy_encoder = "/ibmm_data2/oas_database/paired_lea_tmp/heavy_model/src/r
 #light_gpt_decoder = "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2GPT/gpt_decoder/old_tokenizer/checkpoint-74"
 
 # not fully trained model with same tokenizer as light bert model unpaired
-light_gpt_decoder = "/ibmm_data2/oas_database/paired_lea_tmp/light_model/gpt_model_light_unpaired/src/gpt_light_model_unpaired/model_outputs/small_new_tokenizer_gpt2_light_seqs_unp_lr_5e-4_wd_0.1_bs_32_epochs_500_5/checkpoint-20"
+#light_gpt_decoder = "/ibmm_data2/oas_database/paired_lea_tmp/light_model/gpt_model_light_unpaired/src/gpt_light_model_unpaired/model_outputs/small_new_tokenizer_gpt2_light_seqs_unp_lr_5e-4_wd_0.1_bs_32_epochs_500_5/checkpoint-20"
+
+# trained gpt model with full data unpaired epoch 3 (but not fully trained yet)
+light_gpt_decoder = "/ibmm_data2/oas_database/paired_lea_tmp/light_model/gpt_model_light_unpaired/src/gpt_light_model_unpaired/model_outputs/full_new_tokenizer_gpt2_light_seqs_unp_lr_5e-4_wd_0.1_bs_32_epochs_500_/checkpoint-443328"
 
 model = EncoderDecoderModel.from_encoder_decoder_pretrained(small_heavy_encoder, light_gpt_decoder , add_cross_attention=True)
 init(model)
@@ -106,8 +109,8 @@ gpt_tokenizer = AutoTokenizer.from_pretrained(light_gpt_decoder)
 
 # Common training hyperparameters
 batch_size = 64
-num_train_epochs = 40
-learning_rate = 1e-4
+num_train_epochs = 50
+learning_rate = 1e-5
 weight_decay = 0.1
 
 # Common configurations
@@ -116,11 +119,12 @@ dataset = "healthy_human"
 dataset_size = "small"
 translation_model = "bert2gpt"
 max_length = 110
-max_new_tokens = 110
+min_length = 100
+max_new_tokens = 120
 num_return_sequences = 1  
 
 # Choose decoding strategy
-decoding = "diverse_beam_search"  # Options: "DoLa", "nucleus", "contrastive", "diverse_beam_search", "beam_search"
+decoding = "contrastive"  # Options: "DoLa", "nucleus", "contrastive", "diverse_beam_search", "beam_search"
 
 # Decoding strategy parameters
 decoding_params = {}
@@ -161,7 +165,7 @@ else:
 # Build run_name using the configurations
 run_name = (
     f"{dataset_size}_{flag}_{dataset}_{decoding}_"
-    f"max_new_tokens_{max_new_tokens}_num_epochs_{num_train_epochs}_bert_like_tokenizer_10"
+    f"max_new_tokens_{max_new_tokens}_num_epochs_{num_train_epochs}_bert_like_tokenizer_fully_trained_unpaired_3"
 )
 
 print(f"Training model with run_name: {run_name}")
@@ -172,17 +176,15 @@ common_generation_params = {
     'num_return_sequences': num_return_sequences,
     'max_new_tokens': max_new_tokens,
     'max_length': max_length,
+    'min_length': min_length,
     'pad_token_id': gpt_tokenizer.pad_token_id,
     'eos_token_id': gpt_tokenizer.eos_token_id,
     'decoder_start_token_id': gpt_tokenizer.bos_token_id,
     'use_cache': True,
     'output_scores': True,
     'output_hidden_states': True,
-    'return_dict_in_generate': True,
+    'return_dict_in_geanerate': True,
 }
-
-# Combine common parameters with decoding strategy parameters
-generation_params = {**common_generation_params, **decoding_params}
 
 # Combine common parameters with decoding strategy parameters
 generation_params = {**common_generation_params, **decoding_params}
@@ -522,6 +524,9 @@ for i in range(50):
     # Determine the length of the shorter sequence
     min_length = min(len(generated_text), len(true_light_seq))
     print(f"min_length:, {min_length}")
+
+    if min_length == 0:
+        raise ValueError("One of the sequences (generated or true) is empty! Check the data or put min_length > 0 in the generation config.")
     
     # Calculate the number of matches
     matches = sum(res1 == res2 for res1, res2 in zip(generated_text, true_light_seq))
