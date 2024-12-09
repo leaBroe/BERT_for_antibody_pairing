@@ -108,11 +108,20 @@ class AttentionAnalyzer:
             return_dict=True
         )
 
+        # decode the generated tokens
+        generated_sequence = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
+        generated_sequence = generated_sequence.replace(" ", "")
+        print(f"Generated sequence: {generated_sequence}")
+
         # Extract the decoder attentions
         decoder_attentions = outputs.decoder_attentions  # List of tensors
 
         # Extract attention from the last layer
         last_decoder_attention = decoder_attentions[-1]  # Shape: (batch_size, num_heads, tgt_seq_len, tgt_seq_len)
+
+        # multiply attention score by 1000
+        multiplier = 10000
+        last_decoder_attention = last_decoder_attention * multiplier
 
         att_score=[]
         for i in list(last_decoder_attention[0][0]): #extracting every list of attention
@@ -126,7 +135,7 @@ class AttentionAnalyzer:
         df_all_vs_all = pd.DataFrame(m, index=names, columns=names) #attention score matrix all tokens vs all tokens
 
         # Extract attention to CLS token
-        att_to_cls = df_all_vs_all.loc['[CLS]']
+        att_to_cls = df_all_vs_all.iloc[:,0] #retrieve the first column -> attention score of all tokens related to the CLS token
 
         torch.cuda.empty_cache()
         gc.collect()
@@ -138,12 +147,12 @@ class AttentionAnalyzer:
 if __name__ == "__main__":
     # Define configuration parameters
     config = {
-        # heavy2light 60 epochs diverse beam search beam = 5
-        "run_name": "full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1",
-        "model_path": "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1",
-        "tokenizer_path": "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1/checkpoint-504060",
-        "adapter_path": "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1/final_adapter",
-        "generation_config_path": "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_60_lr_0.001_wd_0.1",
+        # best performing model so far
+        "run_name": "PLAbDab_human_healthy_full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_50_lr_0.0001_wd_0.1",
+        "model_path": "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/PLAbDab_human_healthy_full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_50_lr_0.0001_wd_0.1",
+        "tokenizer_path": "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/PLAbDab_human_healthy_full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_50_lr_0.0001_wd_0.1/checkpoint-95615",
+        "adapter_path": "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/PLAbDab_human_healthy_full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_50_lr_0.0001_wd_0.1/final_adapter",
+        "generation_config_path": "/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/heavy2light_model_checkpoints/PLAbDab_human_healthy_full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_50_lr_0.0001_wd_0.1",
         "adapter_name": "heavy2light_adapter"
     }
 
@@ -157,13 +166,12 @@ if __name__ == "__main__":
         adapter_name=config["adapter_name"]
     )
 
-    input_text = "S Y E L T Q P P S V S V S P G Q T A S I T C S G D K L G D K Y A C W Y Q Q K P G Q S P V L V I Y Q D S K R P S G I P E R F S G S N S G N T A T L T I S G T Q A M D E A D Y Y C Q A W D S S T V V F G G G T K L T V L"
+    input_text = "E V Q L V E S G G D L V R P G G S L R L S C A A S G F P F S R A W M T W V R Q A P G K G L D W V A R I K S K A A D G S A D Y A A A V V G R F V I S R D D A T G T V Y L Q M N S L R S E D T A M Y H C A T D I G L T L V P A T G Y W G Q G V L V T V S S"
     df_all_vs_all, att_to_cls = analyzer.attention_score_to_cls_token_and_to_all(input_text, analyzer.model, analyzer.tokenizer, analyzer.device)
 
     # Save the results
-    df_all_vs_all.to_csv(f"decoder_attention_scores_2_{config['run_name']}.csv", float_format='%.6f')
-    # df_att_to_cls_exp.to_csv(f"decoder_attention_scores_to_cls_exp_{config['run_name']}.csv")
-    att_to_cls.to_csv(f"decoder_attention_scores_to_cls_{config['run_name']}.csv", float_format='%.6f')
+    df_all_vs_all.to_csv(f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/attention_analysis/attention_score_outputs/decoder_attention_scores_{config['run_name']}.csv", float_format='%.6f')
+    att_to_cls.to_csv(f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/attention_analysis/attention_score_outputs/decoder_attention_scores_to_cls_{config['run_name']}.csv", float_format='%.6f')
 
 
 
