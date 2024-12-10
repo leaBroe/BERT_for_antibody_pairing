@@ -107,6 +107,9 @@ class AttentionAnalyzer:
         # Extract input tokens (source tokens)
         input_tokens = self.tokenizer.convert_ids_to_tokens(inputs['input_ids'][0])
 
+        print(f"Input tokens: {input_tokens}")
+        print(f"Generated tokens: {generated_tokens}")
+
         # Extract cross-attentions from the last layer
         cross_attentions = outputs.cross_attentions  # List of tensors, one per layer
         last_cross_attention = cross_attentions[-1]  # Shape: (batch_size, num_heads, tgt_seq_len, src_seq_len)
@@ -164,4 +167,4 @@ if __name__ == "__main__":
 
     # Save the results
     #df_cross_att.to_csv(f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/attention_analysis/attention_score_outputs/cross_attention_scores_{config['run_name']}.csv", float_format='%.6f')
-    df_tokens_scores.to_csv(f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/attention_analysis/attention_score_outputs/aggregated_cross_attention_max_scores_{config['run_name']}.csv", float_format='%.6f')
+    #df_tokens_scores.to_csv(f"/ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/attention_analysis/attention_score_outputs/aggregated_cross_attention_max_scores_{config['run_name']}.csv", float_format='%.6f')
