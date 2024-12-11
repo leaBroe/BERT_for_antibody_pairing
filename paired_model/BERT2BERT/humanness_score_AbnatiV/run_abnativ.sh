@@ -28,11 +28,11 @@
 # Use conda run to execute the command within the 'abnativ' environment
 conda run -n abnativ abnativ score \
   -nat VKappa \
-  -plot \
-  -i /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/humanness_score_AbnatiV/igk_true_sequences_small_extracted_anarci.fasta \
-  -odir /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/humanness_score_AbnatiV/PLAbDab_human_healthy_full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_50_lr_0.0001_wd_0.1/abnativ_output \
-  -oid small_igk_true_sequences
+  -i /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/humanness_score_AbnatiV/extr_igl_gen_sequences_anarci_aho_full.fasta \
+  -odir /ibmm_data2/oas_database/paired_lea_tmp/paired_model/BERT2BERT/humanness_score_AbnatiV/PLAbDab_human_healthy_full_diverse_beam_search_5_temp_0.2_max_length_150_early_stopping_true_batch_size_64_epochs_50_lr_0.0001_wd_0.1/abnativ_output_full \
+  -oid full_igl_gen_sequences
 
+#  -plot \
 # kappa light variable seq from their own validation dataset, works
 #conda run -n abnativ abnativ score -nat VKappa -i EIVLTQSPATLSLSPGERATLSCRASQSVSIYVVWYQQKPGQAPRLLIYDASNRATGTPARFSGSGSGTDFTLTISSLEPEDGAVYYCQQRQRWPLTFGGGTRVEIK -odir test/test_results_kappa -oid test_single_kappa -align -plot
 #conda run -n abnativ abnativ score -nat VKappa -i EIVLTQSPATLSLSPGERATLSCRAS--QSVS------IYVVWYQQKPGQAPRLLIYD--------ASNRATGTPARFSGSGSG--TDFTLTISSLEPEDGAVYYCQQRQR-----------------------WPLTFGGGTRVEIK- -odir test/test_results_kappa_no_align -oid test_single_kappa_no_align -plot
